@@ -522,7 +522,7 @@ button {
 
 .admin-page-title {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: 1.05rem;
   line-height: 1.05;
   letter-spacing: -0.05em;
 }
@@ -544,7 +544,7 @@ button {
   margin: 0;
   line-height: 1.08;
   letter-spacing: -0.05em;
-  font-size: clamp(2rem, 5vw, 3rem);
+  font-size: 1.05rem;
 }
 
 .admin-hero-meta {
@@ -565,8 +565,9 @@ button {
 }
 
 .admin-hero-stat strong {
-  font-size: 1.35rem;
+  font-size: 0.78rem;
   letter-spacing: -0.03em;
+  white-space: nowrap;
 }
 
 .admin-special-case-notice {
@@ -736,6 +737,66 @@ button {
   gap: 18px;
 }
 
+.admin-period-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-period-stat-box {
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 8px 14px;
+  text-align: center;
+  flex: 1;
+  min-width: 64px;
+}
+
+.admin-period-stat-number {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.admin-period-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+.admin-period-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.admin-period-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.admin-period-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.admin-period-legend-dot-done {
+  background: var(--success-soft);
+  border: 1px solid var(--success);
+}
+
+.admin-period-legend-dot-pending {
+  background: var(--warning-soft);
+  border: 1px solid var(--warning);
+}
+
 .admin-overview-action-panel {
   gap: 16px;
 }
@@ -779,6 +840,10 @@ button {
 
 .admin-period-table-header > div {
   width: 100%;
+}
+
+.admin-period-table-header .section-subtitle {
+  white-space: nowrap;
 }
 
 .admin-refresh-button {
@@ -905,8 +970,17 @@ button {
     content: attr(data-label);
   }
 
+  .admin-period-table-head {
+    display: grid;
+  }
+
+  .admin-period-table-head span {
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
   .admin-period-table-panel {
-    gap: 14px;
+    gap: 2px;
   }
 
   .admin-period-table-header {
@@ -921,45 +995,48 @@ button {
     min-height: 40px;
     padding: 10px 14px;
     align-self: flex-end;
+    white-space: nowrap;
   }
 
   .admin-period-table-row {
-    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-    gap: 10px;
-    padding: 14px;
-    border: 1px solid rgba(16, 32, 51, 0.08);
-    background: rgba(255, 255, 255, 0.88);
+    gap: 6px;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    border-bottom: 1px solid rgba(16, 32, 51, 0.08);
+    border-radius: 0;
+    margin-top: 0;
   }
 
   .admin-period-table-row span {
-    font-size: 0.98rem;
+    font-size: 0.81rem;
   }
 
   .admin-period-table-row > span:first-child {
-    grid-column: 1 / -1;
-    text-align: left;
-    font-size: 1.08rem;
-    padding-bottom: 2px;
+    grid-column: unset;
+    text-align: center;
+    font-size: 0.81rem;
+    padding-bottom: 0;
   }
 
   .admin-period-table-row > span:not(:first-child) {
-    border: 1px solid rgba(16, 32, 51, 0.08);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    padding: 10px 10px 12px;
+    border: none;
+    border-radius: 0;
+    background: none;
+    padding: 0;
   }
 
   .admin-period-table-row span::before {
-    font-size: 0.78rem;
-    margin-bottom: 4px;
+    display: none;
   }
 
   .admin-period-table-row .status-pill {
     justify-content: center;
     width: 100%;
-    min-height: 40px;
-    padding: 8px 10px;
-    font-size: 0.96rem;
+    min-height: 28px;
+    padding: 5px 6px;
+    font-size: 0.78rem;
+    border-radius: 6px;
   }
 
   .admin-hero-panel,
@@ -986,7 +1063,7 @@ button {
   }
 
   .admin-page-title {
-    font-size: clamp(1.65rem, 8vw, 2.2rem);
+    font-size: 1.05rem;
   }
 
   .admin-section-nav {
@@ -1011,18 +1088,26 @@ button {
     font-size: 0.95rem;
   }
 
-  .admin-overview-section {
-    order: 2;
-  }
-
   .admin-hero-panel {
-    order: 3;
+    order: 1;
     padding: 16px 14px;
     gap: 12px;
   }
 
+  .admin-period-stats {
+    order: 2;
+  }
+
+  .admin-overview-section {
+    order: 3;
+  }
+
+  .admin-overview-action-panel {
+    order: 4;
+  }
+
   .admin-hero-copy h1 {
-    font-size: clamp(1.7rem, 8.2vw, 2.2rem);
+    font-size: 1.05rem;
     line-height: 1.12;
   }
 
@@ -1061,7 +1146,7 @@ button {
   }
 
   .admin-hero-stat strong {
-    font-size: 1rem;
+    font-size: 1.05rem;
     line-height: 1.22;
   }
 

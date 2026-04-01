@@ -11,7 +11,7 @@ import { AdminUserManagementPanel } from "@/components/admin-user-management-pan
 import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRosterSyncPreview, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
-import { formatKoreaDateTime } from "@/lib/time";
+import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode } from "@/lib/types";
 
 type AdminSectionKey = "overview" | "users" | "operations" | "accounts" | "system";
@@ -154,6 +154,8 @@ export default async function AdminPage({
       ? dashboard.currentPeriodStats.map((stat) => stat.label)
       : currentPeriodRows[0]?.statuses.map((status) => status.label) ?? [];
   const currentPeriodPendingTotal = dashboard.currentPeriodStats.reduce((sum, stat) => sum + stat.pendingCount, 0);
+  const currentPeriodPendingPeople = currentPeriodRows.filter((row) => row.statuses.some((s) => !s.occurredAt)).length;
+  const currentPeriodCompletedPeople = currentPeriodRows.length - currentPeriodPendingPeople;
   const previewTable = buildPreviewRows({
     rows: dashboard.rows,
     scheduledUsers: dashboard.scheduledUsers,
@@ -197,68 +199,82 @@ export default async function AdminPage({
         </nav>
       </section>
 
-      <section className="glass-panel admin-hero-panel">
-        <div className="admin-hero-copy">
-          <span className="brand-kicker">실시간 운영 콘솔</span>
-          <h1>{dashboard.dateLabel} 현장 운영 현황</h1>
-        </div>
-        <div className="admin-hero-meta">
-          <div className="admin-hero-stat">
-            <span className="caption">현재 시간대</span>
-            <strong>{dashboard.currentPeriod.label}</strong>
-          </div>
-          <div className="admin-hero-stat">
-            <span className="caption">근무 대상</span>
-            <strong>{dashboard.summary.scheduledCount}명</strong>
-          </div>
-          <div className="admin-hero-stat">
-            <span className="caption">퇴근 완료</span>
-            <strong>{dashboard.summary.checkedOutCount}명</strong>
-          </div>
-        </div>
-      </section>
-
       {selectedSection === "overview" ? (
-        <section className="stack admin-overview-section">
-          {adminTodayView ? (
-            <section className="glass-panel admin-overview-action-panel stack">
-              <div className="panel-header">
-                <div>
-                  <h2 className="section-title">출결 버튼</h2>
-                </div>
-              </div>
-              <AttendanceActionPanel eventStates={adminTodayView.eventStates} devCoordinates={devCoordinates} variant="quick" />
-            </section>
-          ) : null}
+        <>
+        <section className="glass-panel admin-hero-panel">
+          <div className="admin-hero-copy">
+            <span className="brand-kicker">실시간 운영 콘솔</span>
+            <h1>{getKoreaDateSlashLabel()} 출결현황</h1>
+          </div>
+          <div className="admin-hero-meta">
+            <div className="admin-hero-stat">
+              <span className="caption">현재 시간대</span>
+              <strong>{dashboard.currentPeriod.label}</strong>
+            </div>
+            <div className="admin-hero-stat">
+              <span className="caption">근무 대상</span>
+              <strong>{dashboard.summary.scheduledCount}명</strong>
+            </div>
+            <div className="admin-hero-stat">
+              <span className="caption">퇴근 완료</span>
+              <strong>{dashboard.summary.checkedOutCount}명</strong>
+            </div>
+          </div>
+        </section>
 
+        {dashboard.currentPeriodStats.length > 0 ? (
+          <div className="admin-period-stats">
+            {dashboard.currentPeriodStats.map((stat) => (
+              <div key={stat.label} className="admin-period-stat-box">
+                <span className="admin-period-stat-number">{stat.completedCount}</span>
+                <span className="admin-period-stat-label">{stat.label}</span>
+              </div>
+            ))}
+            <div className="admin-period-stat-box">
+              <span className="admin-period-stat-number">{currentPeriodRows.length}</span>
+              <span className="admin-period-stat-label">출석 대상</span>
+            </div>
+          </div>
+        ) : null}
+
+        <section className="stack admin-overview-section">
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
             <div className="panel-header admin-period-table-header">
               <div>
                 <h2 className="section-title">현재 시간대 출결표</h2>
                 <p className="section-subtitle">
-                  지금은 <strong>{dashboard.currentPeriod.label}</strong> 시간대입니다. 대상 {currentPeriodRows.length}명 · 미완료 {currentPeriodPendingTotal}건
+                  전체인원 {currentPeriodRows.length}명 완료 {currentPeriodCompletedPeople}명 미완료 {currentPeriodPendingPeople}명
                 </p>
               </div>
               <AdminRefreshButton />
             </div>
 
+            <div className="admin-period-legend">
+              <span className="admin-period-legend-item">
+                <span className="admin-period-legend-dot admin-period-legend-dot-done" />
+                완료
+              </span>
+              <span className="admin-period-legend-item">
+                <span className="admin-period-legend-dot admin-period-legend-dot-pending" />
+                미완료
+              </span>
+            </div>
+
             {periodTableRows.length > 0 && periodTableLabels.length > 0 ? (
               <>
-                {specialCaseGroups.length > 0 || currentPeriodRows.length === 0 ? (
+                {specialCaseGroups.length > 0 ? (
                   <div className="notice small admin-special-case-notice">
-                    {specialCaseGroups.length > 0 ? (
-                      <div className="stack admin-special-case-stack">
-                        <strong className="admin-special-case-title">오늘 특이사항 인원</strong>
-                        <div className="stack admin-special-case-groups">
-                          {specialCaseGroups.map((group) => (
-                            <div key={group.reasonCode} className="admin-special-case-group">
-                              <span className="badge admin-special-case-badge">{group.label}</span>
-                              <span>{group.names.join(", ")}</span>
-                            </div>
-                          ))}
-                        </div>
+                    <div className="stack admin-special-case-stack">
+                      <strong className="admin-special-case-title">오늘 특이사항 인원</strong>
+                      <div className="stack admin-special-case-groups">
+                        {specialCaseGroups.map((group) => (
+                          <div key={group.reasonCode} className="admin-special-case-group">
+                            <span className="badge admin-special-case-badge">{group.label}</span>
+                            <span>{group.names.join(", ")}</span>
+                          </div>
+                        ))}
                       </div>
-                    ) : null}
+                    </div>
                   </div>
                 ) : null}
                 <div className="table-head admin-period-table-head" style={{ gridTemplateColumns: currentPeriodGridTemplate }}>
@@ -295,6 +311,18 @@ export default async function AdminPage({
             )}
           </article>
         </section>
+
+          {adminTodayView ? (
+            <section className="glass-panel admin-overview-action-panel stack">
+              <div className="panel-header">
+                <div>
+                  <h2 className="section-title">출결 버튼</h2>
+                </div>
+              </div>
+              <AttendanceActionPanel eventStates={adminTodayView.eventStates} devCoordinates={devCoordinates} variant="quick" />
+            </section>
+          ) : null}
+        </>
       ) : null}
 
       {selectedSection === "users" ? (

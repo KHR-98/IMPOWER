@@ -213,7 +213,7 @@ const PERIOD_DEFINITIONS: PeriodDefinition[] = [
 
 const NONE_PERIOD: CurrentPeriodInfo = {
   code: "none",
-  label: "집중 확인 시간 아님",
+  label: "수고하셨습니다",
   description: "현재는 주요 출결 확인 시간이 아닙니다.",
 };
 
