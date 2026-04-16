@@ -65,7 +65,7 @@ export function AdminRosterControlsPanel({ dateKey, entries, enabled }: AdminRos
       <div className="panel-header">
         <div>
           <h2 className="section-title">오늘 근무자 설정</h2>
-          <p className="section-subtitle">근무 대상자 중 늦조 여부와 점심 출입 대상을 당일 기준으로 지정합니다.</p>
+          <p className="section-subtitle">오늘 근무자의 조 구분과 점심 출입 여부를 지정합니다.</p>
         </div>
       </div>
 

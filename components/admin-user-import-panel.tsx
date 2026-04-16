@@ -17,7 +17,7 @@ export function AdminUserImportPanel({ enabled }: AdminUserImportPanelProps) {
   const [pendingPreview, setPendingPreview] = useState(false);
   const [pendingImport, setPendingImport] = useState(false);
   const [message, setMessage] = useState<string | null>(
-    enabled ? null : "Google Sheet 연동이 준비되면 시트 이름 기준으로 계정을 한 번에 만들 수 있습니다.",
+    enabled ? null : "Google Sheet 연동 후 시트 이름으로 계정을 일괄 생성할 수 있습니다.",
   );
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export function AdminUserImportPanel({ enabled }: AdminUserImportPanelProps) {
       <div className="panel-header">
         <div>
           <h2 className="section-title">시트 사용자 가져오기</h2>
-          <p className="section-subtitle">Google Sheet에서 이름 후보를 읽고, 필요한 이름만 골라 공통 비밀번호로 생성합니다.</p>
+          <p className="section-subtitle">시트에서 이름 목록을 읽어 필요한 인원만 선택해 일괄 생성합니다.</p>
         </div>
       </div>
 
@@ -180,7 +180,7 @@ export function AdminUserImportPanel({ enabled }: AdminUserImportPanelProps) {
               </div>
 
               <div className="notice small">
-                이름을 누르면 생성 대상에서 제외하거나 다시 포함할 수 있습니다. 로그인 ID와 표시 이름은 선택한 시트 이름 그대로 들어갑니다.
+                이름을 눌러 생성 대상을 선택하세요. 로그인 ID와 표시 이름은 시트 이름 그대로 사용됩니다.
               </div>
 
               <div className="inline-row">

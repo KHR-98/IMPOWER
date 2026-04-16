@@ -210,7 +210,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       <div className="panel-header">
         <div>
           <h2 className="section-title">지점 편집</h2>
-          <p className="section-subtitle">수정할 지점을 선택한 뒤 이름, 유형, 좌표, 반경, 활성 상태를 변경하세요.</p>
+          <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
         </div>
         <button type="button" className="button-subtle" disabled={!enabled || pending} onClick={addZone}>
           지점 추가

@@ -20,7 +20,7 @@ export function AdminRosterSyncPanel({ enabled, dataSource }: AdminRosterSyncPan
       ? null
       : dataSource === "demo"
         ? "데모 모드에서는 근무표 동기화를 실행하지 않습니다."
-        : "Google Sheet 환경 변수를 연결하면 근무표 동기화를 실행할 수 있습니다.",
+        : "Google Sheet 환경 변수를 연결하면 근무표 동기화를 사용할 수 있습니다.",
   );
 
   async function handlePreview() {
@@ -76,7 +76,7 @@ export function AdminRosterSyncPanel({ enabled, dataSource }: AdminRosterSyncPan
       <div className="panel-header">
         <div>
           <h2 className="section-title">근무표 동기화</h2>
-          <p className="section-subtitle">Google Sheet의 오늘 근무 대상자를 먼저 검토한 뒤 roster_entries에 반영합니다.</p>
+          <p className="section-subtitle">Google Sheet에서 오늘 근무자를 확인하고 DB에 동기화합니다.</p>
         </div>
       </div>
       <div className="inline-row">

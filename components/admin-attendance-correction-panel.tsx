@@ -103,7 +103,7 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
       <div className="panel-header">
         <div>
           <h2 className="section-title">기록 정정</h2>
-          <p className="section-subtitle">예외 상황이 생기면 관리자 권한으로 오늘 기록 시간을 수정하고 사유를 남길 수 있습니다.</p>
+          <p className="section-subtitle">관리자 권한으로 오늘 출결 시간을 직접 수정하고 사유를 기록합니다.</p>
         </div>
       </div>
 
@@ -144,7 +144,7 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
         />
       </div>
 
-      <div className="notice small">시간을 비우고 저장하면 해당 항목 기록을 제거합니다. 저장할 때마다 감사 로그에 변경 전후 내용이 남습니다.</div>
+      <div className="notice small">시간을 비우면 해당 기록이 삭제됩니다. 변경 내용은 매번 감사 로그에 기록됩니다.</div>
 
       <div className="inline-row">
         <button type="button" className="button" disabled={!enabled || pending || !selectedRow} onClick={handleSave}>

@@ -962,8 +962,39 @@ button {
     margin-bottom: 3px;
   }
 
+  .admin-status-table-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .admin-status-table-row {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "name name"
+      "shift schedule"
+      "checkin tbm"
+      "lunch checkout";
+    gap: 4px 8px;
+    margin-top: 0;
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+
+  .admin-status-table-row span:nth-child(1) { grid-area: name; font-weight: 700; font-size: 0.88rem; }
+  .admin-status-table-row span:nth-child(2) { grid-area: shift; }
+  .admin-status-table-row span:nth-child(3) { grid-area: schedule; }
+  .admin-status-table-row span:nth-child(4) { grid-area: checkin; }
+  .admin-status-table-row span:nth-child(5) { grid-area: tbm; }
+  .admin-status-table-row span:nth-child(6) { grid-area: lunch; }
+  .admin-status-table-row span:nth-child(7) { grid-area: checkout; }
+
   .admin-status-table-row span::before {
     content: attr(data-label);
+  }
+
+  .admin-status-table-row span:nth-child(1)::before {
+    display: none;
   }
 
   .admin-period-table-row span::before {
@@ -1170,6 +1201,17 @@ button {
 
   .admin-overview-action-panel {
     gap: 12px;
+  }
+
+  /* 운영·계정·시스템 탭: 주요 액션 버튼 행 전체 너비로 */
+  .admin-management-panel .inline-row:has(> .button),
+  .admin-management-panel .inline-row:has(> .button-danger) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-management-panel .inline-row .status-pill {
+    align-self: flex-start;
   }
 }
 

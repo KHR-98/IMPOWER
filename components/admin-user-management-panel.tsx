@@ -142,7 +142,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       <div className="panel-header">
         <div>
           <h2 className="section-title">사용자 관리</h2>
-          <p className="section-subtitle">관리자 화면에서 계정을 생성하고, 권한과 활성 상태, 비밀번호를 직접 관리합니다.</p>
+          <p className="section-subtitle">계정 생성과 권한·활성 상태·비밀번호를 직접 관리합니다.</p>
         </div>
         <button type="button" className="button-subtle" disabled={!enabled || pending} onClick={handleNewUser}>
           새 사용자
@@ -176,7 +176,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
           })}
         </div>
       ) : (
-        <div className="notice small">등록된 계정이 아직 없습니다. 아래 폼에서 첫 사용자를 만들어 주세요.</div>
+        <div className="notice small">등록된 계정이 없습니다. 아래 양식에서 첫 사용자를 추가하세요.</div>
       )}
 
       <div className="settings-grid">
@@ -230,7 +230,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       </div>
 
       <div className="notice small">
-        기존 사용자는 로그인 ID를 바꿀 수 없습니다. 비밀번호를 비워두고 저장하면 기존 비밀번호를 유지합니다.
+        로그인 ID는 변경할 수 없습니다. 비밀번호를 비워두면 기존 비밀번호가 유지됩니다.
       </div>
 
       <div className="inline-row">

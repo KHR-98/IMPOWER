@@ -331,7 +331,7 @@ export default async function AdminPage({
             <div className="panel-header">
               <div>
                 <h2 className="section-title">전체 사용자별 상태</h2>
-                <p className="section-subtitle">오늘 기록 전체와 관리자 정정 여부를 한 번에 확인합니다.</p>
+                <p className="section-subtitle">전체 출결 기록과 정정 여부를 확인합니다.</p>
               </div>
             </div>
             <div className="table-head admin-status-table-head">
@@ -343,6 +343,7 @@ export default async function AdminPage({
               <span>점심 등록</span>
               <span>퇴근</span>
             </div>
+            <div className="admin-status-table-body">
             {dashboard.rows.map((row) => {
               const scheduledEntry = dashboard.scheduledUsers.find((entry) => entry.username === row.username);
               return (
@@ -357,6 +358,7 @@ export default async function AdminPage({
                 </div>
               );
             })}
+            </div>
           </article>
         </section>
       ) : null}
@@ -367,7 +369,7 @@ export default async function AdminPage({
             <div className="panel-header">
               <div>
                 <h2 className="section-title">운영 관리</h2>
-                <p className="section-subtitle">근무표와 당일 출결 운영을 조정하는 작업만 모아 보여줍니다.</p>
+                <p className="section-subtitle">근무표 동기화 및 당일 출결 운영을 관리합니다.</p>
               </div>
             </div>
             <AdminRosterSyncPanel enabled={runtime.rosterSyncConfigured} dataSource={runtime.dataSource} />
@@ -391,7 +393,7 @@ export default async function AdminPage({
             <div className="panel-header">
               <div>
                 <h2 className="section-title">계정 관리</h2>
-                <p className="section-subtitle">시트 이름 가져오기와 사용자 권한/비밀번호 관리 작업입니다.</p>
+                <p className="section-subtitle">시트 계정 일괄 생성 및 사용자 권한·비밀번호를 관리합니다.</p>
               </div>
             </div>
             <AdminUserImportPanel enabled={runtime.dataSource === "supabase" && runtime.rosterSyncConfigured} />
