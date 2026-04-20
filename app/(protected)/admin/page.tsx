@@ -222,20 +222,6 @@ export default async function AdminPage({
           </div>
         </section>
 
-        {dashboard.currentPeriodStats.length > 0 ? (
-          <div className="admin-period-stats">
-            {dashboard.currentPeriodStats.map((stat) => (
-              <div key={stat.label} className="admin-period-stat-box">
-                <span className="admin-period-stat-number">{stat.completedCount}</span>
-                <span className="admin-period-stat-label">{stat.label}</span>
-              </div>
-            ))}
-            <div className="admin-period-stat-box">
-              <span className="admin-period-stat-number">{currentPeriodRows.length}</span>
-              <span className="admin-period-stat-label">출석 대상</span>
-            </div>
-          </div>
-        ) : null}
 
         <section className="stack admin-overview-section">
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
