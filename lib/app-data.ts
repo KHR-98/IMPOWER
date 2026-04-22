@@ -20,7 +20,6 @@ import {
   deleteSupabaseAdminUser,
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
-  getSupabaseRosterSyncPreview,
   getSupabaseSessionUser,
   getSupabaseSetupStatus,
   getSupabaseSheetUserImportPreview,
@@ -45,7 +44,6 @@ import type {
   CoordinatePayload,
   DashboardView,
   DataSourceKind,
-  RosterSyncPreview,
   RosterSyncResult,
   RuntimeInfo,
   SessionUser,
@@ -162,16 +160,6 @@ export async function performAttendanceAction(input: {
   return (await resolveDataSource()).dataSource === "supabase"
     ? performSupabaseAttendanceAction(input)
     : performDemoAttendanceAction(input);
-}
-
-export async function getRosterSyncPreview(): Promise<RosterSyncPreview | null> {
-  const resolved = await resolveDataSource();
-
-  if (resolved.dataSource !== "supabase" || !hasGoogleSheetEnv()) {
-    return null;
-  }
-
-  return getSupabaseRosterSyncPreview();
 }
 
 export async function syncRoster(): Promise<RosterSyncResult> {

@@ -4,11 +4,10 @@ import { AttendanceActionPanel } from "@/components/attendance-action-panel";
 import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-correction-panel";
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-panel";
-import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserImportPanel } from "@/components/admin-user-import-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
-import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRosterSyncPreview, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
+import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
@@ -136,11 +135,10 @@ export default async function AdminPage({
   const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
-  const [dashboard, runtime, adminUsers, liveRosterPreview, adminTodayView, devCoordinates] = await Promise.all([
+  const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(),
     getRuntimeInfo(),
     getAdminUserList(),
-    selectedSection === "overview" ? getRosterSyncPreview() : Promise.resolve(null),
     selectedSection === "overview" ? getUserTodayView(session.username) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
@@ -160,7 +158,7 @@ export default async function AdminPage({
     rows: dashboard.rows,
     scheduledUsers: dashboard.scheduledUsers,
   });
-  const specialCaseSourceRows = liveRosterPreview?.rows ?? dashboard.scheduledUsers;
+  const specialCaseSourceRows = dashboard.scheduledUsers;
   const specialCaseGroups = SPECIAL_CASE_ORDER.map((reasonCode) => {
     const names = specialCaseSourceRows
       .filter((entry) => entry.scheduleReasonCode === reasonCode)
@@ -355,10 +353,9 @@ export default async function AdminPage({
             <div className="panel-header">
               <div>
                 <h2 className="section-title">운영 관리</h2>
-                <p className="section-subtitle">근무표 동기화 및 당일 출결 운영을 관리합니다.</p>
+                <p className="section-subtitle">당일 출결 운영을 관리합니다.</p>
               </div>
             </div>
-            <AdminRosterSyncPanel enabled={runtime.rosterSyncConfigured} dataSource={runtime.dataSource} />
             <AdminRosterControlsPanel
               dateKey={dashboard.dateKey}
               entries={dashboard.scheduledUsers}
