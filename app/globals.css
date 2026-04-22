@@ -33,6 +33,18 @@ body {
   min-height: 100%;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 body {
   background:
     radial-gradient(circle at top left, rgba(15, 109, 95, 0.12), transparent 32%),
@@ -549,7 +561,7 @@ button {
 
 .admin-hero-meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1164,7 +1176,7 @@ button {
   }
 
   .admin-hero-meta {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -1258,23 +1270,246 @@ button {
   height: 18px;
 }
 
+/* ── Time Wheel Picker ──────────────────────────────────── */
+
+.wheel-settings-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.wheel-time-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wheel-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.wheel-time-row {
+  display: flex;
+  gap: 12px;
+}
+
+/* Individual picker card */
+.wheel-picker {
+  flex: 1;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wheel-picker--off {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.wheel-picker-lbl {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  padding: 8px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Picker body: the scrollable area */
+.wheel-picker-body {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 220px; /* 5 items × 44 px */
+}
+
+/* Scrollable column */
+.wheel-col {
+  flex: 1;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-y: contain;
+  position: relative;
+  z-index: 1;
+}
+
+.wheel-col::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-col--off {
+  overflow-y: hidden;
+}
+
+/* Top / bottom spacers so first and last items can be centred */
+.wheel-pad {
+  height: 88px; /* 2 × 44 px */
+  flex-shrink: 0;
+}
+
+/* Each time unit cell */
+.wheel-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: rgba(16, 32, 51, 0.28);
+  scroll-snap-align: center;
+  user-select: none;
+}
+
+.wheel-item--on {
+  color: var(--text);
+  font-weight: 800;
+  font-size: 1.55rem;
+}
+
+/* Colon separator */
+.wheel-colon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  padding: 0 2px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Centre highlight bar (behind column text) */
+.wheel-hl {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  right: 8px;
+  height: 44px;
+  transform: translateY(-50%);
+  background: var(--accent);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Top / bottom gradient fades */
+.wheel-fade-t,
+.wheel-fade-b {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 80px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.wheel-fade-t {
+  top: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, transparent 100%);
+}
+
+.wheel-fade-b {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.92) 0%, transparent 100%);
+}
+
+/* ── Combined Time Settings Picker ───────────── */
+.combined-time-picker {
+  display: flex;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.combined-seg-section {
+  flex: 1.8;
+  min-width: 0;
+}
+
+.combined-divider {
+  width: 1px;
+  background: var(--line);
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.combined-time-section {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Smaller text for segment label items */
+.wheel-col--seg .wheel-item {
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.wheel-col--seg .wheel-item--on {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+/* ── End Time Wheel Picker ────────────────────── */
+
 .map-panel {
   border-top: 1px solid var(--line);
   padding-top: 12px;
 }
 
+.map-subtitle {
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+/* Search controls */
 .search-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 6px;
   align-items: stretch;
 }
 
+.search-action-group {
+  display: flex;
+  gap: 6px;
+}
+
+.search-action-group .button-subtle {
+  flex: 1;
+}
+
 .map-search-input {
-  flex: 1 1 280px;
-  min-width: 200px;
+  flex: 1;
+  min-width: 0;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.92);
-  padding: 14px 16px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
   color: var(--text);
+}
+
+.map-search-input::placeholder {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .map-search-input:focus {
@@ -1282,9 +1517,14 @@ button {
   border-color: rgba(15, 109, 95, 0.35);
 }
 
+.search-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .map-canvas {
   width: 100%;
-  min-height: 580px;
+  min-height: 520px;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1306,7 +1546,7 @@ button {
 
 @media (max-width: 780px) {
   .map-canvas {
-    min-height: 460px;
+    min-height: 400px;
   }
 
   .admin-settings-stack {
@@ -1319,21 +1559,30 @@ button {
   }
 
   .map-panel {
-    gap: 14px;
+    gap: 10px;
   }
 
   .map-panel .panel-header {
     margin-bottom: 0;
   }
 
-  .search-row {
-    flex-direction: column;
-    gap: 10px;
+  .map-subtitle {
+    display: none;
   }
 
-  .search-row .button-subtle {
-    width: 100%;
-    min-height: 46px;
+  .search-input-group {
+    gap: 6px;
+  }
+
+  .search-action-group .button-subtle,
+  .search-btn {
+    min-height: 42px;
+    font-size: 0.82rem;
+  }
+
+  .map-search-input {
+    font-size: 0.88rem;
+    padding: 8px 12px;
   }
 
   .zone-editor-card {

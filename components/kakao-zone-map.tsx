@@ -536,28 +536,33 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, onSelectZone, onP
       <div className="panel-header">
         <div>
           <h2 className="section-title">지도에서 지점 선택</h2>
-          <p className="section-subtitle">장소 검색 후 지도를 클릭하거나 현재 중심 좌표를 적용해서 지점을 지정할 수 있습니다.</p>
+          <p className="section-subtitle map-subtitle">검색 후 지도 클릭 또는 중심 좌표 적용으로 지점을 지정합니다.</p>
         </div>
       </div>
 
-      <div className="inline-row search-row">
-        <input
-          className="map-search-input"
-          type="text"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="장소명이나 주소를 검색하세요"
-          disabled={!appKey || pendingSearch}
-        />
-        <button type="button" className="button-subtle" onClick={handleSearch} disabled={!appKey || pendingSearch}>
-          {pendingSearch ? "검색 중..." : "장소 검색"}
-        </button>
-        <button type="button" className="button-subtle" onClick={moveToCurrentLocation} disabled={!appKey}>
-          내 위치로 이동
-        </button>
-        <button type="button" className="button-subtle" onClick={applyMapCenterToSelectedZone} disabled={!appKey || !selectedZoneId}>
-          지도 중심 적용
-        </button>
+      <div className="search-row">
+        <div className="search-input-group">
+          <input
+            className="map-search-input"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            placeholder="장소명 또는 주소"
+            disabled={!appKey || pendingSearch}
+          />
+          <button type="button" className="button-subtle search-btn" onClick={handleSearch} disabled={!appKey || pendingSearch}>
+            {pendingSearch ? "검색 중" : "검색"}
+          </button>
+        </div>
+        <div className="search-action-group">
+          <button type="button" className="button-subtle" onClick={moveToCurrentLocation} disabled={!appKey}>
+            내 위치
+          </button>
+          <button type="button" className="button-subtle" onClick={applyMapCenterToSelectedZone} disabled={!appKey || !selectedZoneId}>
+            중심 적용
+          </button>
+        </div>
       </div>
 
       <div ref={mapContainerRef} className="map-canvas" />

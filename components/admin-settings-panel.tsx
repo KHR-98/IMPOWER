@@ -4,6 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { KakaoZoneMap } from "@/components/kakao-zone-map";
+import { CombinedTimeSettingsPicker } from "@/components/time-wheel-picker";
 import type { AppSettings, Zone, ZoneType } from "@/lib/types";
 
 const DEFAULT_ZONE_CENTER = {
@@ -125,68 +126,18 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
         </div>
       </div>
 
-      <div className="settings-grid admin-settings-basic-grid">
-        <div className="field">
-          <label htmlFor="check-in-start">출근 시작</label>
-          <input
-            id="check-in-start"
-            type="time"
-            disabled={!enabled || pending}
-            value={settings.checkInWindow.start}
-            onChange={(event) => updateTimeWindow("checkInWindow", "start", event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="check-in-end">출근 종료</label>
-          <input
-            id="check-in-end"
-            type="time"
-            disabled={!enabled || pending}
-            value={settings.checkInWindow.end}
-            onChange={(event) => updateTimeWindow("checkInWindow", "end", event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="tbm-start">TBM 시작</label>
-          <input
-            id="tbm-start"
-            type="time"
-            disabled={!enabled || pending}
-            value={settings.tbmWindow.start}
-            onChange={(event) => updateTimeWindow("tbmWindow", "start", event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="tbm-end">TBM 종료</label>
-          <input
-            id="tbm-end"
-            type="time"
-            disabled={!enabled || pending}
-            value={settings.tbmWindow.end}
-            onChange={(event) => updateTimeWindow("tbmWindow", "end", event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="check-out-start">퇴근 시작</label>
-          <input
-            id="check-out-start"
-            type="time"
-            disabled={!enabled || pending}
-            value={settings.checkOutWindow.start}
-            onChange={(event) => updateTimeWindow("checkOutWindow", "start", event.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="check-out-end">퇴근 종료</label>
-          <input
-            id="check-out-end"
-            type="time"
-            disabled={!enabled || pending}
-            value={settings.checkOutWindow.end}
-            onChange={(event) => updateTimeWindow("checkOutWindow", "end", event.target.value)}
-          />
-        </div>
-        <div className="field">
+      <div className="wheel-settings-wrap">
+        <CombinedTimeSettingsPicker
+          settings={{
+            checkInWindow:  settings.checkInWindow,
+            tbmWindow:      settings.tbmWindow,
+            checkOutWindow: settings.checkOutWindow,
+          }}
+          onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "checkOutWindow", field: "start" | "end", value: string) => void}
+          disabled={!enabled || pending}
+        />
+
+        <div className="field" style={{ maxWidth: 240 }}>
           <label htmlFor="max-gps-accuracy">GPS 허용 오차(m)</label>
           <input
             id="max-gps-accuracy"

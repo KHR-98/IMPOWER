@@ -212,12 +212,16 @@ export default async function AdminPage({
               <strong>{dashboard.currentPeriod.label}</strong>
             </div>
             <div className="admin-hero-stat">
-              <span className="caption">근무 대상</span>
-              <strong>{dashboard.summary.scheduledCount}명</strong>
+              <span className="caption">전체인원</span>
+              <strong>{currentPeriodRows.length}명</strong>
             </div>
             <div className="admin-hero-stat">
-              <span className="caption">퇴근 완료</span>
-              <strong>{dashboard.summary.checkedOutCount}명</strong>
+              <span className="caption">완료</span>
+              <strong>{currentPeriodCompletedPeople}명</strong>
+            </div>
+            <div className="admin-hero-stat">
+              <span className="caption">미완료</span>
+              <strong>{currentPeriodPendingPeople}명</strong>
             </div>
           </div>
         </section>
