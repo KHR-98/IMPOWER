@@ -784,6 +784,7 @@ button {
   gap: 14px;
   font-size: 0.78rem;
   color: var(--muted);
+  margin-top: 6px;
 }
 
 .admin-period-legend-item {

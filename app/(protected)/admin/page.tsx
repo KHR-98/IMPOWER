@@ -232,22 +232,18 @@ export default async function AdminPage({
             <div className="panel-header admin-period-table-header">
               <div>
                 <h2 className="section-title">현재 시간대 출결표</h2>
-                <p className="section-subtitle">
-                  전체인원 {currentPeriodRows.length}명 완료 {currentPeriodCompletedPeople}명 미완료 {currentPeriodPendingPeople}명
-                </p>
+                <div className="admin-period-legend">
+                  <span className="admin-period-legend-item">
+                    <span className="admin-period-legend-dot admin-period-legend-dot-done" />
+                    완료
+                  </span>
+                  <span className="admin-period-legend-item">
+                    <span className="admin-period-legend-dot admin-period-legend-dot-pending" />
+                    미완료
+                  </span>
+                </div>
               </div>
               <AdminRefreshButton />
-            </div>
-
-            <div className="admin-period-legend">
-              <span className="admin-period-legend-item">
-                <span className="admin-period-legend-dot admin-period-legend-dot-done" />
-                완료
-              </span>
-              <span className="admin-period-legend-item">
-                <span className="admin-period-legend-dot admin-period-legend-dot-pending" />
-                미완료
-              </span>
             </div>
 
             {periodTableRows.length > 0 && periodTableLabels.length > 0 ? (
