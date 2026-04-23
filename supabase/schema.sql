@@ -4,7 +4,8 @@ create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   username text not null unique,
   display_name text not null,
-  password_hash text not null,
+  password_hash text,
+  kakao_id text unique,
   role text not null check (role in ('user', 'admin')),
   is_active boolean not null default true,
   created_at timestamptz not null default now()

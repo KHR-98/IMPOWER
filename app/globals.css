@@ -392,6 +392,43 @@ button {
   font-weight: 800;
 }
 
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted, #888);
+  font-size: 0.8rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.kakao-login-button {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #fee500;
+  color: #191919;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.kakao-login-button:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
 .login-save-row {
   display: flex;
   align-items: center;

@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { useEffect, useState } from "react";
 
 import { loginAction, type LoginState } from "@/app/login/actions";
+import { KakaoLoginButton } from "@/components/kakao-login-button";
 
 const initialState: LoginState = {
   error: null,
@@ -98,6 +99,10 @@ export function LoginForm() {
       <Link href="/login/password-change" className="button-subtle login-form-link">
         비밀번호 변경
       </Link>
+      <div className="login-divider">
+        <span>또는</span>
+      </div>
+      <KakaoLoginButton />
     </form>
   );
 }

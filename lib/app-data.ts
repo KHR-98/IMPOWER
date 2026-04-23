@@ -17,7 +17,9 @@ import {
   authenticateSupabaseUser,
   changeSupabasePassword,
   correctSupabaseAttendanceRecord,
+  createKakaoUser,
   deleteSupabaseAdminUser,
+  getSessionUserByKakaoId,
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
   getSupabaseSessionUser,
@@ -130,6 +132,18 @@ export async function getSessionUserByUsername(username: string): Promise<Sessio
   return (await resolveDataSource()).dataSource === "supabase"
     ? getSupabaseSessionUser(username)
     : getDemoSessionUser(username);
+}
+
+export async function findUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
+  if ((await resolveDataSource()).dataSource !== "supabase") return null;
+  return getSessionUserByKakaoId(kakaoId);
+}
+
+export async function registerKakaoUser(kakaoId: string, displayName: string): Promise<SessionUser> {
+  if ((await resolveDataSource()).dataSource !== "supabase") {
+    throw new Error("카카오 회원가입은 Supabase 모드에서만 지원됩니다.");
+  }
+  return createKakaoUser(kakaoId, displayName);
 }
 
 export async function getUserTodayView(username: string): Promise<UserTodayView> {

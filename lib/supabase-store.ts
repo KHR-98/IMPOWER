@@ -551,6 +551,53 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
   };
 }
 
+export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from("users")
+    .select("username, display_name, role, is_active")
+    .eq("kakao_id", kakaoId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data || !data.is_active) {
+    return null;
+  }
+
+  return {
+    username: data.username,
+    displayName: data.display_name,
+    role: data.role,
+  };
+}
+
+export async function createKakaoUser(kakaoId: string, displayName: string): Promise<SessionUser> {
+  const client = getSupabaseAdminClient();
+  const username = `kakao_${kakaoId}`;
+
+  const { error } = await client.from("users").insert({
+    username,
+    display_name: displayName,
+    password_hash: null,
+    kakao_id: kakaoId,
+    role: "user",
+    is_active: true,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    username,
+    displayName,
+    role: "user",
+  };
+}
+
 export async function getSupabaseAdminUsers(): Promise<AdminUserListItem[]> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
