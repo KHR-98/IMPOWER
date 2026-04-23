@@ -27,6 +27,8 @@ const adminSettingsSchema = z
     settings: z.object({
       checkInWindow: timeWindowSchema,
       tbmWindow: timeWindowSchema,
+      tbmAfternoonWindow: timeWindowSchema,
+      tbmCheckoutWindow: timeWindowSchema,
       checkOutWindow: timeWindowSchema,
       maxGpsAccuracyM: z.number().int().min(10, "GPS 정확도는 10m 이상이어야 합니다.").max(1000, "GPS 정확도는 1000m 이하이어야 합니다."),
     }),
@@ -35,7 +37,9 @@ const adminSettingsSchema = z
   .superRefine((value, ctx) => {
     const windows = [
       ["출근", value.settings.checkInWindow],
-      ["TBM", value.settings.tbmWindow],
+      ["오전 TBM", value.settings.tbmWindow],
+      ["오후 TBM", value.settings.tbmAfternoonWindow],
+      ["퇴근 TBM", value.settings.tbmCheckoutWindow],
       ["퇴근", value.settings.checkOutWindow],
     ] as const;
 
@@ -83,12 +87,16 @@ export async function PATCH(request: Request) {
       ...baseSettings,
       checkInWindow: parsed.data.settings.checkInWindow,
       tbmWindow: parsed.data.settings.tbmWindow,
+      tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
+      tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
       checkOutWindow: parsed.data.settings.checkOutWindow,
       maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
       dayShift: {
         ...baseSettings.dayShift,
         checkInWindow: parsed.data.settings.checkInWindow,
         tbmMorningWindow: parsed.data.settings.tbmWindow,
+        tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
+        tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
         checkOutWindow: parsed.data.settings.checkOutWindow,
       },
     },
@@ -101,4 +109,3 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json(result);
 }
-

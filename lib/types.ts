@@ -115,6 +115,8 @@ export interface ShiftAttendanceSettings {
 export interface AppSettings {
   checkInWindow: TimeWindow;
   tbmWindow: TimeWindow;
+  tbmAfternoonWindow: TimeWindow;
+  tbmCheckoutWindow: TimeWindow;
   checkOutWindow: TimeWindow;
   dayShift: ShiftAttendanceSettings;
   lateShift: ShiftAttendanceSettings;

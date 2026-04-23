@@ -130,17 +130,21 @@ export function TimeWheelPicker({ label, value, onChange, disabled }: TimeWheelP
 
 /* ── Combined Time Settings Picker ────────────── */
 const SEGMENTS = [
-  { label: "출근 시작", key: "checkInWindow"  as const, field: "start" as const },
-  { label: "출근 종료", key: "checkInWindow"  as const, field: "end"   as const },
-  { label: "TBM 시작",  key: "tbmWindow"      as const, field: "start" as const },
-  { label: "TBM 종료",  key: "tbmWindow"      as const, field: "end"   as const },
-  { label: "퇴근 시작", key: "checkOutWindow" as const, field: "start" as const },
-  { label: "퇴근 종료", key: "checkOutWindow" as const, field: "end"   as const },
+  { label: "출근 시작",     key: "checkInWindow"      as const, field: "start" as const },
+  { label: "출근 종료",     key: "checkInWindow"      as const, field: "end"   as const },
+  { label: "오전TBM 시작",  key: "tbmWindow"          as const, field: "start" as const },
+  { label: "오전TBM 종료",  key: "tbmWindow"          as const, field: "end"   as const },
+  { label: "오후TBM 시작",  key: "tbmAfternoonWindow" as const, field: "start" as const },
+  { label: "오후TBM 종료",  key: "tbmAfternoonWindow" as const, field: "end"   as const },
+  { label: "퇴근TBM 시작",  key: "tbmCheckoutWindow"  as const, field: "start" as const },
+  { label: "퇴근TBM 종료",  key: "tbmCheckoutWindow"  as const, field: "end"   as const },
+  { label: "퇴근 시작",     key: "checkOutWindow"     as const, field: "start" as const },
+  { label: "퇴근 종료",     key: "checkOutWindow"     as const, field: "end"   as const },
 ];
 
 const SEGMENT_LABELS = SEGMENTS.map((s) => s.label);
 
-type SettingsKey = "checkInWindow" | "tbmWindow" | "checkOutWindow";
+type SettingsKey = "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow";
 
 export interface CombinedTimeSettingsPickerProps {
   settings: Record<SettingsKey, { start: string; end: string }>;

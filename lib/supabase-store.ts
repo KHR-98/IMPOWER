@@ -928,6 +928,14 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
     start: String(data.tbm_start ?? settings.tbmWindow.start),
     end: String(data.tbm_end ?? settings.tbmWindow.end),
   };
+  settings.tbmAfternoonWindow = {
+    start: String(data.tbm_afternoon_start ?? settings.tbmAfternoonWindow.start),
+    end: String(data.tbm_afternoon_end ?? settings.tbmAfternoonWindow.end),
+  };
+  settings.tbmCheckoutWindow = {
+    start: String(data.tbm_checkout_start ?? settings.tbmCheckoutWindow.start),
+    end: String(data.tbm_checkout_end ?? settings.tbmCheckoutWindow.end),
+  };
   settings.checkOutWindow = {
     start: String(data.check_out_start ?? settings.checkOutWindow.start),
     end: String(data.check_out_end ?? settings.checkOutWindow.end),
@@ -935,6 +943,8 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
 
   settings.dayShift.checkInWindow = { ...settings.checkInWindow };
   settings.dayShift.tbmMorningWindow = { ...settings.tbmWindow };
+  settings.dayShift.tbmAfternoonWindow = { ...settings.tbmAfternoonWindow };
+  settings.dayShift.tbmCheckoutWindow = { ...settings.tbmCheckoutWindow };
   settings.dayShift.checkOutWindow = { ...settings.checkOutWindow };
 
   return settings;
@@ -1430,6 +1440,10 @@ export async function saveSupabaseAdminConfiguration(input: {
     check_in_end: input.settings.checkInWindow.end,
     tbm_start: input.settings.tbmWindow.start,
     tbm_end: input.settings.tbmWindow.end,
+    tbm_afternoon_start: input.settings.tbmAfternoonWindow.start,
+    tbm_afternoon_end: input.settings.tbmAfternoonWindow.end,
+    tbm_checkout_start: input.settings.tbmCheckoutWindow.start,
+    tbm_checkout_end: input.settings.tbmCheckoutWindow.end,
     check_out_start: input.settings.checkOutWindow.start,
     check_out_end: input.settings.checkOutWindow.end,
     max_gps_accuracy_m: input.settings.maxGpsAccuracyM,

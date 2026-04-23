@@ -129,11 +129,13 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       <div className="wheel-settings-wrap">
         <CombinedTimeSettingsPicker
           settings={{
-            checkInWindow:  settings.checkInWindow,
-            tbmWindow:      settings.tbmWindow,
-            checkOutWindow: settings.checkOutWindow,
+            checkInWindow:      settings.checkInWindow,
+            tbmWindow:          settings.tbmWindow,
+            tbmAfternoonWindow: settings.tbmAfternoonWindow,
+            tbmCheckoutWindow:  settings.tbmCheckoutWindow,
+            checkOutWindow:     settings.checkOutWindow,
           }}
-          onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "checkOutWindow", field: "start" | "end", value: string) => void}
+          onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow", field: "start" | "end", value: string) => void}
           disabled={!enabled || pending}
         />
 
