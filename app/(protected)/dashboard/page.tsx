@@ -42,7 +42,7 @@ export default async function DashboardPage({
 
 {runtime.setupMessage ? <div className="error-box">{runtime.setupMessage}</div> : null}
 
-        <AttendanceActionPanel eventStates={view.eventStates} devCoordinates={devCoordinates} />
+        <AttendanceActionPanel eventStates={view.eventStates} devCoordinates={devCoordinates} variant="quick" />
       </section>
     </main>
   );
