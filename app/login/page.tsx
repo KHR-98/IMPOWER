@@ -31,7 +31,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="login-hero stack">
           <div className="login-hero-copy">
             <span className="brand-kicker">Secure Worksite</span>
-            <h1 className={`${loginTitleFont.className} login-title`}>PCS Axis</h1>
+            <h1 className={`${loginTitleFont.className} login-title`}>IMPOWER</h1>
           </div>
         </div>
         {kakaoError ? (
