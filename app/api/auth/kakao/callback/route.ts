@@ -30,15 +30,23 @@ export async function GET(request: Request) {
   const redirectUri = `${getRedirectBase(request)}/api/auth/kakao/callback`;
 
   // 1. Exchange code for access token
+  const tokenParams: Record<string, string> = {
+    grant_type: "authorization_code",
+    client_id: restApiKey,
+    redirect_uri: redirectUri,
+    code,
+  };
+
+  // Client Secret is now enabled by default — include if configured
+  const clientSecret = process.env.KAKAO_CLIENT_SECRET;
+  if (clientSecret) {
+    tokenParams.client_secret = clientSecret;
+  }
+
   const tokenRes = await fetch("https://kauth.kakao.com/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      client_id: restApiKey,
-      redirect_uri: redirectUri,
-      code,
-    }),
+    body: new URLSearchParams(tokenParams),
   });
 
   if (!tokenRes.ok) {
