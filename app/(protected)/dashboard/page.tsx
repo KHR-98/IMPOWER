@@ -10,9 +10,6 @@ function getPrimaryState(eventStates: AttendanceEventState[]) {
   return eventStates.find((state) => state.implemented && state.action && state.visible);
 }
 
-function getCompletedStates(eventStates: AttendanceEventState[]) {
-  return eventStates.filter((state) => state.implemented && state.occurredAt);
-}
 
 export default async function DashboardPage({
   searchParams,
@@ -33,7 +30,6 @@ export default async function DashboardPage({
     getRuntimeInfo(),
   ]);
   const primaryState = getPrimaryState(view.eventStates);
-  const completedStates = getCompletedStates(view.eventStates);
 
   return (
     <main className="check-screen">
@@ -77,27 +73,6 @@ export default async function DashboardPage({
         {runtime.setupMessage ? <div className="error-box">{runtime.setupMessage}</div> : null}
 
         <AttendanceActionPanel eventStates={view.eventStates} devCoordinates={devCoordinates} />
-
-        <section className="check-summary-panel check-summary-panel-mobile-secondary">
-          <div className="panel-header">
-            <div>
-              <h2 className="section-title">오늘 기록 요약</h2>
-              <p className="section-subtitle">이미 처리한 기록은 아래에서 바로 확인할 수 있습니다.</p>
-            </div>
-          </div>
-          {completedStates.length > 0 ? (
-            <div className="record-list compact-list">
-              {completedStates.map((state) => (
-                <div key={`done-${state.code}`} className="record-item">
-                  <span>{state.label}</span>
-                  <strong>{state.occurredAt?.slice(11, 16) ?? "완료"}</strong>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="notice small">아직 완료된 기록이 없습니다.</div>
-          )}
-        </section>
       </section>
     </main>
   );
