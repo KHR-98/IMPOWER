@@ -331,123 +331,139 @@ button {
   padding: 14px 0;
 }
 
+/* ── Login Shell ─────────────────────────────── */
 .login-shell {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(15, 109, 95, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(10, 79, 69, 0.14) 0%, transparent 50%),
+    linear-gradient(160deg, #e8f4f1 0%, #f0f7fb 50%, #eaf2ee 100%);
 }
 
+/* ── Login Card ──────────────────────────────── */
 .login-card {
-  width: min(460px, 100%);
-  padding: 48px 36px;
+  width: min(420px, 100%);
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow:
+    0 4px 24px rgba(10, 79, 69, 0.1),
+    0 32px 80px rgba(10, 79, 69, 0.18);
+  background: #fff;
+  /* reset inherited panel padding */
+  padding: 0 !important;
+  border: none !important;
+  backdrop-filter: none !important;
 }
 
-.login-hero {
-  gap: 12px;
-}
-
-.login-hero-copy {
+/* ── Brand Strip (top green section) ────────── */
+.login-brand-strip {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(140deg, #0a4f45 0%, #0f6d5f 60%, #148a78 100%);
+  padding: 52px 36px 44px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.login-brand-strip::before {
+  content: "";
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  top: -90px;
+  right: -60px;
+  pointer-events: none;
+}
+
+.login-brand-strip::after {
+  content: "";
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  bottom: -40px;
+  left: -30px;
+  pointer-events: none;
 }
 
 .login-title {
   margin: 0;
-  font-size: clamp(2.4rem, 10vw, 3.4rem);
-  line-height: 1.02;
+  color: #ffffff;
+  font-size: clamp(3rem, 12vw, 3.8rem);
+  line-height: 1;
   letter-spacing: -0.05em;
 }
 
-.login-account-box {
-  gap: 10px;
+.login-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
-.login-account-title {
-  font-weight: 800;
-}
-
-.login-account-list {
+/* ── Login Body (white section) ──────────────── */
+.login-body {
+  padding: 36px 36px 44px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 18px;
 }
 
-.login-account-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.login-guide {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .login-form-stack {
   flex-direction: column;
-  gap: 14px;
+  gap: 0;
 }
 
+/* ── Kakao Button ────────────────────────────── */
+.kakao-login-button {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fee500;
+  color: #191919;
+  font-size: 1rem;
+  font-weight: 800;
+  border-radius: 16px;
+  text-decoration: none;
+  box-shadow: 0 4px 20px rgba(254, 229, 0, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.kakao-login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(254, 229, 0, 0.45);
+}
+
+.kakao-login-button:active {
+  transform: translateY(0);
+}
+
+/* ── Unused legacy (kept for safety) ────────── */
 .login-submit-button {
   width: 100%;
   min-height: 56px;
   font-size: 1rem;
   font-weight: 800;
-}
-
-.login-divider {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted, #888);
-  font-size: 0.8rem;
-}
-
-.login-divider::before,
-.login-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.kakao-login-button {
-  width: 100%;
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #fee500;
-  color: #191919;
-  font-size: 0.95rem;
-  font-weight: 700;
-  border-radius: 999px;
-  text-decoration: none;
-  transition: transform 0.15s, opacity 0.15s;
-}
-
-.kakao-login-button:hover {
-  transform: translateY(-1px);
-  opacity: 0.92;
-}
-
-.login-save-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.login-save-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.login-save-toggle input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--brand);
 }
 
 .login-form-link,
@@ -1192,21 +1208,31 @@ button {
     line-height: 1.12;
   }
 
-  .login-card {
-    padding: 22px 18px;
-  }
-
-  .login-title {
-    font-size: clamp(2rem, 10vw, 2.9rem);
-  }
-
-  .login-save-row {
-    flex-direction: column;
+  .login-shell {
+    padding: 0;
     align-items: stretch;
   }
 
-  .login-save-toggle {
-    justify-content: flex-start;
+  .login-card {
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .login-brand-strip {
+    flex: 1;
+    padding: 72px 28px 48px;
+    justify-content: flex-end;
+  }
+
+  .login-title {
+    font-size: clamp(3.2rem, 14vw, 4rem);
+  }
+
+  .login-body {
+    padding: 32px 28px 52px;
   }
 
   .login-description {

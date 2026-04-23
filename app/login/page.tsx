@@ -27,19 +27,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   return (
     <main className="login-shell">
-      <section className="login-card stack">
-        <div className="login-hero stack">
-          <div className="login-hero-copy">
-            <span className="brand-kicker">Secure Worksite</span>
-            <h1 className={`${loginTitleFont.className} login-title`}>IMPOWER</h1>
-          </div>
+      <section className="login-card">
+        <div className="login-brand-strip">
+          <span className={`${loginTitleFont.className} login-title`}>IMPOWER</span>
+          <p className="login-subtitle">Secure Worksite 출결 관리</p>
         </div>
-        {kakaoError ? (
-          <div className="error-box">
-            <div>{kakaoError}</div>
-          </div>
-        ) : null}
-        <LoginForm />
+        <div className="login-body">
+          {kakaoError ? (
+            <div className="error-box">
+              <div>{kakaoError}</div>
+            </div>
+          ) : null}
+          <p className="login-guide">카카오 계정으로 간편하게 로그인하세요</p>
+          <LoginForm />
+        </div>
       </section>
     </main>
   );
