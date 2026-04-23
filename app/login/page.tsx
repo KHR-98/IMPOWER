@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <section className="login-card">
         <div className="login-brand-strip">
           <span className={`${loginTitleFont.className} login-title`}>IMPOWER</span>
-          <p className="login-subtitle">Secure Worksite 출결 관리</p>
+          <p className="login-subtitle">아임파워(주) 출결 관리</p>
         </div>
         <div className="login-body">
           {kakaoError ? (
