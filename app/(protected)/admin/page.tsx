@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { AttendanceActionPanel } from "@/components/attendance-action-panel";
 import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-correction-panel";
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-panel";
@@ -296,16 +295,6 @@ export default async function AdminPage({
           </article>
         </section>
 
-          {adminTodayView ? (
-            <section className="glass-panel admin-overview-action-panel stack">
-              <div className="panel-header">
-                <div>
-                  <h2 className="section-title">출결 버튼</h2>
-                </div>
-              </div>
-              <AttendanceActionPanel eventStates={adminTodayView.eventStates} devCoordinates={devCoordinates} variant="quick" />
-            </section>
-          ) : null}
         </>
       ) : null}
 
