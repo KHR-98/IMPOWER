@@ -1209,30 +1209,7 @@ button {
   }
 
   .login-shell {
-    padding: 0;
-    align-items: stretch;
-  }
-
-  .login-card {
-    border-radius: 0;
-    box-shadow: none;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  .login-brand-strip {
-    flex: 1;
-    padding: 72px 28px 48px;
-    justify-content: flex-end;
-  }
-
-  .login-title {
-    font-size: clamp(3.2rem, 14vw, 4rem);
-  }
-
-  .login-body {
-    padding: 32px 28px 52px;
+    padding: 24px 16px;
   }
 
   .login-description {
