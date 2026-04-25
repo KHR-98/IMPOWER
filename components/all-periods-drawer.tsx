@@ -13,9 +13,11 @@ const LATE_COLUMNS = ["출근", "퇴근"];
 export function AllPeriodsTrigger({
   open,
   section,
+  periodTitle,
 }: {
   open: boolean;
   section: string;
+  periodTitle: string;
 }) {
   const href = open ? `?section=${section}` : `?section=${section}&allPeriods=1`;
 
@@ -25,7 +27,7 @@ export function AllPeriodsTrigger({
       className={`button-subtle all-periods-trigger all-periods-trigger-wrap${open ? " all-periods-trigger-active" : ""}`}
       scroll={false}
     >
-      전체출결표
+      {open ? periodTitle : "전체출결표"}
     </Link>
   );
 }

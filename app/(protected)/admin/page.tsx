@@ -271,7 +271,7 @@ export default async function AdminPage({
         <section className="stack admin-overview-section">
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
             <div className="panel-header admin-period-table-header">
-              <AllPeriodsTrigger open={showAllPeriods} section={selectedSection} />
+              <AllPeriodsTrigger open={showAllPeriods} section={selectedSection} periodTitle={periodTableTitle} />
               <div>
                 <h2 className="section-title">{showAllPeriods ? "전체 시간대 출결현황" : periodTableTitle}</h2>
                 <div className="admin-period-legend">
