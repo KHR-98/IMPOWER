@@ -273,7 +273,7 @@ export default async function AdminPage({
             <div className="panel-header admin-period-table-header">
               <AllPeriodsTrigger open={showAllPeriods} section={selectedSection} />
               <div>
-                <h2 className="section-title">{periodTableTitle}</h2>
+                <h2 className="section-title">{showAllPeriods ? "전체 시간대 출결현황" : periodTableTitle}</h2>
                 <div className="admin-period-legend">
                   <span className="admin-period-legend-item">
                     <span className="admin-period-legend-dot admin-period-legend-dot-done" />
@@ -288,7 +288,9 @@ export default async function AdminPage({
               <AdminRefreshButton />
             </div>
 
-            {periodTableRows.length > 0 && periodTableLabels.length > 0 ? (
+            {showAllPeriods ? (
+              <AllPeriodsExpanded rows={allPeriodsRows} isPreview={allPeriodsIsPreview} />
+            ) : periodTableRows.length > 0 && periodTableLabels.length > 0 ? (
               <>
                 {specialCaseGroups.length > 0 ? (
                   <div className="notice small admin-special-case-notice">
@@ -338,8 +340,6 @@ export default async function AdminPage({
               <div className="notice small">현재는 별도로 확인할 시간대 출결표가 없습니다.</div>
             )}
           </article>
-
-          {showAllPeriods && <AllPeriodsExpanded rows={allPeriodsRows} isPreview={allPeriodsIsPreview} />}
         </section>
 
         </>

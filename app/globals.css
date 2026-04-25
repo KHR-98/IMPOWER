@@ -943,10 +943,7 @@ button {
 }
 
 .all-periods-expanded {
-  border-radius: 20px;
-  border: 1px solid rgba(15, 109, 95, 0.1);
-  background: rgba(255, 255, 255, 0.78);
-  padding: 20px;
+  display: contents;
 }
 
 .all-periods-preview-notice {
