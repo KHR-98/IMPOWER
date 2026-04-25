@@ -183,94 +183,108 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
         </button>
       </div>
 
-      <div className="zone-editor-list">
+      <div className="zone-editor-list user-mgmt-grid">
         {zones.map((zone, index) => {
           const selected = zone.id === selectedZoneId;
 
           return (
             <div key={zone.id} className={`zone-editor-card stack${selected ? " zone-editor-card-selected" : ""}`}>
               <div className="zone-editor-header">
-                <div className="inline-row">
-                  <strong>지점 {index + 1}</strong>
-                  <span className="badge">{zone.type === "tbm" ? "TBM" : "출입"}</span>
-                  {selected ? <span className="status-pill status-ready">현재 선택됨</span> : null}
+                <div className="stack" style={{ gap: 8 }}>
+                  <div className="inline-row">
+                    <strong>{zone.name || `지점 ${index + 1}`}</strong>
+                    <span className="badge">{zone.type === "tbm" ? "TBM" : "출입"}</span>
+                  </div>
+                  <div className="inline-row">
+                    <span className={`status-pill ${zone.isActive ? "status-ready" : "status-locked"}`}>
+                      {zone.isActive ? "활성" : "비활성"}
+                    </span>
+                  </div>
                 </div>
                 <button type="button" className="button-subtle" onClick={() => setSelectedZoneId(zone.id)}>
                   {selected ? "선택 중" : "선택"}
                 </button>
               </div>
-              <div className="settings-grid zone-editor-body">
-                <div className="field">
-                  <label htmlFor={`zone-name-${zone.id}`}>지점 이름</label>
-                  <input
-                    id={`zone-name-${zone.id}`}
-                    type="text"
-                    value={zone.name}
-                    disabled={!isEditing || !enabled || pending}
-                    onChange={(event) => updateZone(zone.id, { name: event.target.value })}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={`zone-type-${zone.id}`}>지점 유형</label>
-                  <select
-                    id={`zone-type-${zone.id}`}
-                    value={zone.type}
-                    disabled={!isEditing || !enabled || pending}
-                    onChange={(event) => updateZone(zone.id, { type: event.target.value as ZoneType })}
-                  >
-                    <option value="entry">출입</option>
-                    <option value="tbm">TBM</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor={`zone-lat-${zone.id}`}>위도</label>
-                  <input
-                    id={`zone-lat-${zone.id}`}
-                    type="number"
-                    step="0.000001"
-                    value={zone.latitude}
-                    disabled={!isEditing || !enabled || pending}
-                    onChange={(event) => updateZone(zone.id, { latitude: Number(event.target.value) })}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={`zone-lng-${zone.id}`}>경도</label>
-                  <input
-                    id={`zone-lng-${zone.id}`}
-                    type="number"
-                    step="0.000001"
-                    value={zone.longitude}
-                    disabled={!isEditing || !enabled || pending}
-                    onChange={(event) => updateZone(zone.id, { longitude: Number(event.target.value) })}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={`zone-radius-${zone.id}`}>반경(m)</label>
-                  <input
-                    id={`zone-radius-${zone.id}`}
-                    type="number"
-                    min={10}
-                    max={5000}
-                    value={zone.radiusM}
-                    disabled={!isEditing || !enabled || pending}
-                    onChange={(event) => updateZone(zone.id, { radiusM: Number(event.target.value) })}
-                  />
-                </div>
-                <label className="checkbox-row" htmlFor={`zone-active-${zone.id}`}>
-                  <input
-                    id={`zone-active-${zone.id}`}
-                    type="checkbox"
-                    checked={zone.isActive}
-                    disabled={!isEditing || !enabled || pending}
-                    onChange={(event) => updateZone(zone.id, { isActive: event.target.checked })}
-                  />
-                  활성 지점으로 사용
-                </label>
-              </div>
             </div>
           );
         })}
       </div>
+
+      {(() => {
+        const zone = zones.find((z) => z.id === selectedZoneId);
+        const index = zones.findIndex((z) => z.id === selectedZoneId);
+        if (!zone) return null;
+        return (
+          <div className="settings-grid zone-editor-body">
+            <div className="field">
+              <label htmlFor="zone-name">지점 이름</label>
+              <input
+                id="zone-name"
+                type="text"
+                value={zone.name}
+                disabled={!isEditing || !enabled || pending}
+                onChange={(event) => updateZone(zone.id, { name: event.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="zone-type">지점 유형</label>
+              <select
+                id="zone-type"
+                value={zone.type}
+                disabled={!isEditing || !enabled || pending}
+                onChange={(event) => updateZone(zone.id, { type: event.target.value as ZoneType })}
+              >
+                <option value="entry">출입</option>
+                <option value="tbm">TBM</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="zone-lat">위도</label>
+              <input
+                id="zone-lat"
+                type="number"
+                step="0.000001"
+                value={zone.latitude}
+                disabled={!isEditing || !enabled || pending}
+                onChange={(event) => updateZone(zone.id, { latitude: Number(event.target.value) })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="zone-lng">경도</label>
+              <input
+                id="zone-lng"
+                type="number"
+                step="0.000001"
+                value={zone.longitude}
+                disabled={!isEditing || !enabled || pending}
+                onChange={(event) => updateZone(zone.id, { longitude: Number(event.target.value) })}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="zone-radius">반경(m)</label>
+              <input
+                id="zone-radius"
+                type="number"
+                min={10}
+                max={5000}
+                value={zone.radiusM}
+                disabled={!isEditing || !enabled || pending}
+                onChange={(event) => updateZone(zone.id, { radiusM: Number(event.target.value) })}
+              />
+            </div>
+            <label className="checkbox-row" htmlFor="zone-active">
+              <input
+                id="zone-active"
+                type="checkbox"
+                checked={zone.isActive}
+                disabled={!isEditing || !enabled || pending}
+                onChange={(event) => updateZone(zone.id, { isActive: event.target.checked })}
+              />
+              활성 지점으로 사용
+            </label>
+          </div>
+        );
+      })()}
 
       <div className="inline-row">
         <button type="button" className="button" disabled={!isEditing || !enabled || pending} onClick={handleSave}>
