@@ -22,7 +22,7 @@ const WORK_TYPES: WorkTypeOption[] = [
 ];
 
 function currentWorkTypeLabel(entry: RosterEntry | undefined): string {
-  if (!entry) return "";
+  if (!entry) return "미설정";
   if (!entry.isScheduled) {
     switch (entry.scheduleReasonCode) {
       case "leave": return "연차";
@@ -33,6 +33,11 @@ function currentWorkTypeLabel(entry: RosterEntry | undefined): string {
     }
   }
   return entry.shiftType === "late" ? "늦조" : "주간조";
+}
+
+function workTypeStatusClass(entry: RosterEntry | undefined): string {
+  if (!entry) return "status-pending";
+  return entry.isScheduled ? "status-ready" : "status-pending";
 }
 
 export function AttendanceManagementPanel({
@@ -76,36 +81,34 @@ export function AttendanceManagementPanel({
   const activeUsers = users.filter((u) => u.isActive);
 
   return (
-    <div className="attendance-mgmt-list">
+    <div className="mgmt-user-list">
       {activeUsers.map((user) => {
         const entry = entryMap.get(user.username);
         const isOpen = openUsername === user.username;
         const isSaving = saving === user.username;
-        const currentLabel = currentWorkTypeLabel(entry);
+        const label = currentWorkTypeLabel(entry);
+        const statusClass = workTypeStatusClass(entry);
 
         return (
-          <div key={user.username} className="attendance-mgmt-row">
-            <div className="attendance-mgmt-row-header">
-              <button
-                className={`attendance-mgmt-name-btn${isOpen ? " attendance-mgmt-name-btn-active" : ""}`}
-                onClick={() => setOpenUsername(isOpen ? null : user.username)}
-                disabled={isSaving}
-              >
-                {user.displayName}
-              </button>
-              {currentLabel && (
-                <span className={`status-pill ${entry?.isScheduled ? "status-ready" : "status-pending"}`}>
-                  {currentLabel}
-                </span>
-              )}
-            </div>
+          <div key={user.username} className={`mgmt-user-row${isOpen ? " mgmt-user-row-open" : ""}`}>
+            <button
+              className="mgmt-user-header"
+              onClick={() => setOpenUsername(isOpen ? null : user.username)}
+              disabled={isSaving}
+            >
+              <span className="mgmt-user-name">
+                {isSaving ? "저장 중..." : user.displayName}
+              </span>
+              <span className={`status-pill ${statusClass}`}>{label}</span>
+              <span className="mgmt-user-chevron">{isOpen ? "▲" : "▼"}</span>
+            </button>
 
             {isOpen && (
-              <div className="attendance-mgmt-options">
+              <div className="mgmt-user-options">
                 {WORK_TYPES.map((option) => (
                   <button
                     key={option.label}
-                    className="attendance-mgmt-option-btn"
+                    className={`mgmt-option-btn${label === option.label ? " mgmt-option-btn-active" : ""}`}
                     onClick={() => handleSelect(user, option)}
                     disabled={isSaving}
                   >

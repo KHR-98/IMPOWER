@@ -4,7 +4,6 @@ import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-co
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-drawer";
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
-import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-panel";
 import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserImportPanel } from "@/components/admin-user-import-panel";
@@ -16,18 +15,17 @@ import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode } from "@/lib/types";
 
-type AdminSectionKey = "overview" | "users" | "operations" | "accounts" | "system";
+type AdminSectionKey = "overview" | "users" | "accounts" | "system";
 
 const ADMIN_SECTION_OPTIONS: Array<{ key: AdminSectionKey; label: string }> = [
   { key: "overview", label: "오늘 현황" },
   { key: "users", label: "근태 관리" },
-  { key: "operations", label: "운영 관리" },
   { key: "accounts", label: "계정 관리" },
   { key: "system", label: "시스템 설정" },
 ];
 
 function normalizeAdminSection(section: string | undefined): AdminSectionKey {
-  if (section === "users" || section === "operations" || section === "accounts" || section === "system") {
+  if (section === "users" || section === "accounts" || section === "system") {
     return section;
   }
 
@@ -273,35 +271,18 @@ export default async function AdminPage({
       {selectedSection === "users" ? (
         <section className="stack">
           <article className="glass-panel stack admin-management-panel">
-            <div className="panel-header">
-              <div>
-                <h2 className="section-title">근태 관리</h2>
-              </div>
+            <AdminRosterSyncPanel enabled={runtime.dataSource === "supabase" && runtime.rosterSyncConfigured} />
+            <div className="mgmt-section-divider">
+              <span className="mgmt-section-label">근태 설정</span>
             </div>
             <AttendanceManagementPanel
               users={adminUsers}
               rosterEntries={dashboard.scheduledUsers}
               workDate={dashboard.dateKey}
             />
-          </article>
-        </section>
-      ) : null}
-
-      {selectedSection === "operations" ? (
-        <section className="stack">
-          <article className="glass-panel stack admin-management-panel">
-            <div className="panel-header">
-              <div>
-                <h2 className="section-title">운영 관리</h2>
-                <p className="section-subtitle">당일 출결 운영을 관리합니다.</p>
-              </div>
+            <div className="mgmt-section-divider">
+              <span className="mgmt-section-label">출결 정정</span>
             </div>
-            <AdminRosterSyncPanel enabled={runtime.dataSource === "supabase" && runtime.rosterSyncConfigured} />
-            <AdminRosterControlsPanel
-              dateKey={dashboard.dateKey}
-              entries={dashboard.scheduledUsers}
-              enabled={runtime.dataSource === "supabase"}
-            />
             <AdminAttendanceCorrectionPanel
               dateKey={dashboard.dateKey}
               rows={dashboard.rows}
