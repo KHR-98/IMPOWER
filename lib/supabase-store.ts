@@ -8,7 +8,7 @@ import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period"
 import { buildOperationalSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
-import { getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
+import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
 import type {
