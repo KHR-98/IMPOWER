@@ -34,79 +34,6 @@ function normalizeAdminSection(section: string | undefined): AdminSectionKey {
   return "overview";
 }
 
-function buildPreviewRows(input: {
-  rows: Awaited<ReturnType<typeof getDashboardView>>["rows"];
-  scheduledUsers: Awaited<ReturnType<typeof getDashboardView>>["scheduledUsers"];
-}) {
-  const rowMap = new Map(input.rows.map((row) => [row.username, row]));
-  const scheduledPreviewRows = input.scheduledUsers.slice(0, 6).map((entry) => {
-    const row = rowMap.get(entry.username);
-
-    return {
-      id: row?.id ?? `preview-${entry.username}`,
-      username: entry.username,
-      displayName: entry.displayName,
-      shiftLabel: entry.shiftType === "late" ? "늦조" : "주간조",
-      correctedByAdmin: Boolean(row?.correctedByAdmin),
-      statuses: [
-        { label: "출근", occurredAt: row?.checkIn?.occurredAt ?? null },
-        { label: "오전 TBM", occurredAt: row?.tbmMorning?.occurredAt ?? row?.tbm?.occurredAt ?? null },
-        { label: "퇴근", occurredAt: row?.checkOut?.occurredAt ?? null },
-      ],
-    };
-  });
-
-  if (scheduledPreviewRows.length > 0) {
-    return {
-      labels: ["출근", "오전 TBM", "퇴근"],
-      rows: scheduledPreviewRows,
-      mode: "live-preview" as const,
-    };
-  }
-
-  return {
-    labels: ["출근", "오전 TBM", "퇴근"],
-    rows: [
-      {
-        id: "example-day-1",
-        username: "kim",
-        displayName: "김현장",
-        shiftLabel: "주간조",
-        correctedByAdmin: false,
-        statuses: [
-          { label: "출근", occurredAt: "2026-03-25T06:54:00+09:00" },
-          { label: "오전 TBM", occurredAt: null },
-          { label: "퇴근", occurredAt: null },
-        ],
-      },
-      {
-        id: "example-day-2",
-        username: "park",
-        displayName: "박작업",
-        shiftLabel: "주간조",
-        correctedByAdmin: true,
-        statuses: [
-          { label: "출근", occurredAt: "2026-03-25T07:12:00+09:00" },
-          { label: "오전 TBM", occurredAt: "2026-03-25T08:02:00+09:00" },
-          { label: "퇴근", occurredAt: null },
-        ],
-      },
-      {
-        id: "example-late-1",
-        username: "lee",
-        displayName: "이늦조",
-        shiftLabel: "늦조",
-        correctedByAdmin: false,
-        statuses: [
-          { label: "출근", occurredAt: null },
-          { label: "오전 TBM", occurredAt: null },
-          { label: "퇴근", occurredAt: null },
-        ],
-      },
-    ],
-    mode: "example" as const,
-  };
-}
 
 const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military", "blocked", "holiday"];
 function getSpecialCaseLabel(code: RosterReasonCode): string {
@@ -158,10 +85,6 @@ export default async function AdminPage({
   const currentPeriodPendingTotal = dashboard.currentPeriodStats.reduce((sum, stat) => sum + stat.pendingCount, 0);
   const currentPeriodPendingPeople = currentPeriodRows.filter((row) => row.statuses.some((s) => !s.occurredAt)).length;
   const currentPeriodCompletedPeople = currentPeriodRows.length - currentPeriodPendingPeople;
-  const previewTable = buildPreviewRows({
-    rows: dashboard.rows,
-    scheduledUsers: dashboard.scheduledUsers,
-  });
   const specialCaseSourceRows = dashboard.scheduledUsers;
   const specialCaseGroups = SPECIAL_CASE_ORDER.map((reasonCode) => {
     const names = specialCaseSourceRows
@@ -174,8 +97,8 @@ export default async function AdminPage({
       names,
     };
   }).filter((group) => group.names.length > 0);
-  const periodTableLabels = currentPeriodRows.length > 0 ? currentPeriodLabels : previewTable.labels;
-  const periodTableRows = currentPeriodRows.length > 0 ? currentPeriodRows : previewTable.rows;
+  const periodTableLabels = currentPeriodLabels;
+  const periodTableRows = currentPeriodRows;
   const currentPeriodGridTemplate = `1.15fr repeat(${Math.max(periodTableLabels.length, 1)}, minmax(0, 1fr))`;
   const buildAllPeriodsRow = (u: { username: string; displayName: string; shiftType: "day" | "late" }, record: typeof dashboard.rows[number] | undefined): AllPeriodsRow => ({
     username: u.username,

@@ -222,7 +222,7 @@ function getTargetEntries(entries: RosterEntry[], periodCode: CurrentPeriodCode)
 }
 
 export function getCurrentPeriodStatuses(
-  row: AttendanceRecord,
+  row: AttendanceRecord | null,
   periodCode: CurrentPeriodCode,
 ): CurrentPeriodOperatorStatus[] {
   const definition = PERIOD_DEFINITIONS.find((item) => item.code === periodCode);
@@ -233,7 +233,7 @@ export function getCurrentPeriodStatuses(
 
   return definition.stages.map((stage) => ({
     label: stage.label,
-    occurredAt: stage.getPoint(row)?.occurredAt ?? null,
+    occurredAt: row ? (stage.getPoint(row)?.occurredAt ?? null) : null,
   }));
 }
 
@@ -243,29 +243,22 @@ export function buildCurrentPeriodOperatorRows(input: {
   rows: AttendanceRecord[];
 }): CurrentPeriodOperatorRow[] {
   const targetEntries = getTargetEntries(input.scheduledUsers, input.periodCode);
-  const targetUsernames = new Set(targetEntries.map((entry) => entry.username));
-  const targetEntryMap = new Map(targetEntries.map((entry) => [entry.username, entry]));
+  const recordMap = new Map(input.rows.map((row) => [row.username, row]));
 
-  return input.rows
-    .filter((row) => targetUsernames.has(row.username))
-    .map((row) => {
-      const entry = targetEntryMap.get(row.username);
-
-      if (!entry) {
-        return null;
-      }
+  return targetEntries
+    .map((entry) => {
+      const record = recordMap.get(entry.username) ?? null;
 
       return {
-        id: row.id,
-        username: row.username,
-        displayName: row.displayName,
+        id: record?.id ?? entry.username,
+        username: entry.username,
+        displayName: entry.displayName,
         shiftLabel: entry.shiftType === "late" ? "늦조" : "주간조",
         scheduledLabel: "대상",
-        correctedByAdmin: row.correctedByAdmin,
-        statuses: getCurrentPeriodStatuses(row, input.periodCode),
+        correctedByAdmin: record?.correctedByAdmin ?? false,
+        statuses: getCurrentPeriodStatuses(record, input.periodCode),
       } satisfies CurrentPeriodOperatorRow;
     })
-    .filter((row): row is CurrentPeriodOperatorRow => row !== null)
     .sort((left, right) => {
       const leftPending = left.statuses.filter((status) => !status.occurredAt).length;
       const rightPending = right.statuses.filter((status) => !status.occurredAt).length;
