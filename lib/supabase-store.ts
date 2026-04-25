@@ -772,15 +772,21 @@ export async function deleteSupabaseAdminUser(
   const { error: rosterDeleteError } = await client.from("roster_entries").delete().eq("username", username);
   if (rosterDeleteError) throw rosterDeleteError;
 
-  const { error: attendanceDeleteError } = await client.from("attendance_records").delete().eq("username", username);
-  if (attendanceDeleteError) throw attendanceDeleteError;
-
   const { error: deleteError } = await client.from("users").delete().eq("username", username);
-  if (deleteError) throw deleteError;
+  if (deleteError) {
+    const msg = String(deleteError.message ?? "");
+    if (/foreign key|violates/i.test(msg)) {
+      return {
+        ok: false,
+        message: "출퇴근 기록 외래키 제약이 남아 있습니다. Supabase SQL 에디터에서 다음을 실행하세요: ALTER TABLE attendance_records DROP CONSTRAINT attendance_records_username_fkey;",
+      };
+    }
+    throw deleteError;
+  }
 
   return {
     ok: true,
-    message: "계정과 관련 기록을 모두 삭제했습니다.",
+    message: "계정을 삭제했습니다. 출퇴근 기록은 보존됩니다.",
   };
 }
 
