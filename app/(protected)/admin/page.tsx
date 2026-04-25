@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-correction-panel";
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
+import { AllPeriodsDrawer } from "@/components/all-periods-drawer";
+import type { AllPeriodsRow } from "@/components/all-periods-drawer";
 import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserImportPanel } from "@/components/admin-user-import-panel";
@@ -172,6 +174,26 @@ export default async function AdminPage({
   const periodTableLabels = currentPeriodRows.length > 0 ? currentPeriodLabels : previewTable.labels;
   const periodTableRows = currentPeriodRows.length > 0 ? currentPeriodRows : previewTable.rows;
   const currentPeriodGridTemplate = `1.15fr repeat(${Math.max(periodTableLabels.length, 1)}, minmax(0, 1fr))`;
+  const allPeriodsRows: AllPeriodsRow[] = dashboard.scheduledUsers
+    .filter((u) => u.isScheduled)
+    .map((u) => {
+      const record = dashboard.rows.find((r) => r.username === u.username);
+      const items =
+        u.shiftType === "day"
+          ? [
+              { label: "출근", done: !!record?.checkIn },
+              { label: "오전 TBM", done: !!(record?.tbmMorning ?? record?.tbm) },
+              { label: "오후 TBM", done: !!record?.tbmAfternoon },
+              { label: "퇴근 TBM", done: !!record?.tbmCheckout },
+              { label: "퇴근", done: !!record?.checkOut },
+            ]
+          : [
+              { label: "출근", done: !!record?.checkIn },
+              { label: "퇴근", done: !!record?.checkOut },
+            ];
+      return { username: u.username, displayName: u.displayName, shiftType: u.shiftType, items };
+    });
+
   const periodLabel = dashboard.currentPeriod.label;
   const periodTableTitle =
     dashboard.currentPeriod.code === "none"
@@ -232,6 +254,7 @@ export default async function AdminPage({
         <section className="stack admin-overview-section">
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
             <div className="panel-header admin-period-table-header">
+              <AllPeriodsDrawer rows={allPeriodsRows} />
               <div>
                 <h2 className="section-title">{periodTableTitle}</h2>
                 <div className="admin-period-legend">
