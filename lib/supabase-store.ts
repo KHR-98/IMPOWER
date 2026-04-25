@@ -942,11 +942,23 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
     end: String(data.check_out_end ?? settings.checkOutWindow.end),
   };
 
+  settings.lateCheckInWindow = {
+    start: String(data.late_check_in_start ?? settings.lateCheckInWindow.start),
+    end: String(data.late_check_in_end ?? settings.lateCheckInWindow.end),
+  };
+  settings.lateCheckOutWindow = {
+    start: String(data.late_check_out_start ?? settings.lateCheckOutWindow.start),
+    end: String(data.late_check_out_end ?? settings.lateCheckOutWindow.end),
+  };
+
   settings.dayShift.checkInWindow = { ...settings.checkInWindow };
   settings.dayShift.tbmMorningWindow = { ...settings.tbmWindow };
   settings.dayShift.tbmAfternoonWindow = { ...settings.tbmAfternoonWindow };
   settings.dayShift.tbmCheckoutWindow = { ...settings.tbmCheckoutWindow };
   settings.dayShift.checkOutWindow = { ...settings.checkOutWindow };
+
+  settings.lateShift.checkInWindow = { ...settings.lateCheckInWindow };
+  settings.lateShift.checkOutWindow = { ...settings.lateCheckOutWindow };
 
   return settings;
 }
@@ -1472,6 +1484,10 @@ export async function saveSupabaseAdminConfiguration(input: {
     tbm_checkout_end: input.settings.tbmCheckoutWindow.end,
     check_out_start: input.settings.checkOutWindow.start,
     check_out_end: input.settings.checkOutWindow.end,
+    late_check_in_start: input.settings.lateCheckInWindow.start,
+    late_check_in_end: input.settings.lateCheckInWindow.end,
+    late_check_out_start: input.settings.lateCheckOutWindow.start,
+    late_check_out_end: input.settings.lateCheckOutWindow.end,
     max_gps_accuracy_m: input.settings.maxGpsAccuracyM,
     google_sheet_id: latestSettingsRow?.google_sheet_id ?? null,
     google_sheet_tab_name: latestSettingsRow?.google_sheet_tab_name ?? "Roster",

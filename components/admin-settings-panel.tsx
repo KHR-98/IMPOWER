@@ -134,8 +134,10 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
             tbmAfternoonWindow: settings.tbmAfternoonWindow,
             tbmCheckoutWindow:  settings.tbmCheckoutWindow,
             checkOutWindow:     settings.checkOutWindow,
+            lateCheckInWindow:  settings.lateCheckInWindow,
+            lateCheckOutWindow: settings.lateCheckOutWindow,
           }}
-          onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow", field: "start" | "end", value: string) => void}
+          onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow", field: "start" | "end", value: string) => void}
           disabled={!enabled || pending}
         />
 

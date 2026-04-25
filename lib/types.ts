@@ -118,6 +118,8 @@ export interface AppSettings {
   tbmAfternoonWindow: TimeWindow;
   tbmCheckoutWindow: TimeWindow;
   checkOutWindow: TimeWindow;
+  lateCheckInWindow: TimeWindow;
+  lateCheckOutWindow: TimeWindow;
   dayShift: ShiftAttendanceSettings;
   lateShift: ShiftAttendanceSettings;
   maxGpsAccuracyM: number;

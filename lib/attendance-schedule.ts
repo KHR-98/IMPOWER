@@ -46,6 +46,8 @@ export function buildOperationalSettings(maxGpsAccuracyM: number = 100): AppSett
     tbmAfternoonWindow: { ...(DEFAULT_DAY_SHIFT_SETTINGS.tbmAfternoonWindow ?? { start: "13:35", end: "13:45" }) },
     tbmCheckoutWindow: { ...(DEFAULT_DAY_SHIFT_SETTINGS.tbmCheckoutWindow ?? { start: "16:30", end: "16:45" }) },
     checkOutWindow: { ...DEFAULT_DAY_SHIFT_SETTINGS.checkOutWindow },
+    lateCheckInWindow: { ...DEFAULT_LATE_SHIFT_SETTINGS.checkInWindow },
+    lateCheckOutWindow: { ...DEFAULT_LATE_SHIFT_SETTINGS.checkOutWindow },
     dayShift: cloneShiftSettings(DEFAULT_DAY_SHIFT_SETTINGS),
     lateShift: cloneShiftSettings(DEFAULT_LATE_SHIFT_SETTINGS),
     maxGpsAccuracyM,
