@@ -271,9 +271,6 @@ export default async function AdminPage({
         <section className="stack">
           <article className="glass-panel stack admin-management-panel">
             <AdminRosterSyncPanel enabled={runtime.dataSource === "supabase" && runtime.rosterSyncConfigured} />
-            <div className="mgmt-section-divider">
-              <span className="mgmt-section-label">근태 설정</span>
-            </div>
             <AttendanceManagementPanel
               users={adminUsers}
               rosterEntries={dashboard.scheduledUsers}

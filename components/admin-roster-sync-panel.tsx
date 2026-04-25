@@ -44,6 +44,7 @@ export function AdminRosterSyncPanel({ enabled }: { enabled: boolean }) {
         <button
           type="button"
           className="button"
+          style={{ whiteSpace: "nowrap" }}
           disabled={!enabled || pending}
           onClick={handleSync}
         >
