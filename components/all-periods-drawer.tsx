@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 
 export interface AllPeriodsRow {
   username: string;
@@ -12,44 +10,35 @@ export interface AllPeriodsRow {
 const DAY_COLUMNS = ["출근", "오전 TBM", "오후 TBM", "퇴근 TBM", "퇴근"];
 const LATE_COLUMNS = ["출근", "퇴근"];
 
-export function AllPeriodsDrawer({ rows }: { rows: AllPeriodsRow[] }) {
-  const [open, setOpen] = useState(false);
+export function AllPeriodsTrigger({
+  open,
+  section,
+}: {
+  open: boolean;
+  section: string;
+}) {
+  const href = open ? `?section=${section}` : `?section=${section}&allPeriods=1`;
 
+  return (
+    <Link
+      href={href}
+      className={`button-subtle all-periods-trigger all-periods-trigger-wrap${open ? " all-periods-trigger-active" : ""}`}
+      scroll={false}
+    >
+      전체출결표
+    </Link>
+  );
+}
+
+export function AllPeriodsExpanded({ rows }: { rows: AllPeriodsRow[] }) {
   const dayRows = rows.filter((r) => r.shiftType === "day");
   const lateRows = rows.filter((r) => r.shiftType === "late");
 
   return (
-    <div className="all-periods-trigger-wrap">
-      <button
-        type="button"
-        className="button-subtle all-periods-trigger"
-        onClick={() => setOpen(true)}
-      >
-        전체 현황
-      </button>
-
-      {open && (
-        <div
-          className="all-periods-overlay"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      <div className={`all-periods-drawer${open ? " all-periods-drawer-open" : ""}`}>
-        <div className="all-periods-drawer-header">
-          <h3 className="all-periods-drawer-title">전체 시간대 출결현황</h3>
-          <button
-            type="button"
-            className="button-subtle all-periods-close"
-            onClick={() => setOpen(false)}
-          >
-            닫기
-          </button>
-        </div>
-        <div className="all-periods-drawer-body">
-          <AllPeriodsGroup label="주간조" rows={dayRows} columns={DAY_COLUMNS} />
-          <AllPeriodsGroup label="늦조" rows={lateRows} columns={LATE_COLUMNS} />
-        </div>
+    <div className="all-periods-expanded">
+      <div className="all-periods-expanded-body">
+        <AllPeriodsGroup label="주간조" rows={dayRows} columns={DAY_COLUMNS} />
+        <AllPeriodsGroup label="늦조" rows={lateRows} columns={LATE_COLUMNS} />
       </div>
     </div>
   );
@@ -73,7 +62,10 @@ function AllPeriodsGroup({
       <div className="all-periods-group-label">
         {label} ({rows.length}명)
       </div>
-      <div className="all-periods-table-head" style={{ gridTemplateColumns: gridTemplate }}>
+      <div
+        className="all-periods-table-head"
+        style={{ gridTemplateColumns: gridTemplate }}
+      >
         <span>이름</span>
         {columns.map((col) => (
           <span key={col}>{col}</span>

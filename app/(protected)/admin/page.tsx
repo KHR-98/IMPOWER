@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-correction-panel";
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
-import { AllPeriodsDrawer } from "@/components/all-periods-drawer";
+import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-drawer";
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
 import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
@@ -131,11 +131,12 @@ function getSpecialCaseLabel(code: RosterReasonCode): string {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ section?: string; focus?: string }>;
+  searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string }>;
 }) {
   const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
+  const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(),
     getRuntimeInfo(),
@@ -254,7 +255,7 @@ export default async function AdminPage({
         <section className="stack admin-overview-section">
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
             <div className="panel-header admin-period-table-header">
-              <AllPeriodsDrawer rows={allPeriodsRows} />
+              <AllPeriodsTrigger open={showAllPeriods} section={selectedSection} />
               <div>
                 <h2 className="section-title">{periodTableTitle}</h2>
                 <div className="admin-period-legend">
@@ -321,6 +322,8 @@ export default async function AdminPage({
               <div className="notice small">현재는 별도로 확인할 시간대 출결표가 없습니다.</div>
             )}
           </article>
+
+          {showAllPeriods && <AllPeriodsExpanded rows={allPeriodsRows} />}
         </section>
 
         </>
