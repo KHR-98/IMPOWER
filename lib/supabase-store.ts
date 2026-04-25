@@ -772,6 +772,13 @@ export async function deleteSupabaseAdminUser(
   const { error: deleteError } = await client.from("users").delete().eq("username", username);
 
   if (deleteError) {
+    const msg = String(deleteError.message ?? "");
+    if (/foreign key|violates/i.test(msg)) {
+      return {
+        ok: false,
+        message: "이 계정에 연결된 출퇴근 기록 또는 근무표 데이터가 있어 삭제할 수 없습니다. 먼저 관련 기록을 정리하거나 계정을 비활성화하세요.",
+      };
+    }
     throw deleteError;
   }
 

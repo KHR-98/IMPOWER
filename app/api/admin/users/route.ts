@@ -79,18 +79,23 @@ export async function DELETE(request: Request) {
     return auth.response;
   }
 
-  const rawBody = (await request.json()) as unknown;
-  const parsed = deleteUserSchema.safeParse(rawBody);
+  try {
+    const rawBody = (await request.json()) as unknown;
+    const parsed = deleteUserSchema.safeParse(rawBody);
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
+    }
+
+    const result = await deleteAdminUser(parsed.data.username, auth.session.username);
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.message }, { status: 400 });
+    }
+
+    return NextResponse.json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "서버 오류가 발생했습니다.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const result = await deleteAdminUser(parsed.data.username, auth.session.username);
-
-  if (!result.ok) {
-    return NextResponse.json({ error: result.message }, { status: 400 });
-  }
-
-  return NextResponse.json(result);
 }
