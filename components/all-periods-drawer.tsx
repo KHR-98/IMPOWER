@@ -30,12 +30,17 @@ export function AllPeriodsTrigger({
   );
 }
 
-export function AllPeriodsExpanded({ rows }: { rows: AllPeriodsRow[] }) {
+export function AllPeriodsExpanded({ rows, isPreview }: { rows: AllPeriodsRow[]; isPreview?: boolean }) {
   const dayRows = rows.filter((r) => r.shiftType === "day");
   const lateRows = rows.filter((r) => r.shiftType === "late");
 
   return (
     <div className="all-periods-expanded">
+      {isPreview && (
+        <div className="notice small all-periods-preview-notice">
+          명단이 확정되지 않아 예시 데이터를 표시합니다.
+        </div>
+      )}
       <div className="all-periods-expanded-body">
         <AllPeriodsGroup label="주간조" rows={dayRows} columns={DAY_COLUMNS} />
         <AllPeriodsGroup label="늦조" rows={lateRows} columns={LATE_COLUMNS} />

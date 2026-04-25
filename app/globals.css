@@ -949,6 +949,10 @@ button {
   padding: 20px;
 }
 
+.all-periods-preview-notice {
+  margin-bottom: 16px;
+}
+
 .all-periods-expanded-body {
   display: flex;
   flex-direction: column;

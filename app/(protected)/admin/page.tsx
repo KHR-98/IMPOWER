@@ -175,25 +175,41 @@ export default async function AdminPage({
   const periodTableLabels = currentPeriodRows.length > 0 ? currentPeriodLabels : previewTable.labels;
   const periodTableRows = currentPeriodRows.length > 0 ? currentPeriodRows : previewTable.rows;
   const currentPeriodGridTemplate = `1.15fr repeat(${Math.max(periodTableLabels.length, 1)}, minmax(0, 1fr))`;
-  const allPeriodsRows: AllPeriodsRow[] = dashboard.scheduledUsers
-    .filter((u) => u.isScheduled)
-    .map((u) => {
-      const record = dashboard.rows.find((r) => r.username === u.username);
-      const items =
-        u.shiftType === "day"
-          ? [
-              { label: "출근", done: !!record?.checkIn },
-              { label: "오전 TBM", done: !!(record?.tbmMorning ?? record?.tbm) },
-              { label: "오후 TBM", done: !!record?.tbmAfternoon },
-              { label: "퇴근 TBM", done: !!record?.tbmCheckout },
-              { label: "퇴근", done: !!record?.checkOut },
-            ]
-          : [
-              { label: "출근", done: !!record?.checkIn },
-              { label: "퇴근", done: !!record?.checkOut },
-            ];
-      return { username: u.username, displayName: u.displayName, shiftType: u.shiftType, items };
-    });
+  const buildAllPeriodsRow = (u: { username: string; displayName: string; shiftType: "day" | "late" }, record: typeof dashboard.rows[number] | undefined): AllPeriodsRow => ({
+    username: u.username,
+    displayName: u.displayName,
+    shiftType: u.shiftType,
+    items: u.shiftType === "day"
+      ? [
+          { label: "출근", done: !!record?.checkIn },
+          { label: "오전 TBM", done: !!(record?.tbmMorning ?? record?.tbm) },
+          { label: "오후 TBM", done: !!record?.tbmAfternoon },
+          { label: "퇴근 TBM", done: !!record?.tbmCheckout },
+          { label: "퇴근", done: !!record?.checkOut },
+        ]
+      : [
+          { label: "출근", done: !!record?.checkIn },
+          { label: "퇴근", done: !!record?.checkOut },
+        ],
+  });
+
+  const scheduledRows = dashboard.scheduledUsers.filter((u) => u.isScheduled);
+  const liveAllPeriodsRows: AllPeriodsRow[] = scheduledRows.map((u) =>
+    buildAllPeriodsRow(u, dashboard.rows.find((r) => r.username === u.username))
+  );
+
+  const allPeriodsIsPreview = liveAllPeriodsRows.length === 0;
+  const allPeriodsRows: AllPeriodsRow[] = allPeriodsIsPreview
+    ? dashboard.scheduledUsers.length > 0
+      ? dashboard.scheduledUsers.slice(0, 8).map((u) =>
+          buildAllPeriodsRow(u, dashboard.rows.find((r) => r.username === u.username))
+        )
+      : [
+          { username: "ex-day-1", displayName: "김현장", shiftType: "day", items: [{ label: "출근", done: true }, { label: "오전 TBM", done: true }, { label: "오후 TBM", done: false }, { label: "퇴근 TBM", done: false }, { label: "퇴근", done: false }] },
+          { username: "ex-day-2", displayName: "박작업", shiftType: "day", items: [{ label: "출근", done: true }, { label: "오전 TBM", done: false }, { label: "오후 TBM", done: false }, { label: "퇴근 TBM", done: false }, { label: "퇴근", done: false }] },
+          { username: "ex-late-1", displayName: "이늦조", shiftType: "late", items: [{ label: "출근", done: false }, { label: "퇴근", done: false }] },
+        ]
+    : liveAllPeriodsRows;
 
   const periodLabel = dashboard.currentPeriod.label;
   const periodTableTitle =
@@ -323,7 +339,7 @@ export default async function AdminPage({
             )}
           </article>
 
-          {showAllPeriods && <AllPeriodsExpanded rows={allPeriodsRows} />}
+          {showAllPeriods && <AllPeriodsExpanded rows={allPeriodsRows} isPreview={allPeriodsIsPreview} />}
         </section>
 
         </>
