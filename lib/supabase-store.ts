@@ -769,22 +769,18 @@ export async function deleteSupabaseAdminUser(
     }
   }
 
-  const { error: deleteError } = await client.from("users").delete().eq("username", username);
+  const { error: rosterDeleteError } = await client.from("roster_entries").delete().eq("username", username);
+  if (rosterDeleteError) throw rosterDeleteError;
 
-  if (deleteError) {
-    const msg = String(deleteError.message ?? "");
-    if (/foreign key|violates/i.test(msg)) {
-      return {
-        ok: false,
-        message: "이 계정에 연결된 출퇴근 기록 또는 근무표 데이터가 있어 삭제할 수 없습니다. 먼저 관련 기록을 정리하거나 계정을 비활성화하세요.",
-      };
-    }
-    throw deleteError;
-  }
+  const { error: attendanceDeleteError } = await client.from("attendance_records").delete().eq("username", username);
+  if (attendanceDeleteError) throw attendanceDeleteError;
+
+  const { error: deleteError } = await client.from("users").delete().eq("username", username);
+  if (deleteError) throw deleteError;
 
   return {
     ok: true,
-    message: "계정을 영구 삭제했습니다. 기존 출퇴근 기록은 데이터베이스에 남아 있습니다.",
+    message: "계정과 관련 기록을 모두 삭제했습니다.",
   };
 }
 
