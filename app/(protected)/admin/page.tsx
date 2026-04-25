@@ -172,6 +172,15 @@ export default async function AdminPage({
   const periodTableLabels = currentPeriodRows.length > 0 ? currentPeriodLabels : previewTable.labels;
   const periodTableRows = currentPeriodRows.length > 0 ? currentPeriodRows : previewTable.rows;
   const currentPeriodGridTemplate = `1.15fr repeat(${Math.max(periodTableLabels.length, 1)}, minmax(0, 1fr))`;
+  const periodLabel = dashboard.currentPeriod.label;
+  const periodTableTitle =
+    dashboard.currentPeriod.code === "none"
+      ? "현재 시간대 출결표"
+      : periodLabel.includes("늦조")
+      ? "늦조 시간대 출결표"
+      : periodLabel.includes("주간조")
+      ? "주간조 시간대 출결표"
+      : `${periodLabel} 출결표`;
 
   return (
     <main className="stack admin-console">
@@ -224,7 +233,7 @@ export default async function AdminPage({
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
             <div className="panel-header admin-period-table-header">
               <div>
-                <h2 className="section-title">현재 시간대 출결표</h2>
+                <h2 className="section-title">{periodTableTitle}</h2>
                 <div className="admin-period-legend">
                   <span className="admin-period-legend-item">
                     <span className="admin-period-legend-dot admin-period-legend-dot-done" />

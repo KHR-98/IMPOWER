@@ -899,13 +899,14 @@ button {
 }
 
 .admin-period-table-header {
-  position: relative;
-  justify-content: center;
-  text-align: center;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
 }
 
 .admin-period-table-header > div {
-  width: 100%;
+  grid-column: 2;
+  text-align: center;
 }
 
 .admin-period-table-header .section-subtitle {
@@ -913,12 +914,11 @@ button {
 }
 
 .admin-refresh-button {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  grid-column: 3;
+  justify-self: end;
   min-width: 108px;
   min-height: 46px;
+  font-size: 1.05rem;
   font-weight: 800;
 }
 
@@ -1081,17 +1081,21 @@ button {
   }
 
   .admin-period-table-header {
+    grid-template-columns: 1fr auto;
     gap: 10px;
   }
 
+  .admin-period-table-header > div {
+    grid-column: 1;
+    text-align: left;
+  }
+
   .admin-refresh-button {
-    position: static;
-    transform: none;
-    width: auto;
+    grid-column: 2;
+    justify-self: end;
     min-width: 0;
     min-height: 40px;
     padding: 10px 14px;
-    align-self: flex-end;
     white-space: nowrap;
   }
 
@@ -1217,7 +1221,7 @@ button {
   }
 
   .admin-hero-meta {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
