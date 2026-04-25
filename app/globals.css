@@ -1491,6 +1491,12 @@ button {
   gap: 14px;
 }
 
+.user-mgmt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
 .zone-editor-card {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);

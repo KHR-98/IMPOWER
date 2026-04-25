@@ -150,7 +150,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       </div>
 
       {initialUsers.length ? (
-        <div className="zone-editor-list">
+        <div className="zone-editor-list user-mgmt-grid">
           {initialUsers.map((user) => {
             const selected = user.username === selectedUsername && mode === "update";
 
