@@ -5,6 +5,7 @@ import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-drawer";
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
 import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-panel";
+import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserImportPanel } from "@/components/admin-user-import-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
@@ -372,6 +373,7 @@ export default async function AdminPage({
                 <p className="section-subtitle">당일 출결 운영을 관리합니다.</p>
               </div>
             </div>
+            <AdminRosterSyncPanel enabled={runtime.dataSource === "supabase" && runtime.rosterSyncConfigured} />
             <AdminRosterControlsPanel
               dateKey={dashboard.dateKey}
               entries={dashboard.scheduledUsers}
