@@ -6,7 +6,6 @@ import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
 import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
-import { AdminUserImportPanel } from "@/components/admin-user-import-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
 import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
@@ -301,7 +300,6 @@ export default async function AdminPage({
                 <p className="section-subtitle">시트 계정 일괄 생성 및 사용자 권한·비밀번호를 관리합니다.</p>
               </div>
             </div>
-            <AdminUserImportPanel enabled={runtime.dataSource === "supabase" && runtime.rosterSyncConfigured} />
             <AdminUserManagementPanel initialUsers={adminUsers} enabled={runtime.dataSource === "supabase"} />
           </article>
         </section>
