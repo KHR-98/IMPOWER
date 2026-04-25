@@ -83,7 +83,6 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                       <strong>{user.displayName}</strong>
                       <span className="badge">{user.role === "admin" ? "관리자" : "일반"}</span>
                     </div>
-                    <div className="caption">로그인 ID: {user.username}</div>
                   </div>
                   <button type="button" className="button-subtle" onClick={() => setSelectedUsername(user.username)}>
                     {selected ? "선택 중" : "선택"}

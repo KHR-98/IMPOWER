@@ -294,12 +294,6 @@ export default async function AdminPage({
       {selectedSection === "accounts" ? (
         <section className="stack">
           <article className="glass-panel stack admin-management-panel">
-            <div className="panel-header">
-              <div>
-                <h2 className="section-title">계정 관리</h2>
-                <p className="section-subtitle">시트 계정 일괄 생성 및 사용자 권한·비밀번호를 관리합니다.</p>
-              </div>
-            </div>
             <AdminUserManagementPanel initialUsers={adminUsers} enabled={runtime.dataSource === "supabase"} />
           </article>
         </section>
