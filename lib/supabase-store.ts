@@ -14,6 +14,7 @@ import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
 import type {
   AdminAttendanceCorrectionInput,
   AdminRosterControlInput,
+  AdminRosterEntryInput,
   AdminUserImportInput,
   AdminUserListItem,
   AdminUserMutationInput,
@@ -1170,6 +1171,31 @@ export async function saveSupabaseRosterControls(input: AdminRosterControlInput)
     ok: true,
     message: "오늘 근무자 설정을 저장했습니다.",
   };
+}
+
+export async function saveSupabaseRosterEntry(input: AdminRosterEntryInput): Promise<{ ok: boolean; message: string }> {
+  const client = getSupabaseAdminClient();
+
+  const sourceRowKey = encodeRosterSourceKey("admin", input.reasonCode);
+
+  const { error } = await client.from("roster_entries").upsert(
+    {
+      work_date: input.workDate,
+      username: input.username,
+      is_scheduled: input.isScheduled,
+      shift_type: input.shiftType,
+      allow_lunch_out: false,
+      source_row_key: sourceRowKey,
+      synced_at: new Date().toISOString(),
+    },
+    { onConflict: "work_date,username" },
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return { ok: true, message: "근태 설정을 저장했습니다." };
 }
 
 export async function performSupabaseAttendanceAction(input: {

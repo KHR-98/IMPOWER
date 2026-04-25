@@ -31,12 +31,14 @@ import {
   performSupabaseAttendanceAction,
   saveSupabaseAdminConfiguration,
   saveSupabaseRosterControls,
+  saveSupabaseRosterEntry,
   saveSupabaseAdminUser,
   syncSupabaseRoster,
 } from "@/lib/supabase-store";
 import type {
   AdminAttendanceCorrectionInput,
   AdminRosterControlInput,
+  AdminRosterEntryInput,
   AdminUserImportInput,
   AdminUserListItem,
   AdminUserMutationInput,
@@ -244,6 +246,19 @@ export async function deleteAdminUser(username: string, actorUsername: string): 
   }
 
   return deleteSupabaseAdminUser(username, actorUsername);
+}
+
+export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promise<{ ok: boolean; message: string }> {
+  const resolved = await resolveDataSource();
+
+  if (resolved.dataSource !== "supabase") {
+    return {
+      ok: false,
+      message: resolved.setupMessage ?? "현재 저장소에서는 근태 설정을 저장할 수 없습니다.",
+    };
+  }
+
+  return saveSupabaseRosterEntry(input);
 }
 
 export async function saveAdminRosterControls(input: AdminRosterControlInput): Promise<{ ok: boolean; message: string }> {

@@ -8,6 +8,7 @@ import { AdminRosterControlsPanel } from "@/components/admin-roster-controls-pan
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserImportPanel } from "@/components/admin-user-import-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
+import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
 import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
@@ -18,7 +19,7 @@ type AdminSectionKey = "overview" | "users" | "operations" | "accounts" | "syste
 
 const ADMIN_SECTION_OPTIONS: Array<{ key: AdminSectionKey; label: string }> = [
   { key: "overview", label: "오늘 현황" },
-  { key: "users", label: "사용자 보기" },
+  { key: "users", label: "근태 관리" },
   { key: "operations", label: "운영 관리" },
   { key: "accounts", label: "계정 관리" },
   { key: "system", label: "시스템 설정" },
@@ -347,38 +348,17 @@ export default async function AdminPage({
 
       {selectedSection === "users" ? (
         <section className="stack">
-          <article className="table-panel stack admin-detail-panel">
+          <article className="glass-panel stack admin-management-panel">
             <div className="panel-header">
               <div>
-                <h2 className="section-title">전체 사용자별 상태</h2>
-                <p className="section-subtitle">전체 출결 기록과 정정 여부를 확인합니다.</p>
+                <h2 className="section-title">근태 관리</h2>
               </div>
             </div>
-            <div className="table-head admin-status-table-head">
-              <span>이름</span>
-              <span>조</span>
-              <span>근무 대상</span>
-              <span>출근</span>
-              <span>오전 TBM</span>
-              <span>점심 등록</span>
-              <span>퇴근</span>
-            </div>
-            <div className="admin-status-table-body">
-            {dashboard.rows.map((row) => {
-              const scheduledEntry = dashboard.scheduledUsers.find((entry) => entry.username === row.username);
-              return (
-                <div key={row.id} className="table-row admin-status-table-row">
-                  <span data-label="이름">{row.displayName}{row.correctedByAdmin ? " (정정)" : ""}</span>
-                  <span data-label="조">{scheduledEntry?.shiftType === "late" ? "늦조" : "주간조"}</span>
-                  <span data-label="근무 대상">{scheduledEntry?.isScheduled ? "대상" : "비대상"}</span>
-                  <span data-label="출근">{formatKoreaDateTime(row.checkIn?.occurredAt ?? null)}</span>
-                  <span data-label="오전 TBM">{formatKoreaDateTime(row.tbmMorning?.occurredAt ?? row.tbm?.occurredAt ?? null)}</span>
-                  <span data-label="점심 등록">{formatKoreaDateTime(row.lunchRegister?.occurredAt ?? null)}</span>
-                  <span data-label="퇴근">{formatKoreaDateTime(row.checkOut?.occurredAt ?? null)}</span>
-                </div>
-              );
-            })}
-            </div>
+            <AttendanceManagementPanel
+              users={adminUsers}
+              rosterEntries={dashboard.scheduledUsers}
+              workDate={dashboard.dateKey}
+            />
           </article>
         </section>
       ) : null}

@@ -326,6 +326,14 @@ export interface AdminRosterControlInput {
   }>;
 }
 
+export interface AdminRosterEntryInput {
+  workDate: string;
+  username: string;
+  isScheduled: boolean;
+  shiftType: ShiftType;
+  reasonCode: RosterReasonCode | null;
+}
+
 
 
 
