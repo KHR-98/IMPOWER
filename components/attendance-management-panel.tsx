@@ -17,8 +17,8 @@ const WORK_TYPES: WorkTypeOption[] = [
   { label: "늦조", isScheduled: true, shiftType: "late", reasonCode: null },
   { label: "연차", isScheduled: false, shiftType: "day", reasonCode: "leave" },
   { label: "예비군", isScheduled: false, shiftType: "day", reasonCode: "military" },
-  { label: "오전반차", isScheduled: false, shiftType: "day", reasonCode: "half_day_am" },
   { label: "오후반차", isScheduled: false, shiftType: "day", reasonCode: "half_day_pm" },
+  { label: "오전반차", isScheduled: false, shiftType: "day", reasonCode: "half_day_am" },
 ];
 
 function currentWorkTypeLabel(entry: RosterEntry | undefined): string {
