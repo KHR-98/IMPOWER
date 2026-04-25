@@ -1000,7 +1000,6 @@ async function getSupabaseActiveUsers() {
     .from("users")
     .select("username, display_name, role, is_active")
     .eq("is_active", true)
-    .eq("role", "user")
     .order("display_name");
 
   if (error) {
