@@ -33,7 +33,7 @@ function normalizeAdminSection(section: string | undefined): AdminSectionKey {
 }
 
 
-const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military", "blocked", "holiday"];
+const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military", "blocked"];
 function getSpecialCaseLabel(code: RosterReasonCode): string {
   switch (code) {
     case "leave":
