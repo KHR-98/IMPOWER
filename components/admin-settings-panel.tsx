@@ -41,6 +41,7 @@ function createZoneDraft(zones: Zone[]): Zone {
 
 export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: AdminSettingsPanelProps) {
   const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(initialZones[0]?.id ?? null);
@@ -110,6 +111,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       }
 
       setMessage(data.message ?? "운영 설정을 저장했습니다.");
+      setIsEditing(false);
       startTransition(() => router.refresh());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
@@ -124,6 +126,14 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
         <div>
           <h2 className="section-title">운영 설정 편집</h2>
         </div>
+        <button
+          type="button"
+          className={isEditing ? "button-subtle" : "button-subtle"}
+          disabled={!enabled || pending}
+          onClick={() => { setIsEditing((v) => !v); setMessage(null); }}
+        >
+          {isEditing ? "취소" : "수정"}
+        </button>
       </div>
 
       <div className="wheel-settings-wrap">
@@ -138,7 +148,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
             lateCheckOutWindow: settings.lateCheckOutWindow,
           }}
           onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow", field: "start" | "end", value: string) => void}
-          disabled={!enabled || pending}
+          disabled={!isEditing || !enabled || pending}
         />
 
         <div className="field" style={{ maxWidth: 240 }}>
@@ -149,6 +159,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
             min={10}
             max={1000}
             value={settings.maxGpsAccuracyM}
+            disabled={!isEditing || !enabled || pending}
             onChange={(event) => updateMaxGpsAccuracy(event.target.value)}
           />
         </div>
@@ -157,7 +168,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       <KakaoZoneMap
         zones={zones}
         selectedZoneId={selectedZoneId}
-        enabled={enabled}
+        enabled={isEditing && enabled}
         onSelectZone={setSelectedZoneId}
         onPickCoordinates={updateZoneCoordinates}
       />
@@ -167,7 +178,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
           <h2 className="section-title">지점 편집</h2>
           <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
         </div>
-        <button type="button" className="button-subtle" disabled={!enabled || pending} onClick={addZone}>
+        <button type="button" className="button-subtle" disabled={!isEditing || !enabled || pending} onClick={addZone}>
           지점 추가
         </button>
       </div>
@@ -195,6 +206,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                     id={`zone-name-${zone.id}`}
                     type="text"
                     value={zone.name}
+                    disabled={!isEditing || !enabled || pending}
                     onChange={(event) => updateZone(zone.id, { name: event.target.value })}
                   />
                 </div>
@@ -203,6 +215,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                   <select
                     id={`zone-type-${zone.id}`}
                     value={zone.type}
+                    disabled={!isEditing || !enabled || pending}
                     onChange={(event) => updateZone(zone.id, { type: event.target.value as ZoneType })}
                   >
                     <option value="entry">출입</option>
@@ -216,6 +229,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                     type="number"
                     step="0.000001"
                     value={zone.latitude}
+                    disabled={!isEditing || !enabled || pending}
                     onChange={(event) => updateZone(zone.id, { latitude: Number(event.target.value) })}
                   />
                 </div>
@@ -226,6 +240,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                     type="number"
                     step="0.000001"
                     value={zone.longitude}
+                    disabled={!isEditing || !enabled || pending}
                     onChange={(event) => updateZone(zone.id, { longitude: Number(event.target.value) })}
                   />
                 </div>
@@ -237,6 +252,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                     min={10}
                     max={5000}
                     value={zone.radiusM}
+                    disabled={!isEditing || !enabled || pending}
                     onChange={(event) => updateZone(zone.id, { radiusM: Number(event.target.value) })}
                   />
                 </div>
@@ -245,6 +261,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                     id={`zone-active-${zone.id}`}
                     type="checkbox"
                     checked={zone.isActive}
+                    disabled={!isEditing || !enabled || pending}
                     onChange={(event) => updateZone(zone.id, { isActive: event.target.checked })}
                   />
                   활성 지점으로 사용
@@ -256,7 +273,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       </div>
 
       <div className="inline-row">
-        <button type="button" className="button" disabled={!enabled || pending} onClick={handleSave}>
+        <button type="button" className="button" disabled={!isEditing || !enabled || pending} onClick={handleSave}>
           {pending ? "저장 중..." : "운영 설정 저장"}
         </button>
       </div>
