@@ -201,13 +201,9 @@ export default async function AdminPage({
         <section className="glass-panel admin-hero-panel">
           <div className="admin-hero-copy">
             <span className="brand-kicker">실시간 운영 콘솔</span>
-            <h1>{getKoreaDateSlashLabel()} 출결현황</h1>
+            <h1>{getKoreaDateSlashLabel()} {dashboard.currentPeriod.label}</h1>
           </div>
           <div className="admin-hero-meta">
-            <div className="admin-hero-stat">
-              <span className="caption">현재 시간대</span>
-              <strong>{dashboard.currentPeriod.label}</strong>
-            </div>
             <div className="admin-hero-stat">
               <span className="caption">전체인원</span>
               <strong>{currentPeriodRows.length}명</strong>

@@ -22,9 +22,8 @@ export function getKoreaDateLabel(date: Date = new Date()): string {
 }
 
 export function getKoreaDateSlashLabel(date: Date = new Date()): string {
-  const datePart = new Intl.DateTimeFormat("en-CA", {
+  const kst = new Intl.DateTimeFormat("en-CA", {
     timeZone: KOREA_TIME_ZONE,
-    year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date).replace(/-/g, "/");
@@ -34,7 +33,7 @@ export function getKoreaDateSlashLabel(date: Date = new Date()): string {
     weekday: "short",
   }).format(date);
 
-  return `${datePart} (${weekday})`;
+  return `${kst} (${weekday})`;
 }
 
 export function formatKoreaDateTime(value: string | Date | null): string {
