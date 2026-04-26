@@ -69,7 +69,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       </div>
 
       {initialUsers.length ? (
-        <div className="user-mgmt-grid">
+        <div className="mgmt-user-list">
           {initialUsers.map((user) => {
             const isOpen = openUsername === user.username;
             const isSaving = saving === user.username;
