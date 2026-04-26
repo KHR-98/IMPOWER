@@ -53,6 +53,7 @@ export function AttendanceManagementPanel({
   const [openUsername, setOpenUsername] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const entryMap = new Map(rosterEntries.map((e) => [e.username, e]));
 
@@ -86,15 +87,26 @@ export function AttendanceManagementPanel({
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="panel-header" style={{ alignItems: "center", marginBottom: 0 }}>
-        <span className="section-title" style={{ fontSize: "0.95rem" }}>인원 명단</span>
-        <input
-          type="search"
-          placeholder="이름 검색"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 140, fontSize: "0.85rem" }}
-        />
+        <div className="inline-row" style={{ gap: 8, flex: 1 }}>
+          <input
+            type="search"
+            placeholder="이름 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 140, fontSize: "0.85rem" }}
+          />
+          <span className="section-title" style={{ fontSize: "0.95rem" }}>인원 명단</span>
+        </div>
+        <button
+          type="button"
+          className="button-subtle"
+          style={{ whiteSpace: "nowrap" }}
+          onClick={() => setIsExpanded((v) => !v)}
+        >
+          {isExpanded ? "접기 ▲" : "펼치기 ▼"}
+        </button>
       </div>
+    {isExpanded && (
     <div className="mgmt-user-list">
       {activeUsers.map((user) => {
         const entry = entryMap.get(user.username);
@@ -135,6 +147,7 @@ export function AttendanceManagementPanel({
         );
       })}
     </div>
+    )}
     </div>
   );
 }
