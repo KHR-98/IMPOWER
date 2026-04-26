@@ -1762,6 +1762,18 @@ button {
   white-space: nowrap;
 }
 
+.admin-settings-stack .button-subtle {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(15, 109, 95, 0.22);
+}
+
+.admin-settings-stack .button-subtle:disabled {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
+  color: white;
+}
+
 .map-canvas {
   width: 100%;
   min-height: 520px;
