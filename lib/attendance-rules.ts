@@ -329,7 +329,7 @@ export function validateAttendanceMutation(input: {
   if (input.accuracyM > input.settings.maxGpsAccuracyM) {
     return {
       ok: false,
-      message: `GPS 정확도가 낮습니다. ${Math.round(input.settings.maxGpsAccuracyM)}m 이내에서 다시 시도하세요.`,
+      message: "GPS 정확도가 낮습니다. 다시 시도하세요.",
       eventCode,
     };
   }
