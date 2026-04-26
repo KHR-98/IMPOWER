@@ -189,10 +189,10 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
           <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
         </div>
         <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
-          <button type="button" className="button-subtle" disabled={!isEditing || !enabled || pending} onClick={addZone}>
+          <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending} onClick={addZone}>
             지점 추가
           </button>
-          <button type="button" className="button-subtle" disabled={!isEditing || !enabled || pending || !selectedZoneId} onClick={deleteZone}>
+          <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending || !selectedZoneId} onClick={deleteZone}>
             지점 삭제
           </button>
         </div>
@@ -230,7 +230,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                 id={`zone-name-${selectedZone.id}`}
                 type="text"
                 value={selectedZone.name}
-                disabled={!isEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || pending}
                 onChange={(event) => updateZone(selectedZone.id, { name: event.target.value })}
               />
             </div>
@@ -239,7 +239,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
               <select
                 id={`zone-type-${selectedZone.id}`}
                 value={selectedZone.type}
-                disabled={!isEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || pending}
                 onChange={(event) => updateZone(selectedZone.id, { type: event.target.value as ZoneType })}
               >
                 <option value="entry">출입</option>
@@ -253,7 +253,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                 type="number"
                 step="0.000001"
                 value={selectedZone.latitude}
-                disabled={!isEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || pending}
                 onChange={(event) => updateZone(selectedZone.id, { latitude: Number(event.target.value) })}
               />
             </div>
@@ -264,7 +264,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                 type="number"
                 step="0.000001"
                 value={selectedZone.longitude}
-                disabled={!isEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || pending}
                 onChange={(event) => updateZone(selectedZone.id, { longitude: Number(event.target.value) })}
               />
             </div>
@@ -276,7 +276,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                 min={10}
                 max={5000}
                 value={selectedZone.radiusM}
-                disabled={!isEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || pending}
                 onChange={(event) => updateZone(selectedZone.id, { radiusM: Number(event.target.value) })}
               />
             </div>
@@ -285,7 +285,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
                 id={`zone-active-${selectedZone.id}`}
                 type="checkbox"
                 checked={selectedZone.isActive}
-                disabled={!isEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || pending}
                 onChange={(event) => updateZone(selectedZone.id, { isActive: event.target.checked })}
               />
               활성 지점으로 사용
@@ -295,7 +295,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       })()}
 
       <div className="inline-row">
-        <button type="button" className="button" disabled={!isEditing || !enabled || pending} onClick={handleSave}>
+        <button type="button" className="button" disabled={(!isEditing && !isMapEditing) || !enabled || pending} onClick={handleSave}>
           {pending ? "저장 중..." : "운영 설정 저장"}
         </button>
       </div>
