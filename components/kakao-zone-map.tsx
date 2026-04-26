@@ -265,6 +265,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
   const isEditingRef = useRef(isEditing);
   const onPickCoordinatesRef = useRef(onPickCoordinates);
   const onSelectZoneRef = useRef(onSelectZone);
+  const [mapReady, setMapReady] = useState(false);
   const [query, setQuery] = useState("");
   const [pendingSearch, setPendingSearch] = useState(false);
   const [status, setStatus] = useState<string | null>(
@@ -324,6 +325,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
         map.setDraggable(enabledRef.current && isEditingRef.current);
         map.setZoomable(enabledRef.current && isEditingRef.current);
         map.relayout();
+        setMapReady(true);
 
         kakao.maps.event.addListener(map, "click", (mouseEvent: { latLng: { getLat: () => number; getLng: () => number } }) => {
           const zoneId = selectedZoneIdRef.current;
@@ -436,7 +438,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
     } else if (effectiveZones.length === 1) {
       map.setCenter(new kakao.maps.LatLng(effectiveZones[0].latitude, effectiveZones[0].longitude));
     }
-  }, [zones, selectedZoneId]);
+  }, [zones, selectedZoneId, mapReady]);
 
   useEffect(() => {
     const kakao = kakaoRef.current;
