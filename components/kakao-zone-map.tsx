@@ -399,8 +399,9 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
       });
       circle.setMap(map);
 
+      const accent = zone.type === "tbm" ? "#c96a13" : "#0f6d5f";
       const infoWindow = new kakao.maps.InfoWindow({
-        content: `<div style="padding:8px 10px;font-size:12px;white-space:nowrap;">${zone.name || "이름 없는 지점"}</div>`,
+        content: `<div style="padding:5px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:#fff;border:1.5px solid ${accent};border-radius:20px;color:${accent};letter-spacing:-0.01em;box-shadow:0 2px 6px rgba(0,0,0,0.12);">${zone.name || "이름 없는 지점"}</div>`,
       });
       infoWindow.open(map, marker);
 
