@@ -52,6 +52,7 @@ export function AttendanceManagementPanel({
   const router = useRouter();
   const [openUsername, setOpenUsername] = useState<string | null>(null);
   const [saving, setSaving] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const entryMap = new Map(rosterEntries.map((e) => [e.username, e]));
 
@@ -78,9 +79,22 @@ export function AttendanceManagementPanel({
     }
   }
 
-  const activeUsers = users.filter((u) => u.isActive);
+  const activeUsers = users
+    .filter((u) => u.isActive)
+    .filter((u) => u.displayName.includes(search.trim()));
 
   return (
+    <div className="stack" style={{ gap: 8 }}>
+      <div className="panel-header" style={{ alignItems: "center", marginBottom: 0 }}>
+        <span className="section-title" style={{ fontSize: "0.95rem" }}>인원 명단</span>
+        <input
+          type="search"
+          placeholder="이름 검색"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: 140, fontSize: "0.85rem" }}
+        />
+      </div>
     <div className="mgmt-user-list">
       {activeUsers.map((user) => {
         const entry = entryMap.get(user.username);
@@ -120,6 +134,7 @@ export function AttendanceManagementPanel({
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

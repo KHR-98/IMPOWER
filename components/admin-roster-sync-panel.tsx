@@ -36,11 +36,8 @@ export function AdminRosterSyncPanel({ enabled }: { enabled: boolean }) {
 
   return (
     <div className="stack">
-      <div className="panel-header">
-        <div>
-          <h2 className="section-title">근무표 동기화</h2>
-          <p className="section-subtitle">Google Sheet에서 오늘 근무 명단을 즉시 불러옵니다.</p>
-        </div>
+      <div className="panel-header" style={{ alignItems: "center" }}>
+        <h2 className="section-title">근무표 동기화</h2>
         <button
           type="button"
           className="button"
