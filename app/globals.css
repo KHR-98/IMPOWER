@@ -1567,7 +1567,7 @@ button {
   position: relative;
   display: flex;
   align-items: stretch;
-  height: 220px; /* 5 items × 44 px */
+  height: 132px; /* 3 items × 44 px */
 }
 
 /* Scrollable column */
@@ -1592,7 +1592,7 @@ button {
 
 /* Top / bottom spacers so first and last items can be centred */
 .wheel-pad {
-  height: 88px; /* 2 × 44 px */
+  height: 44px; /* 1 × 44 px */
   flex-shrink: 0;
 }
 
