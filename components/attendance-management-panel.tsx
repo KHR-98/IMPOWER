@@ -87,16 +87,18 @@ export function AttendanceManagementPanel({
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="panel-header" style={{ alignItems: "center", marginBottom: 0 }}>
-        <div style={{ flex: 1 }} />
         <span className="section-title" style={{ fontSize: "0.95rem", whiteSpace: "nowrap" }}>인원 명단</span>
-        <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4 }}>
-          <input
-            type="search"
-            placeholder="이름 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: 100, fontSize: "0.8rem" }}
-          />
+        <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 6 }}>
+          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <span style={{ position: "absolute", left: 8, fontSize: "0.8rem", color: "var(--fg-muted)", pointerEvents: "none" }}>🔍</span>
+            <input
+              type="search"
+              placeholder="이름 검색"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ paddingLeft: 26, width: 110, fontSize: "0.82rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", height: 30 }}
+            />
+          </div>
           <button
             type="button"
             className="button-subtle"

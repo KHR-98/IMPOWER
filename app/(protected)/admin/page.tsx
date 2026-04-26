@@ -276,9 +276,6 @@ export default async function AdminPage({
               rosterEntries={dashboard.scheduledUsers}
               workDate={dashboard.dateKey}
             />
-            <div className="mgmt-section-divider">
-              <span className="mgmt-section-label">출결 정정</span>
-            </div>
             <AdminAttendanceCorrectionPanel
               dateKey={dashboard.dateKey}
               rows={dashboard.rows}
