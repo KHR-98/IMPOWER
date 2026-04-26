@@ -93,15 +93,15 @@ export function AttendanceManagementPanel({
           placeholder="이름 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 0, fontSize: "0.85rem" }}
+          style={{ width: 100, fontSize: "0.8rem" }}
         />
         <button
           type="button"
           className="button-subtle"
-          style={{ whiteSpace: "nowrap" }}
+          style={{ padding: "4px 8px" }}
           onClick={() => setIsExpanded((v) => !v)}
         >
-          {isExpanded ? "접기 ▲" : "펼치기 ▼"}
+          {isExpanded ? "▲" : "▼"}
         </button>
       </div>
     {isExpanded && (
