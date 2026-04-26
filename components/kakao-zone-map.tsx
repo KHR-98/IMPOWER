@@ -33,6 +33,8 @@ type KakaoSdk = {
       setBounds: (bounds: unknown) => void;
       relayout: () => void;
       getCenter: () => { getLat: () => number; getLng: () => number };
+      setDraggable: (draggable: boolean) => void;
+      setZoomable: (zoomable: boolean) => void;
     };
     Marker: new (options: { position: { getLat: () => number; getLng: () => number } }) => {
       setMap: (map: unknown | null) => void;
@@ -278,6 +280,10 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
 
   useEffect(() => {
     enabledRef.current = enabled;
+    const map = mapRef.current;
+    if (!map) return;
+    map.setDraggable(enabled);
+    map.setZoomable(enabled);
   }, [enabled]);
 
   useEffect(() => {
@@ -310,6 +316,8 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
         });
 
         mapRef.current = map;
+        map.setDraggable(enabledRef.current);
+        map.setZoomable(enabledRef.current);
         map.relayout();
 
         kakao.maps.event.addListener(map, "click", (mouseEvent: { latLng: { getLat: () => number; getLng: () => number } }) => {
