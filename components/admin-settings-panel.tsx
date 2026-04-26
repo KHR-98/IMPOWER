@@ -8,8 +8,8 @@ import { CombinedTimeSettingsPicker } from "@/components/time-wheel-picker";
 import type { AppSettings, Zone, ZoneType } from "@/lib/types";
 
 const DEFAULT_ZONE_CENTER = {
-  latitude: 37.03846289921283,
-  longitude: 127.05679645475973,
+  latitude: 37.035002,
+  longitude: 127.060133,
 };
 
 function isLegacyPlaceholderZone(zone: Zone) {

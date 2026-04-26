@@ -79,8 +79,8 @@ type KakaoWindow = Window & {
 
 let kakaoSdkPromise: Promise<KakaoSdk> | null = null;
 const DEFAULT_MAP_CENTER = {
-  latitude: 37.03846289921283,
-  longitude: 127.05679645475973,
+  latitude: 37.035002,
+  longitude: 127.060133,
 };
 const LEGACY_PLACEHOLDER_CENTER = {
   latitude: 37.56652,
@@ -317,7 +317,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
         const useCampusOverview = areLegacyPlaceholderZones(zonesRef.current);
         const map = new kakao.maps.Map(mapContainerRef.current, {
           center: new kakao.maps.LatLng(initialCenter.latitude, initialCenter.longitude),
-          level: useCampusOverview ? 5 : 3,
+          level: useCampusOverview ? 6 : 5,
         });
 
         mapRef.current = map;
