@@ -92,6 +92,12 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
     setSelectedZoneId(nextZone.id);
   }
 
+  function deleteZone() {
+    if (!selectedZoneId) return;
+    setZones((current) => current.filter((zone) => zone.id !== selectedZoneId));
+    setSelectedZoneId(null);
+  }
+
   async function handleSave() {
     setPending(true);
     setMessage(null);
@@ -182,9 +188,14 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
           <h2 className="section-title">지점 편집</h2>
           <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
         </div>
-        <button type="button" className="button-subtle" disabled={!isEditing || !enabled || pending} onClick={addZone}>
-          지점 추가
-        </button>
+        <div className="inline-row" style={{ gap: 6, flexShrink: 0 }}>
+          <button type="button" className="button-subtle" style={{ whiteSpace: "nowrap" }} disabled={!isEditing || !enabled || pending} onClick={addZone}>
+            지점 추가
+          </button>
+          <button type="button" className="button-subtle" style={{ whiteSpace: "nowrap" }} disabled={!isEditing || !enabled || pending || !selectedZoneId} onClick={deleteZone}>
+            지점 삭제
+          </button>
+        </div>
       </div>
 
       <div className="zone-editor-list user-mgmt-grid">
