@@ -51,9 +51,8 @@ type KakaoSdk = {
     }) => {
       setMap: (map: unknown | null) => void;
     };
-    InfoWindow: new (options: { content: string }) => {
-      open: (map: unknown, marker: unknown) => void;
-      close: () => void;
+    CustomOverlay: new (options: { position: unknown; content: string; yAnchor?: number }) => {
+      setMap: (map: unknown | null) => void;
     };
     event: {
       addListener: (target: unknown, eventName: string, handler: (payload: any) => void) => void;
@@ -256,7 +255,6 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
   const mapRef = useRef<any>(null);
   const kakaoRef = useRef<KakaoSdk | null>(null);
   const overlayRefs = useRef<any[]>([]);
-  const infoWindowRefs = useRef<any[]>([]);
   const preserveViewportRef = useRef(false);
   const previousViewportSignatureRef = useRef<string | null>(null);
   const zonesRef = useRef(zones);
@@ -360,9 +358,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
     }
 
     overlayRefs.current.forEach((overlay) => overlay.setMap(null));
-    infoWindowRefs.current.forEach((infoWindow) => infoWindow.close());
     overlayRefs.current = [];
-    infoWindowRefs.current = [];
 
     const viewportSignature = JSON.stringify(
       zones.map((zone) => ({
@@ -400,18 +396,19 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
       circle.setMap(map);
 
       const accent = zone.type === "tbm" ? "#c96a13" : "#0f6d5f";
-      const infoWindow = new kakao.maps.InfoWindow({
-        content: `<div style="padding:5px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:#fff;border:1.5px solid ${accent};border-radius:20px;color:${accent};letter-spacing:-0.01em;box-shadow:0 2px 6px rgba(0,0,0,0.12);">${zone.name || "이름 없는 지점"}</div>`,
+      const overlay = new kakao.maps.CustomOverlay({
+        position: center,
+        content: `<div style="padding:4px 10px;font-size:12px;font-weight:700;white-space:nowrap;background:#fff;border:1.5px solid ${accent};border-radius:20px;color:${accent};letter-spacing:-0.01em;box-shadow:0 2px 8px rgba(0,0,0,0.15);pointer-events:none;">${zone.name || "이름 없는 지점"}</div>`,
+        yAnchor: 3.2,
       });
-      infoWindow.open(map, marker);
+      overlay.setMap(map);
 
       kakao.maps.event.addListener(marker, "click", () => {
         onSelectZoneRef.current(zone.id);
         setStatus(`"${zone.name || "지점"}"을(를) 선택했습니다.`);
       });
 
-      overlayRefs.current.push(marker, circle);
-      infoWindowRefs.current.push(infoWindow);
+      overlayRefs.current.push(marker, circle, overlay);
     });
 
     if (preserveViewportRef.current) {
