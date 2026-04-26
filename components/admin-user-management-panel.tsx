@@ -76,18 +76,12 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
             const selected = user.username === selectedUsername;
 
             return (
-              <div key={user.id} className={`zone-editor-card stack${selected ? " user-card-selected" : ""}`}>
-                <div className="zone-editor-header">
-                  <div className="stack" style={{ gap: 8 }}>
-                    <div className="inline-row">
-                      <strong>{user.displayName}</strong>
-                      <span className="badge">{user.role === "admin" ? "관리자" : "일반"}</span>
-                    </div>
-                  </div>
-                  <button type="button" className="button-subtle" onClick={() => setSelectedUsername(selected ? null : user.username)}>
-                    {selected ? "선택 중" : "선택"}
-                  </button>
-                </div>
+              <div key={user.id} className={`zone-editor-card stack${selected ? " user-card-selected" : ""}`} style={{ gap: 10 }}>
+                <strong>{user.displayName}</strong>
+                <span className="badge" style={{ alignSelf: "flex-start" }}>{user.role === "admin" ? "관리자" : "일반"}</span>
+                <button type="button" className="button-subtle" onClick={() => setSelectedUsername(selected ? null : user.username)}>
+                  {selected ? "선택 중" : "선택"}
+                </button>
               </div>
             );
           })}

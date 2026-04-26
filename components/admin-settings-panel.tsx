@@ -188,21 +188,17 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
           const selected = zone.id === selectedZoneId;
 
           return (
-            <div key={zone.id} className={`zone-editor-card stack${selected ? " zone-editor-card-selected" : ""}`}>
-              <div className="zone-editor-header">
-                <div className="stack" style={{ gap: 8 }}>
-                  <div className="inline-row">
-                    <strong>{zone.name || `지점 ${index + 1}`}</strong>
-                    <span className="badge">{zone.type === "tbm" ? "TBM" : "출입"}</span>
-                  </div>
-                  <span className={`status-pill ${zone.isActive ? "status-ready" : "status-locked"}`}>
-                    {zone.isActive ? "활성" : "비활성"}
-                  </span>
-                </div>
-                <button type="button" className="button-subtle" onClick={() => setSelectedZoneId(selected ? null : zone.id)}>
-                  {selected ? "선택 중" : "선택"}
-                </button>
+            <div key={zone.id} className={`zone-editor-card stack${selected ? " zone-editor-card-selected" : ""}`} style={{ gap: 10 }}>
+              <strong>{zone.name || `지점 ${index + 1}`}</strong>
+              <div className="inline-row" style={{ gap: 6 }}>
+                <span className={`status-pill ${zone.isActive ? "status-ready" : "status-locked"}`}>
+                  {zone.isActive ? "활성" : "비활성"}
+                </span>
+                <span className="badge">{zone.type === "tbm" ? "TBM" : "출입"}</span>
               </div>
+              <button type="button" className="button-subtle" onClick={() => setSelectedZoneId(selected ? null : zone.id)}>
+                {selected ? "선택 중" : "선택"}
+              </button>
             </div>
           );
         })}
