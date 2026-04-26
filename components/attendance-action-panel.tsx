@@ -158,7 +158,7 @@ export function AttendanceActionPanel({ eventStates, devCoordinates, variant = "
       const data = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        setMessage(data.error ?? "기록 저장에 실패했습니다.");
+        setMessage(data.error ?? "서버를 불러오지 못했습니다. 다시 시도해주세요.");
         return;
       }
 

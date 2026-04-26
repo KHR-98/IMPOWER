@@ -339,7 +339,7 @@ export function validateAttendanceMutation(input: {
   if (!zone) {
     return {
       ok: false,
-      message: state.zoneType === "tbm" ? "TBM 집합 위치 안에서만 가능합니다." : "등록된 출입 위치 반경 안에서만 가능합니다.",
+      message: state.zoneType === "tbm" ? "TBM 집합 위치 안에서만 가능합니다." : "출입 반경 밖입니다. 사업장 내로 이동해주세요.",
       eventCode,
     };
   }
