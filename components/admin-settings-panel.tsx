@@ -44,7 +44,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
   const [isEditing, setIsEditing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [zones, setZones] = useState<Zone[]>(initialZones);
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(initialZones[0]?.id ?? null);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(
     enabled ? null : "현재 저장소에서는 운영 설정을 수정할 수 없습니다.",

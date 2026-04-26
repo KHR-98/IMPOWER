@@ -1790,7 +1790,6 @@ button {
 .zone-editor-card-selected {
   border-color: rgba(15, 109, 95, 0.32);
   box-shadow: inset 0 0 0 1px rgba(15, 109, 95, 0.18);
-  grid-column: 1 / -1;
 }
 
 .user-card-selected {
