@@ -269,7 +269,7 @@ export function buildEventAvailability(
   }
 
   if (!isWindowActive(window, now)) {
-    return buildHiddenPendingState(code, `${label} 가능 시간이 아닙니다. ${windowText}`);
+    return buildHiddenPendingState(code, `${label} 가능 시간이 아닙니다.`);
   }
 
   return {
