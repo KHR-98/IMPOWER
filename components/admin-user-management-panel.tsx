@@ -102,7 +102,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                       value={role}
                       disabled={!enabled || isSaving}
                       onChange={(e) => setRole(e.target.value as UserRole)}
-                      style={{ flex: 1, fontSize: "0.9rem", padding: "6px 8px" }}
+                      style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                     >
                       <option value="user">일반 사용자</option>
                       <option value="admin">관리자</option>
