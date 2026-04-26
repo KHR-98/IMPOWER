@@ -12,24 +12,21 @@ interface AdminUserManagementPanelProps {
 
 export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserManagementPanelProps) {
   const router = useRouter();
-  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [openUsername, setOpenUsername] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>("user");
-  const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(
     enabled ? null : "현재 저장소에서는 사용자 계정을 수정할 수 없습니다.",
   );
 
-  const selectedUser = selectedUsername ? (initialUsers.find((user) => user.username === selectedUsername) ?? null) : null;
+  const openUser = openUsername ? (initialUsers.find((u) => u.username === openUsername) ?? null) : null;
 
   useEffect(() => {
-    if (selectedUser) {
-      setRole(selectedUser.role);
-    }
-  }, [selectedUser]);
+    if (openUser) setRole(openUser.role);
+  }, [openUser]);
 
-  async function handleSave() {
-    if (!selectedUser) return;
-    setPending(true);
+  async function handleSave(user: AdminUserListItem) {
+    setSaving(user.username);
     setMessage(null);
 
     try {
@@ -38,10 +35,10 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "update",
-          username: selectedUser.username,
-          displayName: selectedUser.displayName,
+          username: user.username,
+          displayName: user.displayName,
           role,
-          isActive: selectedUser.isActive,
+          isActive: user.isActive,
           password: null,
         }),
       });
@@ -53,11 +50,12 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       }
 
       setMessage(data.message ?? "권한을 저장했습니다.");
+      setOpenUsername(null);
       startTransition(() => router.refresh());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
     } finally {
-      setPending(false);
+      setSaving(null);
     }
   }
 
@@ -71,17 +69,43 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       </div>
 
       {initialUsers.length ? (
-        <div className="zone-editor-list user-mgmt-grid">
+        <div className="user-mgmt-grid">
           {initialUsers.map((user) => {
-            const selected = user.username === selectedUsername;
+            const isOpen = openUsername === user.username;
+            const isSaving = saving === user.username;
 
             return (
-              <div key={user.id} className={`zone-editor-card stack${selected ? " user-card-selected" : ""}`} style={{ gap: 10 }}>
-                <strong>{user.displayName}</strong>
-                <span className="badge" style={{ alignSelf: "flex-start" }}>{user.role === "admin" ? "관리자" : "일반"}</span>
-                <button type="button" className="button-subtle" onClick={() => setSelectedUsername(selected ? null : user.username)}>
-                  {selected ? "선택 중" : "선택"}
+              <div key={user.id} className={`mgmt-user-row${isOpen ? " mgmt-user-row-open" : ""}`}>
+                <button
+                  className="mgmt-user-header"
+                  onClick={() => setOpenUsername(isOpen ? null : user.username)}
+                  disabled={isSaving}
+                >
+                  <span className="mgmt-user-name">{isSaving ? "저장 중..." : user.displayName}</span>
+                  <span className="badge">{user.role === "admin" ? "관리자" : "일반"}</span>
+                  <span className="mgmt-user-chevron">{isOpen ? "▲" : "▼"}</span>
                 </button>
+
+                {isOpen && (
+                  <div className="mgmt-user-options">
+                    <select
+                      value={role}
+                      disabled={!enabled || isSaving}
+                      onChange={(e) => setRole(e.target.value as UserRole)}
+                    >
+                      <option value="user">일반 사용자</option>
+                      <option value="admin">관리자</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="mgmt-option-btn"
+                      disabled={!enabled || isSaving}
+                      onClick={() => handleSave(user)}
+                    >
+                      저장
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -89,24 +113,6 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
       ) : (
         <div className="notice small">등록된 계정이 없습니다.</div>
       )}
-
-      {selectedUser ? (
-        <>
-          <div className="field">
-            <label htmlFor="admin-user-role">{selectedUser.displayName} 권한</label>
-            <select id="admin-user-role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}>
-              <option value="user">일반 사용자</option>
-              <option value="admin">관리자</option>
-            </select>
-          </div>
-
-          <div className="inline-row">
-            <button type="button" className="button" disabled={!enabled || pending} onClick={handleSave}>
-              {pending ? "저장 중..." : "권한 저장"}
-            </button>
-          </div>
-        </>
-      ) : null}
 
       {message ? <div className="notice">{message}</div> : null}
     </div>
