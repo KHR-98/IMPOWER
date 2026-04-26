@@ -79,8 +79,8 @@ type KakaoWindow = Window & {
 
 let kakaoSdkPromise: Promise<KakaoSdk> | null = null;
 const DEFAULT_MAP_CENTER = {
-  latitude: 37.035002,
-  longitude: 127.060133,
+  latitude: 37.033164,
+  longitude: 127.062364,
 };
 const LEGACY_PLACEHOLDER_CENTER = {
   latitude: 37.56652,
