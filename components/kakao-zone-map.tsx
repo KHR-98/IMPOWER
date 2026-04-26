@@ -8,6 +8,8 @@ interface KakaoZoneMapProps {
   zones: Zone[];
   selectedZoneId: string | null;
   enabled: boolean;
+  isEditing: boolean;
+  onToggleEditing: () => void;
   onSelectZone: (zoneId: string) => void;
   onPickCoordinates: (zoneId: string, latitude: number, longitude: number) => void;
 }
@@ -246,7 +248,7 @@ function getZoneColors(zone: Zone, selectedZoneId: string | null) {
   };
 }
 
-export function KakaoZoneMap({ zones, selectedZoneId, enabled, onSelectZone, onPickCoordinates }: KakaoZoneMapProps) {
+export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onToggleEditing, onSelectZone, onPickCoordinates }: KakaoZoneMapProps) {
   const appKey = process.env.NEXT_PUBLIC_KAKAO_MAP_APP_KEY;
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -538,6 +540,14 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, onSelectZone, onP
           <h2 className="section-title">지도에서 지점 선택</h2>
           <p className="section-subtitle map-subtitle">검색 후 지도 클릭 또는 중심 좌표 적용으로 지점을 지정합니다.</p>
         </div>
+        <button
+          type="button"
+          className="button-subtle"
+          disabled={!enabled}
+          onClick={onToggleEditing}
+        >
+          {isEditing ? "취소" : "수정"}
+        </button>
       </div>
 
       <div className="search-row">

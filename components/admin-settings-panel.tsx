@@ -42,6 +42,7 @@ function createZoneDraft(zones: Zone[]): Zone {
 export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: AdminSettingsPanelProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [isMapEditing, setIsMapEditing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
@@ -112,6 +113,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
 
       setMessage(data.message ?? "운영 설정을 저장했습니다.");
       setIsEditing(false);
+      setIsMapEditing(false);
       startTransition(() => router.refresh());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
@@ -130,7 +132,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
           type="button"
           className={isEditing ? "button-subtle" : "button-subtle"}
           disabled={!enabled || pending}
-          onClick={() => { setIsEditing((v) => !v); setMessage(null); }}
+          onClick={() => { setIsEditing((v) => !v); setIsMapEditing(false); setMessage(null); }}
         >
           {isEditing ? "취소" : "수정"}
         </button>
@@ -168,7 +170,9 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       <KakaoZoneMap
         zones={zones}
         selectedZoneId={selectedZoneId}
-        enabled={isEditing && enabled}
+        enabled={isMapEditing && enabled}
+        isEditing={isMapEditing}
+        onToggleEditing={() => { setIsMapEditing((v) => !v); }}
         onSelectZone={setSelectedZoneId}
         onPickCoordinates={updateZoneCoordinates}
       />
