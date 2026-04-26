@@ -312,7 +312,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, onSelectZone, onP
 
         kakao.maps.event.addListener(map, "click", (mouseEvent: { latLng: { getLat: () => number; getLng: () => number } }) => {
           if (!enabledRef.current) {
-            setStatus("현재 저장소에서는 지도 기반 좌표 설정을 저장할 수 없습니다.");
+            setStatus("수정 버튼을 눌러 편집 모드로 전환하세요.");
             return;
           }
 
@@ -549,17 +549,17 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, onSelectZone, onP
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="장소명 또는 주소"
-            disabled={!appKey || pendingSearch}
+            disabled={!appKey || pendingSearch || !enabled}
           />
-          <button type="button" className="button-subtle search-btn" onClick={handleSearch} disabled={!appKey || pendingSearch}>
+          <button type="button" className="button-subtle search-btn" onClick={handleSearch} disabled={!appKey || pendingSearch || !enabled}>
             {pendingSearch ? "검색 중" : "검색"}
           </button>
         </div>
         <div className="search-action-group">
-          <button type="button" className="button-subtle" onClick={moveToCurrentLocation} disabled={!appKey}>
+          <button type="button" className="button-subtle" onClick={moveToCurrentLocation} disabled={!appKey || !enabled}>
             내 위치
           </button>
-          <button type="button" className="button-subtle" onClick={applyMapCenterToSelectedZone} disabled={!appKey || !selectedZoneId}>
+          <button type="button" className="button-subtle" onClick={applyMapCenterToSelectedZone} disabled={!appKey || !selectedZoneId || !enabled}>
             중심 적용
           </button>
         </div>

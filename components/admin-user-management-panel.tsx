@@ -12,14 +12,14 @@ interface AdminUserManagementPanelProps {
 
 export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserManagementPanelProps) {
   const router = useRouter();
-  const [selectedUsername, setSelectedUsername] = useState(initialUsers[0]?.username ?? "");
-  const [role, setRole] = useState<UserRole>(initialUsers[0]?.role ?? "user");
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [role, setRole] = useState<UserRole>("user");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(
     enabled ? null : "현재 저장소에서는 사용자 계정을 수정할 수 없습니다.",
   );
 
-  const selectedUser = initialUsers.find((user) => user.username === selectedUsername) ?? null;
+  const selectedUser = selectedUsername ? (initialUsers.find((user) => user.username === selectedUsername) ?? null) : null;
 
   useEffect(() => {
     if (selectedUser) {
@@ -76,7 +76,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
             const selected = user.username === selectedUsername;
 
             return (
-              <div key={user.id} className={`zone-editor-card stack${selected ? " zone-editor-card-selected" : ""}`}>
+              <div key={user.id} className={`zone-editor-card stack${selected ? " user-card-selected" : ""}`}>
                 <div className="zone-editor-header">
                   <div className="stack" style={{ gap: 8 }}>
                     <div className="inline-row">
@@ -84,7 +84,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                       <span className="badge">{user.role === "admin" ? "관리자" : "일반"}</span>
                     </div>
                   </div>
-                  <button type="button" className="button-subtle" onClick={() => setSelectedUsername(user.username)}>
+                  <button type="button" className="button-subtle" onClick={() => setSelectedUsername(selected ? null : user.username)}>
                     {selected ? "선택 중" : "선택"}
                   </button>
                 </div>
