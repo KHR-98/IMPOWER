@@ -262,6 +262,7 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
   const zonesRef = useRef(zones);
   const selectedZoneIdRef = useRef<string | null>(selectedZoneId);
   const enabledRef = useRef(enabled);
+  const isEditingRef = useRef(isEditing);
   const onPickCoordinatesRef = useRef(onPickCoordinates);
   const onSelectZoneRef = useRef(onSelectZone);
   const [query, setQuery] = useState("");
@@ -280,11 +281,15 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
 
   useEffect(() => {
     enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    isEditingRef.current = isEditing;
     const map = mapRef.current;
     if (!map) return;
-    map.setDraggable(enabled);
-    map.setZoomable(enabled);
-  }, [enabled]);
+    map.setDraggable(enabled && isEditing);
+    map.setZoomable(enabled && isEditing);
+  }, [enabled, isEditing]);
 
   useEffect(() => {
     onPickCoordinatesRef.current = onPickCoordinates;
@@ -316,12 +321,12 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
         });
 
         mapRef.current = map;
-        map.setDraggable(enabledRef.current);
-        map.setZoomable(enabledRef.current);
+        map.setDraggable(enabledRef.current && isEditingRef.current);
+        map.setZoomable(enabledRef.current && isEditingRef.current);
         map.relayout();
 
         kakao.maps.event.addListener(map, "click", (mouseEvent: { latLng: { getLat: () => number; getLng: () => number } }) => {
-          if (!enabledRef.current) {
+          if (!isEditingRef.current) {
             setStatus("수정 버튼을 눌러 편집 모드로 전환하세요.");
             return;
           }
@@ -567,17 +572,17 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="장소명 또는 주소"
-            disabled={!appKey || pendingSearch || !enabled}
+            disabled={!appKey || pendingSearch || !isEditing}
           />
-          <button type="button" className="button-subtle search-btn" onClick={handleSearch} disabled={!appKey || pendingSearch || !enabled}>
+          <button type="button" className="button-subtle search-btn" onClick={handleSearch} disabled={!appKey || pendingSearch || !isEditing}>
             {pendingSearch ? "검색 중" : "검색"}
           </button>
         </div>
         <div className="search-action-group">
-          <button type="button" className="button-subtle" onClick={moveToCurrentLocation} disabled={!appKey || !enabled}>
+          <button type="button" className="button-subtle" onClick={moveToCurrentLocation} disabled={!appKey || !isEditing}>
             내 위치
           </button>
-          <button type="button" className="button-subtle" onClick={applyMapCenterToSelectedZone} disabled={!appKey || !selectedZoneId || !enabled}>
+          <button type="button" className="button-subtle" onClick={applyMapCenterToSelectedZone} disabled={!appKey || !selectedZoneId || !isEditing}>
             중심 적용
           </button>
         </div>

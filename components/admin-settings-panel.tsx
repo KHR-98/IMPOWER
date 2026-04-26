@@ -176,7 +176,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       <KakaoZoneMap
         zones={zones}
         selectedZoneId={selectedZoneId}
-        enabled={isMapEditing && enabled}
+        enabled={enabled}
         isEditing={isMapEditing}
         onToggleEditing={() => { setIsMapEditing((v) => !v); }}
         onSelectZone={setSelectedZoneId}
