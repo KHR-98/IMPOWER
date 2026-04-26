@@ -326,11 +326,6 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
         map.relayout();
 
         kakao.maps.event.addListener(map, "click", (mouseEvent: { latLng: { getLat: () => number; getLng: () => number } }) => {
-          if (!isEditingRef.current) {
-            setStatus("수정 버튼을 눌러 편집 모드로 전환하세요.");
-            return;
-          }
-
           const zoneId = selectedZoneIdRef.current;
 
           if (!zoneId) {
@@ -588,7 +583,15 @@ export function KakaoZoneMap({ zones, selectedZoneId, enabled, isEditing, onTogg
         </div>
       </div>
 
-      <div ref={mapContainerRef} className="map-canvas" />
+      <div style={{ position: "relative" }}>
+        <div ref={mapContainerRef} className="map-canvas" />
+        {!isEditing && (
+          <div
+            style={{ position: "absolute", inset: 0, touchAction: "none", cursor: "default" }}
+            onClick={() => setStatus("수정 버튼을 눌러 편집 모드로 전환하세요.")}
+          />
+        )}
+      </div>
       {status ? <div className="notice small">{status}</div> : null}
     </div>
   );
