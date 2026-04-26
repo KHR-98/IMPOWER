@@ -15,6 +15,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
   const [openUsername, setOpenUsername] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>("user");
   const [saving, setSaving] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const [message, setMessage] = useState<string | null>(
     enabled ? null : "현재 저장소에서는 사용자 계정을 수정할 수 없습니다.",
   );
@@ -59,18 +60,27 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
     }
   }
 
+  const filteredUsers = initialUsers.filter((u) => u.displayName.includes(search.trim()));
+
   return (
     <div className="stack">
-      <div className="panel-header">
-        <div>
-          <h2 className="section-title">사용자 관리</h2>
-          <p className="section-subtitle">사용자 권한을 관리합니다.</p>
+      <div className="panel-header" style={{ alignItems: "center" }}>
+        <h2 className="section-title">사용자 권한 관리</h2>
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+          <span style={{ position: "absolute", left: 8, fontSize: "0.8rem", color: "var(--fg-muted)", pointerEvents: "none" }}>🔍</span>
+          <input
+            type="search"
+            placeholder="이름 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ paddingLeft: 26, width: 110, fontSize: "0.82rem", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", height: 30 }}
+          />
         </div>
       </div>
 
       {initialUsers.length ? (
         <div className="mgmt-user-list">
-          {initialUsers.map((user) => {
+          {filteredUsers.map((user) => {
             const isOpen = openUsername === user.username;
             const isSaving = saving === user.username;
 
@@ -87,22 +97,24 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                 </button>
 
                 {isOpen && (
-                  <div className="mgmt-user-options">
+                  <div className="mgmt-user-options" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
                     <select
                       value={role}
                       disabled={!enabled || isSaving}
                       onChange={(e) => setRole(e.target.value as UserRole)}
+                      style={{ flex: 1, fontSize: "0.9rem", padding: "6px 8px" }}
                     >
                       <option value="user">일반 사용자</option>
                       <option value="admin">관리자</option>
                     </select>
                     <button
                       type="button"
-                      className="mgmt-option-btn"
+                      className="button-subtle"
                       disabled={!enabled || isSaving}
                       onClick={() => handleSave(user)}
+                      style={{ whiteSpace: "nowrap" }}
                     >
-                      저장
+                      {isSaving ? "저장 중..." : "저장"}
                     </button>
                   </div>
                 )}
