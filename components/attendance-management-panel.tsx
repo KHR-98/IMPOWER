@@ -87,22 +87,25 @@ export function AttendanceManagementPanel({
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div className="panel-header" style={{ alignItems: "center", marginBottom: 0 }}>
+        <div style={{ flex: 1 }} />
         <span className="section-title" style={{ fontSize: "0.95rem", whiteSpace: "nowrap" }}>인원 명단</span>
-        <input
-          type="search"
-          placeholder="이름 검색"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ width: 100, fontSize: "0.8rem" }}
-        />
-        <button
-          type="button"
-          className="button-subtle"
-          style={{ padding: "4px 8px" }}
-          onClick={() => setIsExpanded((v) => !v)}
-        >
-          {isExpanded ? "▲" : "▼"}
-        </button>
+        <div style={{ flex: 1, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4 }}>
+          <input
+            type="search"
+            placeholder="이름 검색"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: 100, fontSize: "0.8rem" }}
+          />
+          <button
+            type="button"
+            className="button-subtle"
+            style={{ padding: "4px 8px" }}
+            onClick={() => setIsExpanded((v) => !v)}
+          >
+            {isExpanded ? "▲" : "▼"}
+          </button>
+        </div>
       </div>
     {isExpanded && (
     <div className="mgmt-user-list">
