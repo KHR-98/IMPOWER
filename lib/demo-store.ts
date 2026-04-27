@@ -500,5 +500,11 @@ export function performAttendanceAction(input: {
     ok: true,
     message: validation.message,
     record: nextRecord,
+    eventStates: buildEventStates({
+      shiftType: rosterEntry?.shiftType ?? "day",
+      rosterEntry,
+      record: nextRecord,
+      settings,
+    }),
   };
 }
