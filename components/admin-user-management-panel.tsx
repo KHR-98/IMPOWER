@@ -157,6 +157,9 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                         />
                         활성
                       </label>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                       <button
                         type="button"
                         className="button-subtle"
@@ -166,41 +169,41 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                       >
                         {isSaving ? "저장 중..." : "저장"}
                       </button>
-                    </div>
 
-                    {isConfirmingDelete ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: "0.82rem", color: "#e53e3e", flex: 1 }}>정말 삭제할까요?</span>
+                      {isConfirmingDelete ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: "0.82rem", color: "#e53e3e" }}>정말 삭제할까요?</span>
+                          <button
+                            type="button"
+                            className="button-subtle"
+                            disabled={isSaving}
+                            onClick={() => handleDelete(user.username)}
+                            style={{ whiteSpace: "nowrap", color: "#e53e3e", borderColor: "#e53e3e" }}
+                          >
+                            삭제 확인
+                          </button>
+                          <button
+                            type="button"
+                            className="button-subtle"
+                            disabled={isSaving}
+                            onClick={() => setConfirmDelete(null)}
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            취소
+                          </button>
+                        </div>
+                      ) : (
                         <button
                           type="button"
                           className="button-subtle"
-                          disabled={isSaving}
-                          onClick={() => handleDelete(user.username)}
-                          style={{ whiteSpace: "nowrap", color: "#e53e3e", borderColor: "#e53e3e" }}
+                          disabled={!enabled || isSaving}
+                          onClick={() => setConfirmDelete(user.username)}
+                          style={{ whiteSpace: "nowrap", fontSize: "0.82rem", color: "#e53e3e", borderColor: "#e53e3e" }}
                         >
-                          삭제 확인
+                          계정 삭제
                         </button>
-                        <button
-                          type="button"
-                          className="button-subtle"
-                          disabled={isSaving}
-                          onClick={() => setConfirmDelete(null)}
-                          style={{ whiteSpace: "nowrap" }}
-                        >
-                          취소
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="button-subtle"
-                        disabled={!enabled || isSaving}
-                        onClick={() => setConfirmDelete(user.username)}
-                        style={{ alignSelf: "flex-start", fontSize: "0.82rem", color: "#e53e3e", borderColor: "#e53e3e" }}
-                      >
-                        계정 삭제
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
