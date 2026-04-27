@@ -3,7 +3,6 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getSessionUserByUsername } from "@/lib/app-data";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth-config";
 import { encodeSessionToken, verifySessionToken } from "@/lib/session-token";
 import type { SessionUser } from "@/lib/types";
@@ -38,7 +37,13 @@ export async function getSession(): Promise<SessionUser | null> {
     return null;
   }
 
-  return getSessionUserByUsername(payload.username);
+  // Trust signed token claims directly — avoids a DB round-trip on every request.
+  // Trade-off: a deactivated user stays active until the token expires (12 h max).
+  return {
+    username: payload.username,
+    displayName: payload.displayName,
+    role: payload.role,
+  };
 }
 
 export async function requireSession(): Promise<SessionUser> {

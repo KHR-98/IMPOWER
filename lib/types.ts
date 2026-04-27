@@ -198,6 +198,7 @@ export interface AttendanceMutationResult {
   ok: boolean;
   message: string;
   record?: AttendanceRecord;
+  eventStates?: AttendanceEventState[];
 }
 
 export interface CoordinatePayload {

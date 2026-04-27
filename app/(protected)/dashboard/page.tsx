@@ -20,7 +20,7 @@ export default async function DashboardPage({
   }
 
   const [view, devCoordinates, runtime] = await Promise.all([
-    getUserTodayView(session.username),
+    getUserTodayView(session.username, session),
     getDevCoordinatesForTesting(),
     getRuntimeInfo(),
   ]);

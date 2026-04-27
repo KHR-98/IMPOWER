@@ -36,6 +36,7 @@ export async function POST(
   const result = await performAttendanceAction({
     username: session.username,
     action,
+    sessionUser: session,
     ...parsed.data,
   });
 
@@ -43,5 +44,5 @@ export async function POST(
     return NextResponse.json({ error: result.message }, { status: 400 });
   }
 
-  return NextResponse.json({ message: result.message, record: result.record });
+  return NextResponse.json({ message: result.message, eventStates: result.eventStates });
 }

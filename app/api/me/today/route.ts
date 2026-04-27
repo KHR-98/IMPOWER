@@ -10,5 +10,5 @@ export async function GET() {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
-  return NextResponse.json(await getUserTodayView(session.username));
+  return NextResponse.json(await getUserTodayView(session.username, session));
 }

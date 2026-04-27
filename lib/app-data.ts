@@ -23,7 +23,6 @@ import {
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
   getSupabaseSessionUser,
-  getSupabaseSetupStatus,
   getSupabaseSheetUserImportPreview,
   getSupabaseUserTodayView,
   getSupabaseZones,
@@ -61,49 +60,19 @@ interface ResolvedDataSource {
   setupMessage: string | null;
 }
 
-let resolvedCache: { value: ResolvedDataSource; expiresAt: number } | null = null;
-
-async function resolveDataSource(): Promise<ResolvedDataSource> {
-  const now = Date.now();
-
-  if (resolvedCache && resolvedCache.expiresAt > now) {
-    return resolvedCache.value;
-  }
-
-  let resolved: ResolvedDataSource;
-
+function resolveDataSource(): ResolvedDataSource {
   if (!hasSupabaseEnv()) {
-    resolved = {
-      dataSource: "demo",
-      setupMessage: null,
-    };
-  } else {
-    const setupStatus = await getSupabaseSetupStatus();
-    resolved = setupStatus.ready
-      ? {
-          dataSource: "supabase",
-          setupMessage: null,
-        }
-      : {
-          dataSource: "demo",
-          setupMessage: setupStatus.message,
-        };
+    return { dataSource: "demo", setupMessage: null };
   }
-
-  resolvedCache = {
-    value: resolved,
-    expiresAt: now + 5000,
-  };
-
-  return resolved;
+  return { dataSource: "supabase", setupMessage: null };
 }
 
 export async function getDataSourceKind(): Promise<DataSourceKind> {
-  return (await resolveDataSource()).dataSource;
+  return resolveDataSource().dataSource;
 }
 
 export async function getRuntimeInfo(): Promise<RuntimeInfo> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   return {
     dataSource: resolved.dataSource,
@@ -115,7 +84,7 @@ export async function getRuntimeInfo(): Promise<RuntimeInfo> {
 }
 
 export async function authenticateUser(username: string, password: string): Promise<SessionUser | null> {
-  return (await resolveDataSource()).dataSource === "supabase"
+  return resolveDataSource().dataSource === "supabase"
     ? authenticateSupabaseUser(username, password)
     : authenticateDemoUser(username, password);
 }
@@ -125,45 +94,45 @@ export async function changePassword(input: {
   currentPassword: string;
   nextPassword: string;
 }): Promise<{ ok: boolean; message: string }> {
-  return (await resolveDataSource()).dataSource === "supabase"
+  return resolveDataSource().dataSource === "supabase"
     ? changeSupabasePassword(input)
     : changeDemoPassword(input);
 }
 
 export async function getSessionUserByUsername(username: string): Promise<SessionUser | null> {
-  return (await resolveDataSource()).dataSource === "supabase"
+  return resolveDataSource().dataSource === "supabase"
     ? getSupabaseSessionUser(username)
     : getDemoSessionUser(username);
 }
 
 export async function findUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
-  if ((await resolveDataSource()).dataSource !== "supabase") return null;
+  if (resolveDataSource().dataSource !== "supabase") return null;
   return getSessionUserByKakaoId(kakaoId);
 }
 
 export async function registerKakaoUser(kakaoId: string, displayName: string): Promise<SessionUser> {
-  if ((await resolveDataSource()).dataSource !== "supabase") {
+  if (resolveDataSource().dataSource !== "supabase") {
     throw new Error("카카오 회원가입은 Supabase 모드에서만 지원됩니다.");
   }
   return createKakaoUser(kakaoId, displayName);
 }
 
-export async function getUserTodayView(username: string): Promise<UserTodayView> {
-  return (await resolveDataSource()).dataSource === "supabase"
-    ? getSupabaseUserTodayView(username)
+export async function getUserTodayView(username: string, sessionUser?: SessionUser): Promise<UserTodayView> {
+  return resolveDataSource().dataSource === "supabase"
+    ? getSupabaseUserTodayView(username, sessionUser)
     : getDemoUserTodayView(username);
 }
 
 export async function getDashboardView(): Promise<DashboardView> {
-  return (await resolveDataSource()).dataSource === "supabase" ? getSupabaseDashboardView() : getDemoDashboardView();
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseDashboardView() : getDemoDashboardView();
 }
 
 export async function getZones(): Promise<Zone[]> {
-  return (await resolveDataSource()).dataSource === "supabase" ? getSupabaseZones() : getDemoZones();
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseZones() : getDemoZones();
 }
 
 export async function getAdminUserList(): Promise<AdminUserListItem[]> {
-  return (await resolveDataSource()).dataSource === "supabase" ? getSupabaseAdminUsers() : [];
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers() : [];
 }
 
 export async function performAttendanceAction(input: {
@@ -172,14 +141,16 @@ export async function performAttendanceAction(input: {
   latitude: number;
   longitude: number;
   accuracyM: number;
+  sessionUser?: SessionUser;
 }): Promise<AttendanceMutationResult> {
-  return (await resolveDataSource()).dataSource === "supabase"
-    ? performSupabaseAttendanceAction(input)
-    : performDemoAttendanceAction(input);
+  const { sessionUser, ...baseInput } = input;
+  return resolveDataSource().dataSource === "supabase"
+    ? performSupabaseAttendanceAction({ ...baseInput, sessionUser })
+    : performDemoAttendanceAction(baseInput);
 }
 
 export async function syncRoster(): Promise<RosterSyncResult> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -210,7 +181,7 @@ export async function saveAdminConfiguration(input: {
   settings: AppSettings;
   zones: Zone[];
 }): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -223,7 +194,7 @@ export async function saveAdminConfiguration(input: {
 }
 
 export async function saveAdminUser(input: AdminUserMutationInput): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -236,7 +207,7 @@ export async function saveAdminUser(input: AdminUserMutationInput): Promise<{ ok
 }
 
 export async function deleteAdminUser(username: string, actorUsername: string): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -249,7 +220,7 @@ export async function deleteAdminUser(username: string, actorUsername: string): 
 }
 
 export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -262,7 +233,7 @@ export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promis
 }
 
 export async function saveAdminRosterControls(input: AdminRosterControlInput): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -275,7 +246,7 @@ export async function saveAdminRosterControls(input: AdminRosterControlInput): P
 }
 
 export async function getSheetUserImportPreview(): Promise<SheetUserImportPreview | null> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase" || !hasGoogleSheetEnv()) {
     return null;
@@ -287,7 +258,7 @@ export async function getSheetUserImportPreview(): Promise<SheetUserImportPrevie
 export async function importUsersFromSheet(
   input: AdminUserImportInput,
 ): Promise<{ ok: boolean; message: string; createdCount: number; skippedCount: number }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -314,7 +285,7 @@ export async function saveAdminAttendanceCorrection(
   input: AdminAttendanceCorrectionInput,
   actorName: string,
 ): Promise<{ ok: boolean; message: string }> {
-  const resolved = await resolveDataSource();
+  const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
     return {
@@ -327,7 +298,7 @@ export async function saveAdminAttendanceCorrection(
 }
 
 export async function getDevCoordinatesForTesting(): Promise<Partial<Record<AttendanceAction, CoordinatePayload>> | null> {
-  return (await resolveDataSource()).dataSource === "demo" ? getDevCoordinates() : null;
+  return resolveDataSource().dataSource === "demo" ? getDevCoordinates() : null;
 }
 
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 
 import type { AttendanceAction, AttendanceEventState, CoordinatePayload } from "@/lib/types";
 
@@ -130,8 +129,8 @@ function getStatusMessage(visibleStates: AttendanceEventState[], allStates: Atte
   return "오늘 필요한 기록이 모두 완료되었습니다.";
 }
 
-export function AttendanceActionPanel({ eventStates, devCoordinates, variant = "default" }: AttendanceActionPanelProps) {
-  const router = useRouter();
+export function AttendanceActionPanel({ eventStates: initialEventStates, devCoordinates, variant = "default" }: AttendanceActionPanelProps) {
+  const [eventStates, setEventStates] = useState<AttendanceEventState[]>(initialEventStates);
   const [pendingAction, setPendingAction] = useState<AttendanceAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -142,11 +141,13 @@ export function AttendanceActionPanel({ eventStates, devCoordinates, variant = "
 
   async function submitAction(action: AttendanceAction, useDemoCoordinates: boolean) {
     setPendingAction(action);
-    setMessage(null);
+    setMessage("위치 확인 중...");
 
     try {
       const demoPayload = useDemoCoordinates && devCoordinates ? devCoordinates[action] : null;
       const payload = demoPayload ?? (await getCurrentPosition());
+      setMessage(null);
+
       const response = await fetch(`/api/attendance/${action}`, {
         method: "POST",
         headers: {
@@ -155,7 +156,7 @@ export function AttendanceActionPanel({ eventStates, devCoordinates, variant = "
         body: JSON.stringify(payload),
       });
 
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = (await response.json()) as { error?: string; message?: string; eventStates?: AttendanceEventState[] };
 
       if (!response.ok) {
         setMessage(data.error ?? "서버를 불러오지 못했습니다. 다시 시도해주세요.");
@@ -163,7 +164,9 @@ export function AttendanceActionPanel({ eventStates, devCoordinates, variant = "
       }
 
       setMessage(data.message ?? "기록이 저장되었습니다.");
-      startTransition(() => router.refresh());
+      if (data.eventStates) {
+        setEventStates(data.eventStates);
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
     } finally {

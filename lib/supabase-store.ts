@@ -983,6 +983,22 @@ async function getSupabaseRosterEntries(workDate: string) {
   return data ?? [];
 }
 
+async function getSupabaseRosterEntryForUser(workDate: string, username: string) {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from("roster_entries")
+    .select("*")
+    .eq("work_date", workDate)
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
 async function getSupabaseAttendanceRecords(workDate: string) {
   const client = getSupabaseAdminClient();
   const { data, error } = await client.from("attendance_records").select("*").eq("work_date", workDate);
@@ -1009,20 +1025,20 @@ async function getSupabaseActiveUsers() {
   return data ?? [];
 }
 
-export async function getSupabaseUserTodayView(username: string): Promise<UserTodayView> {
+export async function getSupabaseUserTodayView(username: string, sessionUser?: SessionUser): Promise<UserTodayView> {
   const workDate = getKoreaDateKey();
-  const [user, settings, rosterRows, recordRows] = await Promise.all([
-    getSupabaseSessionUser(username),
+  const [settings, rosterRow, recordRow] = await Promise.all([
     getSupabaseSettings(),
-    getSupabaseRosterEntries(workDate),
-    getSupabaseAttendanceRecords(workDate),
+    getSupabaseRosterEntryForUser(workDate, username),
+    getSupabaseAttendanceRecordRow(workDate, username),
   ]);
+
+  const user = sessionUser ?? (await getSupabaseSessionUser(username));
 
   if (!user) {
     throw new Error(`Unknown user: ${username}`);
   }
 
-  const rosterRow = rosterRows.find((row) => row.username === username) ?? null;
   const rosterEntry = rosterRow
     ? mapRosterEntry(rosterRow, user.displayName)
     : user.role === "admin"
@@ -1048,7 +1064,6 @@ export async function getSupabaseUserTodayView(username: string): Promise<UserTo
           scheduleReasonCode: "not_synced" as const,
           scheduleReason: getRosterReasonMessage("not_synced"),
         };
-  const recordRow = recordRows.find((row) => row.username === username);
   const record = recordRow ? mapAttendanceRecord(recordRow) : null;
   const shiftType = rosterEntry.shiftType;
   const currentPeriod = getCurrentPeriod(settings);
@@ -1224,16 +1239,17 @@ export async function performSupabaseAttendanceAction(input: {
   latitude: number;
   longitude: number;
   accuracyM: number;
+  sessionUser?: SessionUser;
 }): Promise<AttendanceMutationResult> {
   const workDate = getKoreaDateKey();
-  const client = getSupabaseAdminClient();
-  const [sessionUser, zones, settings, rosterRows, recordRows] = await Promise.all([
-    getSupabaseSessionUser(input.username),
+  const [zones, settings, rosterRow, currentRecordRow] = await Promise.all([
     getSupabaseZones(),
     getSupabaseSettings(),
-    getSupabaseRosterEntries(workDate),
-    getSupabaseAttendanceRecords(workDate),
+    getSupabaseRosterEntryForUser(workDate, input.username),
+    getSupabaseAttendanceRecordRow(workDate, input.username),
   ]);
+
+  const sessionUser = input.sessionUser ?? (await getSupabaseSessionUser(input.username));
 
   if (!sessionUser) {
     return {
@@ -1242,22 +1258,20 @@ export async function performSupabaseAttendanceAction(input: {
     };
   }
 
-  const rosterRow = rosterRows.find((row) => row.username === input.username) ?? null;
   const rosterEntry = rosterRow
     ? mapRosterEntry(rosterRow, sessionUser.displayName)
-      : {
-          id: `${workDate}-${input.username}`,
-          workDate,
-          username: input.username,
-          displayName: sessionUser.displayName,
-          isScheduled: false,
-          shiftType: "day" as const,
-          allowLunchOut: false,
-          scheduleReasonCode: "not_synced" as const,
-          scheduleReason: getRosterReasonMessage("not_synced"),
-        };
-  const currentRecord = recordRows.find((row) => row.username === input.username);
-  const mappedRecord = currentRecord ? mapAttendanceRecord(currentRecord) : null;
+    : {
+        id: `${workDate}-${input.username}`,
+        workDate,
+        username: input.username,
+        displayName: sessionUser.displayName,
+        isScheduled: false,
+        shiftType: "day" as const,
+        allowLunchOut: false,
+        scheduleReasonCode: "not_synced" as const,
+        scheduleReason: getRosterReasonMessage("not_synced"),
+      };
+  const mappedRecord = currentRecordRow ? mapAttendanceRecord(currentRecordRow) : null;
 
   const validation = validateAttendanceMutation({
     action: input.action,
@@ -1282,7 +1296,7 @@ export async function performSupabaseAttendanceAction(input: {
     zoneId: validation.zoneId,
   } satisfies AttendancePoint;
 
-  return persistAttendanceEvent({
+  const result = await persistAttendanceEvent({
     workDate,
     username: input.username,
     displayName: sessionUser.displayName,
@@ -1291,6 +1305,17 @@ export async function performSupabaseAttendanceAction(input: {
     currentRecord: mappedRecord,
     validationMessage: validation.message,
   });
+
+  if (result.ok && result.record) {
+    result.eventStates = buildEventStates({
+      shiftType: rosterEntry.shiftType,
+      rosterEntry,
+      record: result.record,
+      settings,
+    });
+  }
+
+  return result;
 }
 
 function toAdminCorrectedPoint(nextOccurredAt: string | null, currentPoint: AttendancePoint | null): AttendancePoint | null {
