@@ -181,19 +181,14 @@ button {
 .correction-time-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
 }
 
 .correction-time-grid .field input {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
-}
-
-@media (max-width: 520px) {
-  .correction-time-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .card,
