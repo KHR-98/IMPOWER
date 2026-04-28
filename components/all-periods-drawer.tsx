@@ -1,10 +1,12 @@
 import Link from "next/link";
 
+import { formatKoreaDateTime } from "@/lib/time";
+
 export interface AllPeriodsRow {
   username: string;
   displayName: string;
   shiftType: "day" | "late";
-  items: { label: string; done: boolean }[];
+  items: { label: string; done: boolean; occurredAt: string | null }[];
 }
 
 const DAY_COLUMNS = ["출근", "오전 TBM", "오후 TBM", "퇴근 TBM", "퇴근"];
@@ -90,7 +92,7 @@ function AllPeriodsGroup({
               key={item.label}
               className={`status-pill ${item.done ? "status-ready" : "status-pending"}`}
             >
-              {item.done ? "완료" : "미완"}
+              {item.done ? formatKoreaDateTime(item.occurredAt) : "미완"}
             </span>
           ))}
         </div>

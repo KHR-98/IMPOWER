@@ -103,15 +103,15 @@ export default async function AdminPage({
     shiftType: u.shiftType,
     items: u.shiftType === "day"
       ? [
-          { label: "출근", done: !!record?.checkIn },
-          { label: "오전 TBM", done: !!(record?.tbmMorning ?? record?.tbm) },
-          { label: "오후 TBM", done: !!record?.tbmAfternoon },
-          { label: "퇴근 TBM", done: !!record?.tbmCheckout },
-          { label: "퇴근", done: !!record?.checkOut },
+          { label: "출근", done: !!record?.checkIn, occurredAt: record?.checkIn?.occurredAt ?? null },
+          { label: "오전 TBM", done: !!(record?.tbmMorning ?? record?.tbm), occurredAt: (record?.tbmMorning ?? record?.tbm)?.occurredAt ?? null },
+          { label: "오후 TBM", done: !!record?.tbmAfternoon, occurredAt: record?.tbmAfternoon?.occurredAt ?? null },
+          { label: "퇴근 TBM", done: !!record?.tbmCheckout, occurredAt: record?.tbmCheckout?.occurredAt ?? null },
+          { label: "퇴근", done: !!record?.checkOut, occurredAt: record?.checkOut?.occurredAt ?? null },
         ]
       : [
-          { label: "출근", done: !!record?.checkIn },
-          { label: "퇴근", done: !!record?.checkOut },
+          { label: "출근", done: !!record?.checkIn, occurredAt: record?.checkIn?.occurredAt ?? null },
+          { label: "퇴근", done: !!record?.checkOut, occurredAt: record?.checkOut?.occurredAt ?? null },
         ],
   });
 
