@@ -195,7 +195,7 @@ export default async function AdminPage({
             <div className="panel-header admin-period-table-header">
               <AllPeriodsTrigger open={showAllPeriods} section={selectedSection} periodTitle={periodTableTitle} />
               <div>
-                <h2 className="section-title">{showAllPeriods ? "전체 출결현황" : periodTableTitle}</h2>
+                <h2 className="section-title">{showAllPeriods ? "전체 출결표" : periodTableTitle}</h2>
                 <div className="admin-period-legend">
                   <span className="admin-period-legend-item">
                     <span className="admin-period-legend-dot admin-period-legend-dot-done" />
