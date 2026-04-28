@@ -64,7 +64,7 @@ function AllPeriodsGroup({
 }) {
   if (rows.length === 0) return null;
 
-  const gridTemplate = `1.4fr repeat(${columns.length}, 1fr)`;
+  const gridTemplate = `1fr repeat(${columns.length}, 1.1fr)`;
 
   return (
     <div className="all-periods-group">
@@ -92,7 +92,7 @@ function AllPeriodsGroup({
               key={item.label}
               className={`status-pill ${item.done ? "status-ready" : "status-pending"}`}
             >
-              {item.done ? formatKoreaDateTime(item.occurredAt) : "미완"}
+              {item.done ? formatKoreaDateTime(item.occurredAt) : "미완료"}
             </span>
           ))}
         </div>
