@@ -233,9 +233,15 @@ function hasRecordedEvent(record: AttendanceRecord | null, eventCode: Attendance
   }
 }
 
-function buildEventColumnPayload(eventCode: AttendanceEventCode, point: AttendancePoint, updatedAt: string) {
+function buildEventColumnPayload(
+  eventCode: AttendanceEventCode,
+  point: AttendancePoint,
+  updatedAt: string,
+  mdmVerified?: boolean,
+  cameraTestResult?: string | null,
+) {
   const prefix = EVENT_STORAGE_PREFIX[eventCode];
-  const payload: Record<string, string | number> = {
+  const payload: Record<string, string | number | boolean | null> = {
     [`${prefix}_at`]: point.occurredAt,
     [`${prefix}_lat`]: point.latitude,
     [`${prefix}_lng`]: point.longitude,
@@ -250,6 +256,11 @@ function buildEventColumnPayload(eventCode: AttendanceEventCode, point: Attendan
     payload.tbm_lng = point.longitude;
     payload.tbm_accuracy_m = point.accuracyM;
     payload.tbm_zone_id = point.zoneId;
+  }
+
+  if ((eventCode === "check_in" || eventCode === "lunch_register" || eventCode === "lunch_in" || eventCode === "check_out") && mdmVerified !== undefined) {
+    payload[`${prefix}_mdm_verified`] = mdmVerified;
+    payload[`${prefix}_camera_test`] = cameraTestResult ?? null;
   }
 
   return payload;
@@ -298,10 +309,12 @@ async function persistAttendanceEvent(input: {
   point: AttendancePoint;
   currentRecord: AttendanceRecord | null;
   validationMessage: string;
+  mdmVerified?: boolean;
+  cameraTestResult?: string | null;
 }): Promise<AttendanceMutationResult> {
   const client = getSupabaseAdminClient();
   const updatedAt = new Date().toISOString();
-  const eventPayload = buildEventColumnPayload(input.eventCode, input.point, updatedAt);
+  const eventPayload = buildEventColumnPayload(input.eventCode, input.point, updatedAt, input.mdmVerified, input.cameraTestResult);
   const eventPrefix = EVENT_STORAGE_PREFIX[input.eventCode];
 
   if (input.currentRecord) {
@@ -604,8 +617,8 @@ export async function getSupabaseAdminUsers(): Promise<AdminUserListItem[]> {
   const { data, error } = await client
     .from("users")
     .select("id, username, display_name, role, is_active, created_at")
-    .order("role", { ascending: false })
-    .order("created_at", { ascending: true });
+    .order("role", { ascending: true })
+    .order("display_name", { ascending: true });
 
   if (error) {
     throw error;
@@ -1239,6 +1252,8 @@ export async function performSupabaseAttendanceAction(input: {
   latitude: number;
   longitude: number;
   accuracyM: number;
+  mdmVerified?: boolean;
+  cameraTestResult?: string | null;
   sessionUser?: SessionUser;
 }): Promise<AttendanceMutationResult> {
   const workDate = getKoreaDateKey();
@@ -1304,6 +1319,8 @@ export async function performSupabaseAttendanceAction(input: {
     point,
     currentRecord: mappedRecord,
     validationMessage: validation.message,
+    mdmVerified: input.mdmVerified,
+    cameraTestResult: input.cameraTestResult,
   });
 
   if (result.ok && result.record) {

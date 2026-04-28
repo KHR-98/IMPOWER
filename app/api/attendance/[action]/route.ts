@@ -9,6 +9,8 @@ const coordinateSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
   accuracyM: z.number().nonnegative(),
+  mdmVerified: z.boolean().optional(),
+  cameraTestResult: z.string().nullable().optional(),
 });
 
 export async function POST(
@@ -31,6 +33,14 @@ export async function POST(
 
   if (!parsed.success) {
     return NextResponse.json({ error: "위치 정보 형식이 올바르지 않습니다." }, { status: 400 });
+  }
+
+  const mdmRequiredActions = ["check-in", "lunch-register", "lunch-in"];
+  if (mdmRequiredActions.includes(action) && parsed.data.mdmVerified !== true) {
+    return NextResponse.json(
+      { error: "MDM 보안 확인이 필요합니다. 출퇴근 등록 전 MDM 보안 프로그램을 활성화해주세요." },
+      { status: 403 },
+    );
   }
 
   const result = await performAttendanceAction({

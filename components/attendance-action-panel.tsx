@@ -10,6 +10,54 @@ interface AttendanceActionPanelProps {
   variant?: "default" | "quick";
 }
 
+const MDM_REQUIRED_ACTIONS: AttendanceAction[] = ["check-in", "lunch-register", "lunch-in"];
+
+type MdmCheckResult =
+  | { ok: true; cameraTestResult: string }
+  | { ok: false; error: string };
+
+async function checkMdmViaCamera(): Promise<MdmCheckResult> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return { ok: false, error: "이 브라우저는 카메라 API를 지원하지 않습니다. Chrome 브라우저를 사용해주세요." };
+  }
+
+  let permState: PermissionState = "prompt";
+  try {
+    const status = await navigator.permissions.query({ name: "camera" as PermissionName });
+    permState = status.state;
+  } catch {
+    // Permissions API를 지원하지 않는 브라우저 — getUserMedia로 진행
+  }
+
+  if (permState === "denied") {
+    return {
+      ok: false,
+      error: "카메라 권한이 거부되어 있습니다. 브라우저 설정에서 카메라 권한을 허용 후 다시 시도하세요.",
+    };
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    // 카메라가 열림 = MDM 미활성 상태
+    stream.getTracks().forEach((t) => t.stop());
+    return {
+      ok: false,
+      error: "MDM 보안 프로그램이 활성화되지 않은 것으로 확인됩니다. MDM을 활성화한 후 다시 시도하세요.",
+    };
+  } catch (err) {
+    const code = err instanceof DOMException ? err.name : "UnknownError";
+    // 권한 요청 중 사용자가 거부한 경우 (MDM 아님)
+    if (permState === "prompt" && code === "NotAllowedError") {
+      return {
+        ok: false,
+        error: "카메라 권한을 허용해야 MDM 확인이 가능합니다. 권한 허용 후 다시 시도하세요.",
+      };
+    }
+    // 권한은 허용됐으나 카메라가 차단됨 = MDM 활성 상태로 판단
+    return { ok: true, cameraTestResult: code };
+  }
+}
+
 function getCurrentPosition(): Promise<CoordinatePayload> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -44,17 +92,7 @@ function getQuickActionStates(eventStates: AttendanceEventState[]) {
   return actionOrder
     .map((action) => {
       const candidates = eventStates.filter((state) => state.implemented && state.action === action);
-
-      if (candidates.length === 0) {
-        return null;
-      }
-
-      return (
-        candidates.find((state) => state.visible && !state.occurredAt) ??
-        candidates.find((state) => !state.occurredAt) ??
-        candidates.find((state) => state.visible) ??
-        candidates[0]
-      );
+      return candidates.find((state) => state.visible && !state.occurredAt) ?? null;
     })
     .filter((state): state is AttendanceEventState => state !== null);
 }
@@ -141,19 +179,41 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
 
   async function submitAction(action: AttendanceAction, useDemoCoordinates: boolean) {
     setPendingAction(action);
-    setMessage("위치 확인 중...");
+    const requiresMdm = !useDemoCoordinates && MDM_REQUIRED_ACTIONS.includes(action);
+    setMessage(requiresMdm ? "보안·위치 확인 중..." : "위치 확인 중...");
 
     try {
       const demoPayload = useDemoCoordinates && devCoordinates ? devCoordinates[action] : null;
-      const payload = demoPayload ?? (await getCurrentPosition());
+      const [position, mdmResult] = await Promise.all([
+        demoPayload ? Promise.resolve(demoPayload) : getCurrentPosition(),
+        requiresMdm ? checkMdmViaCamera() : Promise.resolve(null),
+      ]);
+
+      if (mdmResult !== null && !mdmResult.ok) {
+        setMessage(mdmResult.error);
+        return;
+      }
+
       setMessage(null);
+
+      const body: Record<string, unknown> = { ...position };
+      if (MDM_REQUIRED_ACTIONS.includes(action)) {
+        if (useDemoCoordinates) {
+          // 데모 모드에서는 MDM 검사 생략
+          body.mdmVerified = true;
+          body.cameraTestResult = "demo";
+        } else if (mdmResult?.ok) {
+          body.mdmVerified = true;
+          body.cameraTestResult = mdmResult.cameraTestResult;
+        }
+      }
 
       const response = await fetch(`/api/attendance/${action}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
 
       const data = (await response.json()) as { error?: string; message?: string; eventStates?: AttendanceEventState[] };

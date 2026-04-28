@@ -141,6 +141,8 @@ export async function performAttendanceAction(input: {
   latitude: number;
   longitude: number;
   accuracyM: number;
+  mdmVerified?: boolean;
+  cameraTestResult?: string | null;
   sessionUser?: SessionUser;
 }): Promise<AttendanceMutationResult> {
   const { sessionUser, ...baseInput } = input;
