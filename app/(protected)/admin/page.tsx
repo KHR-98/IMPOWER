@@ -127,9 +127,9 @@ export default async function AdminPage({
           buildAllPeriodsRow(u, dashboard.rows.find((r) => r.username === u.username))
         )
       : [
-          { username: "ex-day-1", displayName: "김현장", shiftType: "day", items: [{ label: "출근", done: true }, { label: "오전 TBM", done: true }, { label: "오후 TBM", done: false }, { label: "퇴근 TBM", done: false }, { label: "퇴근", done: false }] },
-          { username: "ex-day-2", displayName: "박작업", shiftType: "day", items: [{ label: "출근", done: true }, { label: "오전 TBM", done: false }, { label: "오후 TBM", done: false }, { label: "퇴근 TBM", done: false }, { label: "퇴근", done: false }] },
-          { username: "ex-late-1", displayName: "이늦조", shiftType: "late", items: [{ label: "출근", done: false }, { label: "퇴근", done: false }] },
+          { username: "ex-day-1", displayName: "김현장", shiftType: "day", items: [{ label: "출근", done: true, occurredAt: null }, { label: "오전 TBM", done: true, occurredAt: null }, { label: "오후 TBM", done: false, occurredAt: null }, { label: "퇴근 TBM", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
+          { username: "ex-day-2", displayName: "박작업", shiftType: "day", items: [{ label: "출근", done: true, occurredAt: null }, { label: "오전 TBM", done: false, occurredAt: null }, { label: "오후 TBM", done: false, occurredAt: null }, { label: "퇴근 TBM", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
+          { username: "ex-late-1", displayName: "이늦조", shiftType: "late", items: [{ label: "출근", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
         ]
     : liveAllPeriodsRows;
 
