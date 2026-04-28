@@ -80,9 +80,26 @@ export function AttendanceManagementPanel({
     }
   }
 
+  function getSortPriority(entry: RosterEntry | undefined): number {
+    if (!entry) return 7;
+    if (entry.isScheduled && entry.shiftType === "day") return 1;
+    if (entry.isScheduled && entry.shiftType === "late") return 2;
+    if (entry.scheduleReasonCode === "leave") return 3;
+    if (entry.scheduleReasonCode === "military") return 4;
+    if (entry.scheduleReasonCode === "half_day_pm") return 5;
+    if (entry.scheduleReasonCode === "half_day_am") return 6;
+    return 7;
+  }
+
   const activeUsers = users
     .filter((u) => u.isActive)
-    .filter((u) => u.displayName.includes(search.trim()));
+    .filter((u) => u.displayName.includes(search.trim()))
+    .sort((a, b) => {
+      const pa = getSortPriority(entryMap.get(a.username));
+      const pb = getSortPriority(entryMap.get(b.username));
+      if (pa !== pb) return pa - pb;
+      return a.displayName.localeCompare(b.displayName, "ko");
+    });
 
   return (
     <div className="stack" style={{ gap: 8 }}>
