@@ -178,6 +178,24 @@ button {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.correction-time-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.correction-time-grid .field input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .correction-time-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .card,
 .glass-panel,
 .metric-card,
@@ -2001,7 +2019,7 @@ button {
 }
 
 .check-button-checkout {
-  background: linear-gradient(135deg, #9da4af 0%, #c7ccd2 100%);
+  background: linear-gradient(135deg, #f7735a 0%, #e8395a 100%);
 }
 
 .check-button-disabled {

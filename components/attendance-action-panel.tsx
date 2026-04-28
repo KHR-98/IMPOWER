@@ -39,7 +39,7 @@ function getVisibleStates(eventStates: AttendanceEventState[]) {
 }
 
 function getQuickActionStates(eventStates: AttendanceEventState[]) {
-  const actionOrder: AttendanceAction[] = ["check-in", "tbm", "check-out"];
+  const actionOrder: AttendanceAction[] = ["check-in", "tbm", "lunch-register", "lunch-out", "lunch-in", "check-out"];
 
   return actionOrder
     .map((action) => {

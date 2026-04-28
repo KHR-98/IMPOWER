@@ -241,10 +241,6 @@ export function buildEventAvailability(
     return buildUnavailableState(code, "늦조는 TBM 버튼을 사용하지 않습니다.", occurredAt);
   }
 
-  if ((code === "lunch_register" || code === "lunch_out" || code === "lunch_in") && !rosterEntry.allowLunchOut) {
-    return buildUnavailableState(code, "점심 출입 대상자로 등록된 경우에만 사용할 수 있습니다.", occurredAt);
-  }
-
   if (occurredAt) {
     return buildUnavailableState(code, getCompletedReason(code), occurredAt);
   }

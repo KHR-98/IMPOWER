@@ -118,7 +118,7 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
         </select>
       </div>
 
-      <div className="settings-grid">
+      <div className="correction-time-grid">
         <div className="field">
           <label htmlFor="correction-check-in">출근 시간</label>
           <input id="correction-check-in" type="datetime-local" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
