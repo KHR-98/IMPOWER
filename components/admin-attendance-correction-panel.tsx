@@ -11,22 +11,16 @@ interface AdminAttendanceCorrectionPanelProps {
   enabled: boolean;
 }
 
-function toInputValue(value: string | null): string {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
+function toTimeInputValue(isoString: string | null): string {
+  if (!isoString) return "";
+  const date = new Date(isoString);
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return localDate.toISOString().slice(0, 16);
+  return localDate.toISOString().slice(11, 16); // HH:mm
 }
 
-function toIsoValue(value: string): string | null {
-  if (!value) {
-    return null;
-  }
-
-  return new Date(value).toISOString();
+function timeToIso(dateKey: string, time: string): string | null {
+  if (!time) return null;
+  return new Date(`${dateKey}T${time}`).toISOString();
 }
 
 export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: AdminAttendanceCorrectionPanelProps) {
@@ -51,9 +45,9 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
       return;
     }
 
-    setCheckInAt(toInputValue(selectedRow.checkIn?.occurredAt ?? null));
-    setTbmAt(toInputValue(selectedRow.tbm?.occurredAt ?? null));
-    setCheckOutAt(toInputValue(selectedRow.checkOut?.occurredAt ?? null));
+    setCheckInAt(toTimeInputValue(selectedRow.checkIn?.occurredAt ?? null));
+    setTbmAt(toTimeInputValue(selectedRow.tbm?.occurredAt ?? null));
+    setCheckOutAt(toTimeInputValue(selectedRow.checkOut?.occurredAt ?? null));
     setReason(selectedRow.correctionNote ?? "");
   }, [selectedRow]);
 
@@ -76,9 +70,9 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
           workDate: dateKey,
           username: selectedRow.username,
           expectedUpdatedAt: selectedRow.updatedAt,
-          checkInAt: toIsoValue(checkInAt),
-          tbmAt: toIsoValue(tbmAt),
-          checkOutAt: toIsoValue(checkOutAt),
+          checkInAt: timeToIso(dateKey, checkInAt),
+          tbmAt: timeToIso(dateKey, tbmAt),
+          checkOutAt: timeToIso(dateKey, checkOutAt),
           reason,
         }),
       });
@@ -121,15 +115,15 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
       <div className="correction-time-grid">
         <div className="field">
           <label htmlFor="correction-check-in">출근 시간</label>
-          <input id="correction-check-in" type="datetime-local" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
+          <input id="correction-check-in" type="time" value={checkInAt} onChange={(event) => setCheckInAt(event.target.value)} />
         </div>
         <div className="field">
           <label htmlFor="correction-tbm">TBM 시간</label>
-          <input id="correction-tbm" type="datetime-local" value={tbmAt} onChange={(event) => setTbmAt(event.target.value)} />
+          <input id="correction-tbm" type="time" value={tbmAt} onChange={(event) => setTbmAt(event.target.value)} />
         </div>
         <div className="field">
           <label htmlFor="correction-check-out">퇴근 시간</label>
-          <input id="correction-check-out" type="datetime-local" value={checkOutAt} onChange={(event) => setCheckOutAt(event.target.value)} />
+          <input id="correction-check-out" type="time" value={checkOutAt} onChange={(event) => setCheckOutAt(event.target.value)} />
         </div>
       </div>
 

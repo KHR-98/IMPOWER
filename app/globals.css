@@ -181,7 +181,13 @@ button {
 .correction-time-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .correction-time-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .correction-time-grid .field input {
