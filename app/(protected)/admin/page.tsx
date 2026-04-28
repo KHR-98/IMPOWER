@@ -136,7 +136,7 @@ export default async function AdminPage({
   const periodLabel = dashboard.currentPeriod.label;
   const periodTableTitle =
     dashboard.currentPeriod.code === "none"
-      ? "현재 시간대 출결표"
+      ? "현재 출결표"
       : periodLabel.includes("늦조")
       ? "늦조 시간대 출결표"
       : periodLabel.includes("주간조")

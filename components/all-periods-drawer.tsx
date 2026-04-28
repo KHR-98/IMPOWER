@@ -27,7 +27,7 @@ export function AllPeriodsTrigger({
       className={`button-subtle all-periods-trigger all-periods-trigger-wrap${open ? " all-periods-trigger-active" : ""}`}
       scroll={false}
     >
-      {open ? periodTitle : "전체출결표"}
+      {open ? periodTitle : "전체 출결표"}
     </Link>
   );
 }
