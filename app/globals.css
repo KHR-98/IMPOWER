@@ -1034,8 +1034,8 @@ button {
 .all-periods-table-row .status-pill {
   font-size: 0.68rem;
   padding: 3px 4px;
-  text-align: center;
   justify-self: center;
+  justify-content: center;
   width: 100%;
 }
 
