@@ -138,7 +138,7 @@ export default async function AdminPage({
     dashboard.currentPeriod.code === "none"
       ? "현재 출결표"
       : periodLabel.includes("늦조")
-      ? "늦조 시간대 출결표"
+      ? "늦조 출결표"
       : periodLabel.includes("주간조")
       ? "주간조 시간대 출결표"
       : `${periodLabel} 출결표`;
