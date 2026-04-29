@@ -301,6 +301,26 @@ async function createSheetsClient() {
   return google.sheets({ version: "v4", auth });
 }
 
+async function createSheetsWriteClient() {
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: getRequiredEnv("GOOGLE_SERVICE_ACCOUNT_EMAIL"),
+      private_key: getRequiredEnv("GOOGLE_PRIVATE_KEY").replace(/\\n/g, "\n").replace(/^"|"$/g, ""),
+    },
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
+
+  return google.sheets({ version: "v4", auth });
+}
+
+function buildStatusToken(displayName: string, reasonCode: RosterReasonCode | null): string | null {
+  if (reasonCode === "leave") return displayName;
+  if (reasonCode === "half_day_am") return `${displayName}(오전)`;
+  if (reasonCode === "half_day_pm") return `${displayName}(오후)`;
+  if (reasonCode === "military") return `${displayName}(예)`;
+  return null;
+}
+
 async function listSheetTitles(sheets: ReturnType<typeof google.sheets>, spreadsheetId: string): Promise<string[]> {
   const response = await sheets.spreadsheets.get({
     spreadsheetId,
@@ -746,6 +766,63 @@ export async function fetchSheetUserCandidates(): Promise<SheetUserCandidateSnap
   return fetchSimpleUserCandidates({
     sheets,
     spreadsheetId,
+  });
+}
+
+export async function writeSpecialStatusToSheet(input: {
+  workDate: string;
+  displayName: string;
+  reasonCode: RosterReasonCode | null;
+}): Promise<void> {
+  const sheets = await createSheetsWriteClient();
+  const spreadsheetId = getRequiredEnv("GOOGLE_SHEET_ID");
+  const titles = await listSheetTitles(sheets, spreadsheetId);
+  const monthTitle = getTargetMonthTitle(input.workDate);
+
+  if (!titles.includes(monthTitle)) {
+    return;
+  }
+
+  const targetYear = getTargetYear(input.workDate);
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${monthTitle}!B:L`,
+  });
+  const values = response.data.values ?? [];
+
+  const rowIndex = values.findIndex((row, index) => {
+    if (index === 0) return false;
+    return normalizeDateValue(String(row[0] ?? ""), targetYear) === input.workDate;
+  });
+
+  if (rowIndex < 0) {
+    return;
+  }
+
+  const currentCell = String(values[rowIndex][10] ?? "");
+  const normalizedTarget = normalizeName(input.displayName);
+
+  const filtered = currentCell
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((token) => {
+      const namePart = token.replace(/\((오전|오후|예)\)$/, "").trim();
+      return normalizeName(namePart) !== normalizedTarget;
+    });
+
+  const newToken = buildStatusToken(input.displayName, input.reasonCode);
+  if (newToken) filtered.push(newToken);
+
+  const sheetRowNumber = rowIndex + 1;
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `${monthTitle}!L${sheetRowNumber}`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [[filtered.join(" ")]],
+    },
   });
 }
 

@@ -9,6 +9,7 @@ const workDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const schema = z.object({
   workDate: z.string().regex(workDatePattern, "날짜 형식을 확인하세요."),
   username: z.string().trim().min(1, "사용자 ID가 필요합니다."),
+  displayName: z.string().trim().min(1, "표시 이름이 필요합니다."),
   isScheduled: z.boolean(),
   shiftType: z.enum(["day", "late"]),
   reasonCode: z

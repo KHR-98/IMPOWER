@@ -66,6 +66,7 @@ export function AttendanceManagementPanel({
         body: JSON.stringify({
           workDate,
           username: user.username,
+          displayName: user.displayName,
           isScheduled: option.isScheduled,
           shiftType: option.shiftType,
           reasonCode: option.reasonCode,
