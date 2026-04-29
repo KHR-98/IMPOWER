@@ -9,5 +9,5 @@ export default async function IndexPage() {
     redirect("/login");
   }
 
-  redirect(session.role === "admin" ? "/admin" : "/dashboard");
+  redirect(session.role === "admin" || session.role === "sub_admin" ? "/admin" : "/dashboard");
 }

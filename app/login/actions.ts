@@ -66,7 +66,7 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   }
 
   await createSession(user);
-  redirect(user.role === "admin" ? "/admin" : "/dashboard");
+  redirect(user.role === "admin" || user.role === "sub_admin" ? "/admin" : "/dashboard");
 }
 
 export async function changePasswordAction(
