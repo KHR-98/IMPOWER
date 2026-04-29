@@ -10,7 +10,7 @@ export function AdminRefreshButton() {
   return (
     <button
       type="button"
-      className="button-subtle admin-refresh-button"
+      className="button admin-refresh-button"
       disabled={isPending}
       onClick={() => {
         startTransition(() => {
