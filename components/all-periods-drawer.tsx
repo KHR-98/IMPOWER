@@ -26,7 +26,7 @@ export function AllPeriodsTrigger({
   return (
     <Link
       href={href}
-      className={`button-subtle all-periods-trigger all-periods-trigger-wrap${open ? " all-periods-trigger-active" : ""}`}
+      className={`button all-periods-trigger all-periods-trigger-wrap${open ? " all-periods-trigger-active" : ""}`}
       scroll={false}
     >
       {open ? periodTitle : "전체 출결표"}
