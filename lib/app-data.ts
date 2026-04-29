@@ -235,19 +235,20 @@ export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promis
   const result = await saveSupabaseRosterEntry(input);
 
   if (result.ok && hasGoogleSheetEnv()) {
-    writeSpecialStatusToSheet({
-      workDate: input.workDate,
-      displayName: input.displayName,
-      reasonCode: input.reasonCode,
-    }).catch((err) => console.error("[sheets write]", String(err)));
-
-    if (input.isScheduled) {
-      writeShiftTypeToSheet({
+    await Promise.allSettled([
+      writeSpecialStatusToSheet({
         workDate: input.workDate,
         displayName: input.displayName,
-        shiftType: input.shiftType,
-      }).catch((err) => console.error("[sheets write]", String(err)));
-    }
+        reasonCode: input.reasonCode,
+      }),
+      input.isScheduled
+        ? writeShiftTypeToSheet({
+            workDate: input.workDate,
+            displayName: input.displayName,
+            shiftType: input.shiftType,
+          })
+        : Promise.resolve(),
+    ]).catch((err) => console.error("[sheets write]", String(err)));
   }
 
   return result;
