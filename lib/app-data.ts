@@ -12,7 +12,7 @@ import {
   performAttendanceAction as performDemoAttendanceAction,
 } from "@/lib/demo-store";
 import { hasGoogleSheetEnv, hasSupabaseEnv } from "@/lib/env";
-import { writeSpecialStatusToSheet } from "@/lib/google-sheets";
+import { writeShiftTypeToSheet, writeSpecialStatusToSheet } from "@/lib/google-sheets";
 import { getKoreaDateKey } from "@/lib/time";
 import {
   authenticateSupabaseUser,
@@ -240,6 +240,14 @@ export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promis
       displayName: input.displayName,
       reasonCode: input.reasonCode,
     }).catch((err) => console.error("[sheets write]", String(err)));
+
+    if (input.isScheduled) {
+      writeShiftTypeToSheet({
+        workDate: input.workDate,
+        displayName: input.displayName,
+        shiftType: input.shiftType,
+      }).catch((err) => console.error("[sheets write]", String(err)));
+    }
   }
 
   return result;

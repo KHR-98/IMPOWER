@@ -769,6 +769,70 @@ export async function fetchSheetUserCandidates(): Promise<SheetUserCandidateSnap
   });
 }
 
+export async function writeShiftTypeToSheet(input: {
+  workDate: string;
+  displayName: string;
+  shiftType: ShiftType;
+}): Promise<void> {
+  const sheets = await createSheetsWriteClient();
+  const spreadsheetId = getRequiredEnv("GOOGLE_SHEET_ID");
+  const titles = await listSheetTitles(sheets, spreadsheetId);
+  const monthTitle = getTargetMonthTitle(input.workDate);
+
+  if (!titles.includes(monthTitle)) {
+    return;
+  }
+
+  const targetYear = getTargetYear(input.workDate);
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${monthTitle}!B:L`,
+  });
+  const values = response.data.values ?? [];
+
+  const rowIndex = values.findIndex((row, index) => {
+    if (index === 0) return false;
+    return normalizeDateValue(String(row[0] ?? ""), targetYear) === input.workDate;
+  });
+
+  if (rowIndex < 0) {
+    return;
+  }
+
+  const row = values[rowIndex];
+  const sheetRowNumber = rowIndex + 1;
+  const normalizedTarget = normalizeName(input.displayName);
+
+  // Indices 2-9 in the B:L range correspond to sheet columns D-K (late shift name slots)
+  const nameColumns = ["D", "E", "F", "G", "H", "I", "J", "K"];
+  const lateSlotIndices = [2, 3, 4, 5, 6, 7, 8, 9];
+
+  const existingSlotArrayIndex = lateSlotIndices.findIndex((slotIndex) => {
+    const cellValue = cleanName(String(row[slotIndex] ?? ""));
+    return normalizeName(cellValue) === normalizedTarget;
+  });
+
+  if (input.shiftType === "late") {
+    if (existingSlotArrayIndex >= 0) return;
+    const emptySlotArrayIndex = lateSlotIndices.findIndex((slotIndex) => String(row[slotIndex] ?? "").trim() === "");
+    if (emptySlotArrayIndex < 0) return;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${monthTitle}!${nameColumns[emptySlotArrayIndex]}${sheetRowNumber}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[input.displayName]] },
+    });
+  } else {
+    if (existingSlotArrayIndex < 0) return;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${monthTitle}!${nameColumns[existingSlotArrayIndex]}${sheetRowNumber}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [[""]] },
+    });
+  }
+}
+
 export async function writeSpecialStatusToSheet(input: {
   workDate: string;
   displayName: string;
