@@ -1,4 +1,4 @@
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "admin" | "sub_admin";
 export type ZoneType = "entry" | "tbm";
 export type AttendanceAction = "check-in" | "tbm" | "lunch-register" | "lunch-out" | "lunch-in" | "check-out";
 export type DataSourceKind = "demo" | "supabase";

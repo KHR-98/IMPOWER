@@ -9,7 +9,7 @@ const adminUserSchema = z
     mode: z.enum(["create", "update"]),
     username: z.string().trim().min(1, "로그인 ID를 입력하세요.").max(40, "로그인 ID가 너무 깁니다.").regex(/^\S+$/, "로그인 ID에는 공백을 넣을 수 없습니다."),
     displayName: z.string().trim().min(1, "표시 이름을 입력하세요.").max(40, "표시 이름이 너무 깁니다."),
-    role: z.enum(["user", "admin"]),
+    role: z.enum(["user", "admin", "sub_admin"]),
     isActive: z.boolean(),
     password: z.string().trim().nullable(),
   })

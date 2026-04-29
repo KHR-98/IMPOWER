@@ -151,7 +151,7 @@ function mapAdminUserListItem(row: Record<string, unknown>): AdminUserListItem {
     id: String(row.id),
     username: String(row.username),
     displayName: String(row.display_name),
-    role: row.role === "admin" ? "admin" : "user",
+    role: row.role === "admin" ? "admin" : row.role === "sub_admin" ? "sub_admin" : "user",
     isActive: Boolean(row.is_active),
     createdAt: String(row.created_at),
   };
@@ -709,7 +709,7 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
 
   const updatePayload: {
     display_name: string;
-    role: "user" | "admin";
+    role: "user" | "admin" | "sub_admin";
     is_active: boolean;
     password_hash?: string;
   } = {

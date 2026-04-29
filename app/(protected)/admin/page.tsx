@@ -9,7 +9,7 @@ import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
 import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminOrSubAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode } from "@/lib/types";
@@ -59,9 +59,10 @@ export default async function AdminPage({
 }: {
   searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string }>;
 }) {
-  const session = await requireAdmin();
+  const session = await requireAdminOrSubAdmin();
+  const isSubAdmin = session.role === "sub_admin";
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
+  const selectedSection = isSubAdmin ? "overview" : normalizeAdminSection(resolvedSearchParams?.section);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(),
@@ -153,17 +154,19 @@ export default async function AdminPage({
           <h1 className="admin-page-title">관리자 대시보드</h1>
         </div>
 
-        <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
-          {ADMIN_SECTION_OPTIONS.map((option) => (
-            <Link
-              key={option.key}
-              href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
-              className={`admin-section-link${selectedSection === option.key ? " admin-section-link-active" : ""}`}
-            >
-              {option.label}
-            </Link>
-          ))}
-        </nav>
+        {!isSubAdmin ? (
+          <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
+            {ADMIN_SECTION_OPTIONS.map((option) => (
+              <Link
+                key={option.key}
+                href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
+                className={`admin-section-link${selectedSection === option.key ? " admin-section-link-active" : ""}`}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </section>
 
       {selectedSection === "overview" ? (

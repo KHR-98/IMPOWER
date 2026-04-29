@@ -6,7 +6,7 @@ create table if not exists users (
   display_name text not null,
   password_hash text,
   kakao_id text unique,
-  role text not null check (role in ('user', 'admin')),
+  role text not null check (role in ('user', 'admin', 'sub_admin')),
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );

@@ -129,7 +129,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                   disabled={isSaving}
                 >
                   <span className="mgmt-user-name">{isSaving ? "처리 중..." : user.displayName}</span>
-                  <span className="badge">{user.role === "admin" ? "관리자" : "일반"}</span>
+                  <span className="badge">{user.role === "admin" ? "관리자" : user.role === "sub_admin" ? "부관리자" : "일반"}</span>
                   {!user.isActive && (
                     <span className="badge" style={{ background: "#e53e3e", color: "#fff" }}>비활성</span>
                   )}
@@ -146,6 +146,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
                         <option value="user">일반 사용자</option>
+                        <option value="sub_admin">부관리자</option>
                         <option value="admin">관리자</option>
                       </select>
                       <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.82rem", whiteSpace: "nowrap", cursor: enabled ? "pointer" : "default" }}>
