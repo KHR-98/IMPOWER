@@ -10,7 +10,7 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   const session = await requireSession();
-  const isAdmin = session.role === "admin";
+  const isAdmin = session.role === "admin" || session.role === "sub_admin";
 
   return (
     <div className="shell">

@@ -15,7 +15,7 @@ export default async function DashboardPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const isAdminUserPreview = resolvedSearchParams?.view === "user";
 
-  if (session.role === "admin" && !isAdminUserPreview) {
+  if ((session.role === "admin" || session.role === "sub_admin") && !isAdminUserPreview) {
     redirect("/admin");
   }
 
