@@ -246,15 +246,15 @@ export function buildEventAvailability(
   }
 
   if (code !== "check_in" && !record?.checkIn) {
-    return buildHiddenPendingState(code, "출근 처리 후 이용할 수 있습니다.");
+    return buildHiddenPendingState(code, "출근 후 이용할 수 있습니다.");
   }
 
   if (code === "lunch_out" && !record?.lunchRegister) {
-    return buildHiddenPendingState(code, "점심 등록 후 점심 출문을 기록할 수 있습니다.");
+    return buildHiddenPendingState(code, "점심 등록 후 점심 출문을 할 수 있습니다.");
   }
 
   if (code === "lunch_in" && !record?.lunchOut) {
-    return buildHiddenPendingState(code, "점심 출문 기록 후 점심 입문을 기록할 수 있습니다.");
+    return buildHiddenPendingState(code, "점심 출문 후 점심 입문을 할 수 있습니다.");
   }
 
   const window = getEventWindow(settings, rosterEntry.shiftType, code);
@@ -265,7 +265,7 @@ export function buildEventAvailability(
   }
 
   if (!isWindowActive(window, now)) {
-    return buildHiddenPendingState(code, `${label} 가능 시간이 아닙니다.`);
+    return buildHiddenPendingState(code, `${label} 시간이 아닙니다.`);
   }
 
   return {
