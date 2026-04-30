@@ -2074,13 +2074,12 @@ button {
 
   .check-card-head {
     align-items: flex-start;
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .check-chip-stack {
-    align-items: flex-start;
-    flex-direction: row;
-    flex-wrap: wrap;
+    align-items: flex-end;
+    flex-direction: column;
   }
 
   .check-panel {
@@ -2130,7 +2129,7 @@ button {
 
 .view-toggle-fixed {
   position: fixed;
-  top: 14px;
+  top: 22px;
   right: 16px;
   z-index: 100;
   display: flex;
