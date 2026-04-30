@@ -8,7 +8,7 @@ Project: IMPOWER attendance web app
 - Workspace path: `C:\Users\ycsky\.codex\worktrees\b055\IMPOWER`
 - Git repository: yes
 - Current workspace state: branch `codex/department-role-settings`
-- Current commit: `3d64533`
+- Current commit: `04da6aa`
 - Related main worktree: `C:\Users\ycsky\Desktop\IMPOWER1\CULCHECK\IMPOWER`
 - Related main worktree branch: `feat/my-work`
 
@@ -38,7 +38,8 @@ Remaining:
 | 2026-04-28 | Project setup | Created this CYC work log file. | File added. | Current Codex worktree is detached HEAD. |
 | 2026-04-28 | Planning | Recorded department/role/shift/camera planning summary. | Document updated. | No app functionality changed. |
 | 2026-04-29 | Git setup | Created/used `codex/department-role-settings` and fast-forwarded it to GitHub latest `origin/main`. | `HEAD` is `3d64533`. | `CYC-work-log.md` preserved; no app feature edits by Codex yet. |
-| 2026-04-29 | Step 1 implementation | Added role foundation for `user`, `department_admin`, and existing `admin`; added department schema/migration seeds for memory PCS, foundry PCS, and memory. | `git diff --check` passed; `npm run typecheck` blocked because `node_modules` is not installed. | No commit/push; no live Supabase migration applied. |
+| 2026-04-29 | Step 1 implementation | Added role foundation for `user`, `department_admin`, and existing `admin`; added department schema/migration seeds for memory PCS, foundry PCS, and memory. | `git diff --check` passed; `npm run typecheck` blocked because `node_modules` is not installed. | Committed as `04da6aa`; no push; no live Supabase migration applied. |
+| 2026-04-30 | Step 2 implementation | Added department-specific attendance time settings, admin department buttons, user department selection UI, and user-specific time-rule selection. | `npm run typecheck` passed; `git diff --check` passed. | No live Supabase migration applied yet. |
 
 ## Errors / Issues
 

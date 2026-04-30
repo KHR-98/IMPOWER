@@ -288,7 +288,11 @@ export default async function AdminPage({
       {selectedSection === "accounts" ? (
         <section className="stack">
           <article className="glass-panel stack admin-management-panel">
-            <AdminUserManagementPanel initialUsers={adminUsers} enabled={runtime.dataSource === "supabase"} />
+            <AdminUserManagementPanel
+              initialUsers={adminUsers}
+              departments={dashboard.settings.departmentSettings}
+              enabled={runtime.dataSource === "supabase"}
+            />
           </article>
         </section>
       ) : null}

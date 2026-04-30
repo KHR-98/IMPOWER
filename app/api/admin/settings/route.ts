@@ -13,6 +13,26 @@ const timeWindowSchema = z.object({
   end: z.string().regex(timePattern, "시간 형식은 HH:MM 이어야 합니다."),
 });
 
+const shiftSettingsSchema = z.object({
+  checkInWindow: timeWindowSchema,
+  tbmMorningWindow: timeWindowSchema.nullable(),
+  lunchOutWindow: timeWindowSchema.nullable(),
+  lunchInWindow: timeWindowSchema.nullable(),
+  tbmAfternoonWindow: timeWindowSchema.nullable(),
+  tbmCheckoutWindow: timeWindowSchema.nullable(),
+  checkOutWindow: timeWindowSchema,
+  earlyCheckOutWindow: timeWindowSchema.nullable(),
+});
+
+const departmentSettingsSchema = z.object({
+  id: z.string().uuid("부서 ID 형식이 올바르지 않습니다."),
+  code: z.string().trim().min(1, "부서 코드가 필요합니다."),
+  name: z.string().trim().min(1, "부서명이 필요합니다."),
+  isActive: z.boolean(),
+  dayShift: shiftSettingsSchema,
+  lateShift: shiftSettingsSchema,
+});
+
 const zoneSchema = z.object({
   id: z.string().trim().min(1, "지점 식별값이 필요합니다."),
   name: z.string().trim().min(1, "지점 이름을 입력하세요."),
@@ -33,6 +53,7 @@ const adminSettingsSchema = z
       checkOutWindow: timeWindowSchema,
       lateCheckInWindow: timeWindowSchema,
       lateCheckOutWindow: timeWindowSchema,
+      departmentSettings: z.array(departmentSettingsSchema).optional().default([]),
       maxGpsAccuracyM: z.number().int().min(10, "GPS 정확도는 10m 이상이어야 합니다.").max(1000, "GPS 정확도는 1000m 이하이어야 합니다."),
     }),
     zones: z.array(zoneSchema).min(1, "지점은 최소 1개 이상 필요합니다."),
@@ -46,7 +67,21 @@ const adminSettingsSchema = z
       ["퇴근", value.settings.checkOutWindow],
     ] as const;
 
-    for (const [label, window] of windows) {
+    const departmentWindows = value.settings.departmentSettings.flatMap((department) => [
+      [`${department.name} 주간 출근`, department.dayShift.checkInWindow],
+      [`${department.name} 주간 오전 TBM`, department.dayShift.tbmMorningWindow],
+      [`${department.name} 주간 오후 TBM`, department.dayShift.tbmAfternoonWindow],
+      [`${department.name} 주간 퇴근 TBM`, department.dayShift.tbmCheckoutWindow],
+      [`${department.name} 주간 퇴근`, department.dayShift.checkOutWindow],
+      [`${department.name} 늦조 출근`, department.lateShift.checkInWindow],
+      [`${department.name} 늦조 퇴근`, department.lateShift.checkOutWindow],
+    ] as const);
+
+    for (const [label, window] of [...windows, ...departmentWindows]) {
+      if (!window) {
+        continue;
+      }
+
       if (window.start >= window.end) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -95,6 +130,7 @@ export async function PATCH(request: Request) {
       checkOutWindow: parsed.data.settings.checkOutWindow,
       lateCheckInWindow: parsed.data.settings.lateCheckInWindow,
       lateCheckOutWindow: parsed.data.settings.lateCheckOutWindow,
+      departmentSettings: parsed.data.settings.departmentSettings,
       maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
       dayShift: {
         ...baseSettings.dayShift,

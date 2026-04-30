@@ -132,3 +132,23 @@ create table if not exists app_settings (
   created_at timestamptz not null default now()
 );
 
+create table if not exists department_settings (
+  id uuid primary key default gen_random_uuid(),
+  department_id uuid not null unique references departments(id) on delete cascade,
+  day_check_in_start text not null default '06:00',
+  day_check_in_end text not null default '08:30',
+  day_tbm_start text not null default '06:00',
+  day_tbm_end text not null default '08:30',
+  day_tbm_afternoon_start text not null default '13:35',
+  day_tbm_afternoon_end text not null default '13:45',
+  day_tbm_checkout_start text not null default '16:30',
+  day_tbm_checkout_end text not null default '16:45',
+  day_check_out_start text not null default '16:30',
+  day_check_out_end text not null default '18:00',
+  late_check_in_start text not null default '09:00',
+  late_check_in_end text not null default '11:00',
+  late_check_out_start text not null default '19:30',
+  late_check_out_end text not null default '21:00',
+  updated_at timestamptz not null default now()
+);
+

@@ -148,7 +148,7 @@ const SEGMENTS = [
 
 const SEGMENT_LABELS = SEGMENTS.map((s) => s.label);
 
-type SettingsKey = "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow";
+export type SettingsKey = "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow";
 
 export interface CombinedTimeSettingsPickerProps {
   settings: Record<SettingsKey, { start: string; end: string }>;

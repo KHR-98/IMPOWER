@@ -5,7 +5,7 @@ import { compareSync, hashSync } from "bcryptjs";
 
 import { buildEventStates } from "@/lib/attendance-events";
 import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period";
-import { buildOperationalSettings } from "@/lib/attendance-schedule";
+import { buildDepartmentAttendanceSettings, buildOperationalSettings, cloneShiftSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
 import { isAdminRole } from "@/lib/permissions";
@@ -26,11 +26,14 @@ import type {
   AttendancePoint,
   AttendanceRecord,
   DashboardView,
+  Department,
+  DepartmentAttendanceSettings,
   RosterEntry,
   RosterSyncPreview,
   RosterSyncResult,
   SessionUser,
   SheetUserImportPreview,
+  ShiftAttendanceSettings,
   UserTodayView,
   UserRole,
   Zone,
@@ -62,6 +65,14 @@ const defaultSettings: AppSettings = buildOperationalSettings(100);
 
 const zoneIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+interface ActiveUserRow {
+  username: string;
+  display_name: string;
+  role: UserRole;
+  department_id: string | null;
+  is_active: boolean;
+}
+
 function normalizeUserLookupKey(value: string): string {
   return value.trim().replace(/\([^)]*\)/g, "").replace(/\s+/g, "").toLowerCase();
 }
@@ -87,6 +98,84 @@ function mapZone(row: Record<string, unknown>): Zone {
     longitude: Number(row.longitude),
     radiusM: Number(row.radius_m),
     isActive: Boolean(row.is_active),
+  };
+}
+
+function mapDepartment(row: Record<string, unknown>): Department {
+  return {
+    id: String(row.id),
+    code: String(row.code),
+    name: String(row.name),
+    isActive: Boolean(row.is_active),
+  };
+}
+
+function mergeDepartmentShiftSettings(
+  row: Record<string, unknown> | null,
+  department: Department,
+  baseSettings: AppSettings,
+): DepartmentAttendanceSettings {
+  const departmentSettings = buildDepartmentAttendanceSettings(department, baseSettings);
+
+  if (!row) {
+    return departmentSettings;
+  }
+
+  departmentSettings.dayShift.checkInWindow = {
+    start: String(row.day_check_in_start ?? departmentSettings.dayShift.checkInWindow.start),
+    end: String(row.day_check_in_end ?? departmentSettings.dayShift.checkInWindow.end),
+  };
+  departmentSettings.dayShift.tbmMorningWindow = {
+    start: String(row.day_tbm_start ?? departmentSettings.dayShift.tbmMorningWindow?.start ?? departmentSettings.dayShift.checkInWindow.start),
+    end: String(row.day_tbm_end ?? departmentSettings.dayShift.tbmMorningWindow?.end ?? departmentSettings.dayShift.checkInWindow.end),
+  };
+  departmentSettings.dayShift.tbmAfternoonWindow = {
+    start: String(row.day_tbm_afternoon_start ?? departmentSettings.dayShift.tbmAfternoonWindow?.start ?? "13:35"),
+    end: String(row.day_tbm_afternoon_end ?? departmentSettings.dayShift.tbmAfternoonWindow?.end ?? "13:45"),
+  };
+  departmentSettings.dayShift.tbmCheckoutWindow = {
+    start: String(row.day_tbm_checkout_start ?? departmentSettings.dayShift.tbmCheckoutWindow?.start ?? "16:30"),
+    end: String(row.day_tbm_checkout_end ?? departmentSettings.dayShift.tbmCheckoutWindow?.end ?? "16:45"),
+  };
+  departmentSettings.dayShift.checkOutWindow = {
+    start: String(row.day_check_out_start ?? departmentSettings.dayShift.checkOutWindow.start),
+    end: String(row.day_check_out_end ?? departmentSettings.dayShift.checkOutWindow.end),
+  };
+  departmentSettings.lateShift.checkInWindow = {
+    start: String(row.late_check_in_start ?? departmentSettings.lateShift.checkInWindow.start),
+    end: String(row.late_check_in_end ?? departmentSettings.lateShift.checkInWindow.end),
+  };
+  departmentSettings.lateShift.checkOutWindow = {
+    start: String(row.late_check_out_start ?? departmentSettings.lateShift.checkOutWindow.start),
+    end: String(row.late_check_out_end ?? departmentSettings.lateShift.checkOutWindow.end),
+  };
+
+  return departmentSettings;
+}
+
+function applyDepartmentSettings(baseSettings: AppSettings, departmentId: string | null): AppSettings {
+  if (!departmentId) {
+    return baseSettings;
+  }
+
+  const departmentSettings = baseSettings.departmentSettings.find((settings) => settings.id === departmentId);
+
+  if (!departmentSettings) {
+    return baseSettings;
+  }
+
+  return {
+    ...baseSettings,
+    checkInWindow: { ...departmentSettings.dayShift.checkInWindow },
+    tbmWindow: { ...(departmentSettings.dayShift.tbmMorningWindow ?? departmentSettings.dayShift.checkInWindow) },
+    tbmAfternoonWindow: { ...(departmentSettings.dayShift.tbmAfternoonWindow ?? baseSettings.tbmAfternoonWindow) },
+    tbmCheckoutWindow: { ...(departmentSettings.dayShift.tbmCheckoutWindow ?? baseSettings.tbmCheckoutWindow) },
+    checkOutWindow: { ...departmentSettings.dayShift.checkOutWindow },
+    lateCheckInWindow: { ...departmentSettings.lateShift.checkInWindow },
+    lateCheckOutWindow: { ...departmentSettings.lateShift.checkOutWindow },
+    dayShift: cloneShiftSettings(departmentSettings.dayShift),
+    lateShift: cloneShiftSettings(departmentSettings.lateShift),
+    departmentSettings: baseSettings.departmentSettings,
   };
 }
 
@@ -156,6 +245,10 @@ function normalizeUserRole(value: unknown): UserRole {
   return value === "admin" || value === "department_admin" ? value : "user";
 }
 
+function isMissingDepartmentColumnError(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && (error.code === "42703" || error.message?.includes("department_id")));
+}
+
 function mapSessionUser(row: Record<string, unknown>): SessionUser {
   return {
     username: String(row.username),
@@ -178,6 +271,16 @@ function mapAdminUserListItem(row: Record<string, unknown>): AdminUserListItem {
     departmentName: null,
     isActive: Boolean(row.is_active),
     createdAt: String(row.created_at),
+  };
+}
+
+function mapActiveUserRow(row: Record<string, unknown>): ActiveUserRow {
+  return {
+    username: String(row.username),
+    display_name: String(row.display_name),
+    role: normalizeUserRole(row.role),
+    department_id: nullableString(row.department_id),
+    is_active: Boolean(row.is_active),
   };
 }
 
@@ -496,11 +599,19 @@ export async function getSupabaseSetupStatus(): Promise<{ ready: boolean; messag
 
 export async function authenticateSupabaseUser(username: string, password: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  let { data, error } = await client
     .from("users")
     .select("username, display_name, role, department_id, is_active, password_hash")
     .eq("username", username)
     .maybeSingle();
+
+  if (isMissingDepartmentColumnError(error)) {
+    ({ data, error } = await client
+      .from("users")
+      .select("username, display_name, role, is_active, password_hash")
+      .eq("username", username)
+      .maybeSingle());
+  }
 
   if (error) {
     throw error;
@@ -564,11 +675,19 @@ export async function changeSupabasePassword(input: {
 
 export async function getSupabaseSessionUser(username: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  let { data, error } = await client
     .from("users")
     .select("username, display_name, role, department_id, is_active")
     .eq("username", username)
     .maybeSingle();
+
+  if (isMissingDepartmentColumnError(error)) {
+    ({ data, error } = await client
+      .from("users")
+      .select("username, display_name, role, is_active")
+      .eq("username", username)
+      .maybeSingle());
+  }
 
   if (error) {
     throw error;
@@ -583,11 +702,19 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
 
 export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  let { data, error } = await client
     .from("users")
     .select("username, display_name, role, department_id, is_active")
     .eq("kakao_id", kakaoId)
     .maybeSingle();
+
+  if (isMissingDepartmentColumnError(error)) {
+    ({ data, error } = await client
+      .from("users")
+      .select("username, display_name, role, is_active")
+      .eq("kakao_id", kakaoId)
+      .maybeSingle());
+  }
 
   if (error) {
     throw error;
@@ -630,11 +757,23 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
 
 export async function getSupabaseAdminUsers(): Promise<AdminUserListItem[]> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  const withDepartment = await client
     .from("users")
     .select("id, username, display_name, role, department_id, is_active, created_at")
     .order("role", { ascending: true })
     .order("display_name", { ascending: true });
+  let data: Record<string, unknown>[] | null = withDepartment.data;
+  let error = withDepartment.error;
+
+  if (isMissingDepartmentColumnError(error)) {
+    const withoutDepartment = await client
+      .from("users")
+      .select("id, username, display_name, role, is_active, created_at")
+      .order("role", { ascending: true })
+      .order("display_name", { ascending: true });
+    data = withoutDepartment.data;
+    error = withoutDepartment.error;
+  }
 
   if (error) {
     throw error;
@@ -944,6 +1083,43 @@ export async function getSupabaseZones(): Promise<Zone[]> {
   return (data ?? []).map((row) => mapZone(row));
 }
 
+async function getSupabaseDepartments(): Promise<Department[]> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client.from("departments").select("id, code, name, is_active").eq("is_active", true).order("name");
+
+  if (error) {
+    if (isSupabaseSchemaMissingError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return (data ?? []).map((row) => mapDepartment(row));
+}
+
+async function getSupabaseDepartmentSettings(baseSettings: AppSettings): Promise<DepartmentAttendanceSettings[]> {
+  const client = getSupabaseAdminClient();
+  const departments = await getSupabaseDepartments();
+
+  if (departments.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await client.from("department_settings").select("*");
+
+  if (error) {
+    if (isSupabaseSchemaMissingError(error)) {
+      return departments.map((department) => buildDepartmentAttendanceSettings(department, baseSettings));
+    }
+
+    throw error;
+  }
+
+  const rowsByDepartmentId = new Map((data ?? []).map((row) => [String(row.department_id), row as Record<string, unknown>]));
+  return departments.map((department) => mergeDepartmentShiftSettings(rowsByDepartmentId.get(department.id) ?? null, department, baseSettings));
+}
+
 export async function getSupabaseSettings(): Promise<AppSettings> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
@@ -958,7 +1134,9 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
   }
 
   if (!data) {
-    return defaultSettings;
+    const settings = buildOperationalSettings(defaultSettings.maxGpsAccuracyM);
+    settings.departmentSettings = await getSupabaseDepartmentSettings(settings);
+    return settings;
   }
 
   const settings = buildOperationalSettings(Number(data.max_gps_accuracy_m ?? defaultSettings.maxGpsAccuracyM));
@@ -1001,6 +1179,7 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
 
   settings.lateShift.checkInWindow = { ...settings.lateCheckInWindow };
   settings.lateShift.checkOutWindow = { ...settings.lateCheckOutWindow };
+  settings.departmentSettings = await getSupabaseDepartmentSettings(settings);
 
   return settings;
 }
@@ -1043,19 +1222,31 @@ async function getSupabaseAttendanceRecords(workDate: string) {
   return data ?? [];
 }
 
-async function getSupabaseActiveUsers() {
+async function getSupabaseActiveUsers(): Promise<ActiveUserRow[]> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  const withDepartment = await client
     .from("users")
     .select("username, display_name, role, department_id, is_active")
     .eq("is_active", true)
     .order("display_name");
+  let data: Record<string, unknown>[] | null = withDepartment.data;
+  let error = withDepartment.error;
+
+  if (isMissingDepartmentColumnError(error)) {
+    const withoutDepartment = await client
+      .from("users")
+      .select("username, display_name, role, is_active")
+      .eq("is_active", true)
+      .order("display_name");
+    data = withoutDepartment.data;
+    error = withoutDepartment.error;
+  }
 
   if (error) {
     throw error;
   }
 
-  return data ?? [];
+  return (data ?? []).map((row) => mapActiveUserRow(row));
 }
 
 export async function getSupabaseUserTodayView(username: string, sessionUser?: SessionUser): Promise<UserTodayView> {
@@ -1099,7 +1290,8 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
         };
   const record = recordRow ? mapAttendanceRecord(recordRow) : null;
   const shiftType = rosterEntry.shiftType;
-  const currentPeriod = getCurrentPeriod(settings);
+  const effectiveSettings = applyDepartmentSettings(settings, user.departmentId);
+  const currentPeriod = getCurrentPeriod(effectiveSettings);
 
   return {
     dateKey: workDate,
@@ -1110,18 +1302,18 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
     currentPeriod,
     record,
     actionStates: [
-      buildActionAvailability("check-in", rosterEntry, record, settings),
-      buildActionAvailability("tbm", rosterEntry, record, settings),
-      buildActionAvailability("lunch-register", rosterEntry, record, settings),
-      buildActionAvailability("lunch-out", rosterEntry, record, settings),
-      buildActionAvailability("lunch-in", rosterEntry, record, settings),
-      buildActionAvailability("check-out", rosterEntry, record, settings),
+      buildActionAvailability("check-in", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("tbm", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("lunch-register", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("lunch-out", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("lunch-in", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("check-out", rosterEntry, record, effectiveSettings),
     ],
     eventStates: buildEventStates({
       shiftType,
       rosterEntry,
       record,
-      settings,
+      settings: effectiveSettings,
     }),
   };
 }
@@ -1307,6 +1499,7 @@ export async function performSupabaseAttendanceAction(input: {
         scheduleReason: getRosterReasonMessage("not_synced"),
       };
   const mappedRecord = currentRecordRow ? mapAttendanceRecord(currentRecordRow) : null;
+  const effectiveSettings = applyDepartmentSettings(settings, sessionUser.departmentId);
 
   const validation = validateAttendanceMutation({
     action: input.action,
@@ -1316,7 +1509,7 @@ export async function performSupabaseAttendanceAction(input: {
     rosterEntry,
     record: mappedRecord,
     zones,
-    settings,
+    settings: effectiveSettings,
   });
 
   if (!validation.ok || !validation.zoneId || !validation.eventCode) {
@@ -1348,7 +1541,7 @@ export async function performSupabaseAttendanceAction(input: {
       shiftType: rosterEntry.shiftType,
       rosterEntry,
       record: result.record,
-      settings,
+      settings: effectiveSettings,
     });
   }
 
@@ -1527,6 +1720,39 @@ export async function correctSupabaseAttendanceRecord(
     message: "기록을 정정하고 변경 이력을 저장했습니다.",
   };
 }
+
+function getNullableWindow(
+  settings: ShiftAttendanceSettings,
+  key: "tbmMorningWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow",
+  fallback: { start: string; end: string },
+) {
+  return settings[key] ?? fallback;
+}
+
+function buildDepartmentSettingsPayload(settings: DepartmentAttendanceSettings) {
+  const dayTbm = getNullableWindow(settings.dayShift, "tbmMorningWindow", settings.dayShift.checkInWindow);
+  const dayTbmAfternoon = getNullableWindow(settings.dayShift, "tbmAfternoonWindow", { start: "13:35", end: "13:45" });
+  const dayTbmCheckout = getNullableWindow(settings.dayShift, "tbmCheckoutWindow", { start: "16:30", end: "16:45" });
+
+  return {
+    department_id: settings.id,
+    day_check_in_start: settings.dayShift.checkInWindow.start,
+    day_check_in_end: settings.dayShift.checkInWindow.end,
+    day_tbm_start: dayTbm.start,
+    day_tbm_end: dayTbm.end,
+    day_tbm_afternoon_start: dayTbmAfternoon.start,
+    day_tbm_afternoon_end: dayTbmAfternoon.end,
+    day_tbm_checkout_start: dayTbmCheckout.start,
+    day_tbm_checkout_end: dayTbmCheckout.end,
+    day_check_out_start: settings.dayShift.checkOutWindow.start,
+    day_check_out_end: settings.dayShift.checkOutWindow.end,
+    late_check_in_start: settings.lateShift.checkInWindow.start,
+    late_check_in_end: settings.lateShift.checkInWindow.end,
+    late_check_out_start: settings.lateShift.checkOutWindow.start,
+    late_check_out_end: settings.lateShift.checkOutWindow.end,
+    updated_at: new Date().toISOString(),
+  };
+}
 export async function saveSupabaseAdminConfiguration(input: {
   settings: AppSettings;
   zones: Zone[];
@@ -1574,6 +1800,18 @@ export async function saveSupabaseAdminConfiguration(input: {
 
     if (error) {
       throw error;
+    }
+  }
+
+  if (input.settings.departmentSettings.length > 0) {
+    const { error: departmentSettingsError } = await client
+      .from("department_settings")
+      .upsert(input.settings.departmentSettings.map((settings) => buildDepartmentSettingsPayload(settings)), {
+        onConflict: "department_id",
+      });
+
+    if (departmentSettingsError) {
+      throw departmentSettingsError;
     }
   }
 

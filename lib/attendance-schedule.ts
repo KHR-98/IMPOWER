@@ -1,10 +1,10 @@
-import type { AppSettings, ShiftAttendanceSettings, TimeWindow } from "@/lib/types";
+import type { AppSettings, Department, DepartmentAttendanceSettings, ShiftAttendanceSettings, TimeWindow } from "@/lib/types";
 
 function cloneWindow(window: TimeWindow | null): TimeWindow | null {
   return window ? { ...window } : null;
 }
 
-function cloneShiftSettings(settings: ShiftAttendanceSettings): ShiftAttendanceSettings {
+export function cloneShiftSettings(settings: ShiftAttendanceSettings): ShiftAttendanceSettings {
   return {
     checkInWindow: { ...settings.checkInWindow },
     tbmMorningWindow: cloneWindow(settings.tbmMorningWindow),
@@ -14,6 +14,17 @@ function cloneShiftSettings(settings: ShiftAttendanceSettings): ShiftAttendanceS
     tbmCheckoutWindow: cloneWindow(settings.tbmCheckoutWindow),
     checkOutWindow: { ...settings.checkOutWindow },
     earlyCheckOutWindow: cloneWindow(settings.earlyCheckOutWindow),
+  };
+}
+
+export function buildDepartmentAttendanceSettings(
+  department: Department,
+  baseSettings: AppSettings,
+): DepartmentAttendanceSettings {
+  return {
+    ...department,
+    dayShift: cloneShiftSettings(baseSettings.dayShift),
+    lateShift: cloneShiftSettings(baseSettings.lateShift),
   };
 }
 
@@ -50,6 +61,7 @@ export function buildOperationalSettings(maxGpsAccuracyM: number = 100): AppSett
     lateCheckOutWindow: { ...DEFAULT_LATE_SHIFT_SETTINGS.checkOutWindow },
     dayShift: cloneShiftSettings(DEFAULT_DAY_SHIFT_SETTINGS),
     lateShift: cloneShiftSettings(DEFAULT_LATE_SHIFT_SETTINGS),
+    departmentSettings: [],
     maxGpsAccuracyM,
   };
 }

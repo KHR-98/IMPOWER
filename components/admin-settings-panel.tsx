@@ -4,8 +4,8 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { KakaoZoneMap } from "@/components/kakao-zone-map";
-import { CombinedTimeSettingsPicker } from "@/components/time-wheel-picker";
-import type { AppSettings, Zone, ZoneType } from "@/lib/types";
+import { CombinedTimeSettingsPicker, type SettingsKey } from "@/components/time-wheel-picker";
+import type { AppSettings, DepartmentAttendanceSettings, TimeWindow, Zone, ZoneType } from "@/lib/types";
 
 const DEFAULT_ZONE_CENTER = {
   latitude: 37.033164,
@@ -39,11 +39,93 @@ function createZoneDraft(zones: Zone[]): Zone {
   };
 }
 
+function cloneWindow(window: TimeWindow): TimeWindow {
+  return { start: window.start, end: window.end };
+}
+
+function fallbackWindow(window: TimeWindow | null, fallback: TimeWindow): TimeWindow {
+  return window ? cloneWindow(window) : cloneWindow(fallback);
+}
+
+function getDepartmentPickerSettings(
+  settings: AppSettings,
+  department: DepartmentAttendanceSettings | null,
+): Record<SettingsKey, TimeWindow> {
+  if (!department) {
+    return {
+      checkInWindow: settings.checkInWindow,
+      tbmWindow: settings.tbmWindow,
+      tbmAfternoonWindow: settings.tbmAfternoonWindow,
+      tbmCheckoutWindow: settings.tbmCheckoutWindow,
+      checkOutWindow: settings.checkOutWindow,
+      lateCheckInWindow: settings.lateCheckInWindow,
+      lateCheckOutWindow: settings.lateCheckOutWindow,
+    };
+  }
+
+  return {
+    checkInWindow: department.dayShift.checkInWindow,
+    tbmWindow: fallbackWindow(department.dayShift.tbmMorningWindow, department.dayShift.checkInWindow),
+    tbmAfternoonWindow: fallbackWindow(department.dayShift.tbmAfternoonWindow, settings.tbmAfternoonWindow),
+    tbmCheckoutWindow: fallbackWindow(department.dayShift.tbmCheckoutWindow, settings.tbmCheckoutWindow),
+    checkOutWindow: department.dayShift.checkOutWindow,
+    lateCheckInWindow: department.lateShift.checkInWindow,
+    lateCheckOutWindow: department.lateShift.checkOutWindow,
+  };
+}
+
+function patchDepartmentWindow(
+  department: DepartmentAttendanceSettings,
+  key: SettingsKey,
+  field: "start" | "end",
+  value: string,
+  fallbackSettings: AppSettings,
+): DepartmentAttendanceSettings {
+  const next: DepartmentAttendanceSettings = {
+    ...department,
+    dayShift: {
+      ...department.dayShift,
+      checkInWindow: cloneWindow(department.dayShift.checkInWindow),
+      tbmMorningWindow: department.dayShift.tbmMorningWindow ? cloneWindow(department.dayShift.tbmMorningWindow) : null,
+      lunchOutWindow: department.dayShift.lunchOutWindow ? cloneWindow(department.dayShift.lunchOutWindow) : null,
+      lunchInWindow: department.dayShift.lunchInWindow ? cloneWindow(department.dayShift.lunchInWindow) : null,
+      tbmAfternoonWindow: department.dayShift.tbmAfternoonWindow ? cloneWindow(department.dayShift.tbmAfternoonWindow) : null,
+      tbmCheckoutWindow: department.dayShift.tbmCheckoutWindow ? cloneWindow(department.dayShift.tbmCheckoutWindow) : null,
+      checkOutWindow: cloneWindow(department.dayShift.checkOutWindow),
+      earlyCheckOutWindow: department.dayShift.earlyCheckOutWindow ? cloneWindow(department.dayShift.earlyCheckOutWindow) : null,
+    },
+    lateShift: {
+      ...department.lateShift,
+      checkInWindow: cloneWindow(department.lateShift.checkInWindow),
+      tbmMorningWindow: department.lateShift.tbmMorningWindow ? cloneWindow(department.lateShift.tbmMorningWindow) : null,
+      lunchOutWindow: department.lateShift.lunchOutWindow ? cloneWindow(department.lateShift.lunchOutWindow) : null,
+      lunchInWindow: department.lateShift.lunchInWindow ? cloneWindow(department.lateShift.lunchInWindow) : null,
+      tbmAfternoonWindow: department.lateShift.tbmAfternoonWindow ? cloneWindow(department.lateShift.tbmAfternoonWindow) : null,
+      tbmCheckoutWindow: department.lateShift.tbmCheckoutWindow ? cloneWindow(department.lateShift.tbmCheckoutWindow) : null,
+      checkOutWindow: cloneWindow(department.lateShift.checkOutWindow),
+      earlyCheckOutWindow: department.lateShift.earlyCheckOutWindow ? cloneWindow(department.lateShift.earlyCheckOutWindow) : null,
+    },
+  };
+
+  if (key === "checkInWindow") next.dayShift.checkInWindow[field] = value;
+  if (key === "tbmWindow") next.dayShift.tbmMorningWindow = { ...fallbackWindow(next.dayShift.tbmMorningWindow, next.dayShift.checkInWindow), [field]: value };
+  if (key === "tbmAfternoonWindow") next.dayShift.tbmAfternoonWindow = { ...fallbackWindow(next.dayShift.tbmAfternoonWindow, fallbackSettings.tbmAfternoonWindow), [field]: value };
+  if (key === "tbmCheckoutWindow") next.dayShift.tbmCheckoutWindow = { ...fallbackWindow(next.dayShift.tbmCheckoutWindow, fallbackSettings.tbmCheckoutWindow), [field]: value };
+  if (key === "checkOutWindow") next.dayShift.checkOutWindow[field] = value;
+  if (key === "lateCheckInWindow") next.lateShift.checkInWindow[field] = value;
+  if (key === "lateCheckOutWindow") next.lateShift.checkOutWindow[field] = value;
+
+  return next;
+}
+
 export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: AdminSettingsPanelProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isMapEditing, setIsMapEditing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
+    initialSettings.departmentSettings[0]?.id ?? null,
+  );
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -57,8 +139,30 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
     }
   }, [selectedZoneId, zones]);
 
-  function updateTimeWindow(key: keyof AppSettings, field: "start" | "end", value: string) {
-    if (key === "maxGpsAccuracyM") {
+  useEffect(() => {
+    if (settings.departmentSettings.length === 0) {
+      setSelectedDepartmentId(null);
+      return;
+    }
+
+    if (!selectedDepartmentId || !settings.departmentSettings.some((department) => department.id === selectedDepartmentId)) {
+      setSelectedDepartmentId(settings.departmentSettings[0]?.id ?? null);
+    }
+  }, [selectedDepartmentId, settings.departmentSettings]);
+
+  const selectedDepartment = settings.departmentSettings.find((department) => department.id === selectedDepartmentId) ?? null;
+  const pickerSettings = getDepartmentPickerSettings(settings, selectedDepartment);
+
+  function updateTimeWindow(key: SettingsKey, field: "start" | "end", value: string) {
+    if (selectedDepartment) {
+      setSettings((current) => ({
+        ...current,
+        departmentSettings: current.departmentSettings.map((department) =>
+          department.id === selectedDepartment.id
+            ? patchDepartmentWindow(department, key, field, value, current)
+            : department,
+        ),
+      }));
       return;
     }
 
@@ -145,17 +249,25 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       </div>
 
       <div className="wheel-settings-wrap">
+        {settings.departmentSettings.length > 0 ? (
+          <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
+            {settings.departmentSettings.map((department) => (
+              <button
+                key={department.id}
+                type="button"
+                className={department.id === selectedDepartmentId ? "button" : "button-subtle"}
+                disabled={!enabled || pending}
+                onClick={() => setSelectedDepartmentId(department.id)}
+              >
+                {department.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <CombinedTimeSettingsPicker
-          settings={{
-            checkInWindow:      settings.checkInWindow,
-            tbmWindow:          settings.tbmWindow,
-            tbmAfternoonWindow: settings.tbmAfternoonWindow,
-            tbmCheckoutWindow:  settings.tbmCheckoutWindow,
-            checkOutWindow:     settings.checkOutWindow,
-            lateCheckInWindow:  settings.lateCheckInWindow,
-            lateCheckOutWindow: settings.lateCheckOutWindow,
-          }}
-          onChangeWindow={updateTimeWindow as (key: "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow", field: "start" | "end", value: string) => void}
+          settings={pickerSettings}
+          onChangeWindow={updateTimeWindow}
           disabled={!isEditing || !enabled || pending}
         />
 

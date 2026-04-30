@@ -122,6 +122,11 @@ export interface ShiftAttendanceSettings {
   earlyCheckOutWindow: TimeWindow | null;
 }
 
+export interface DepartmentAttendanceSettings extends Department {
+  dayShift: ShiftAttendanceSettings;
+  lateShift: ShiftAttendanceSettings;
+}
+
 export interface AppSettings {
   checkInWindow: TimeWindow;
   tbmWindow: TimeWindow;
@@ -132,6 +137,7 @@ export interface AppSettings {
   lateCheckOutWindow: TimeWindow;
   dayShift: ShiftAttendanceSettings;
   lateShift: ShiftAttendanceSettings;
+  departmentSettings: DepartmentAttendanceSettings[];
   maxGpsAccuracyM: number;
 }
 
