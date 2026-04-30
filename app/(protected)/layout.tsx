@@ -18,7 +18,7 @@ export default async function ProtectedLayout({
       <div className="container">
         <header className={`topbar${isAdmin ? "" : " topbar-compact"}`}>
           <div className="brand">
-            <span className="brand-kicker">{isAdmin ? "Attendance System" : "Check In"}</span>
+            <span className="brand-kicker">{isAdmin ? "아임파워(주)" : "Check In"}</span>
             <span className={`brand-title${isAdmin ? "" : " brand-title-compact"}`}>
               {isAdmin ? "IM-ON" : "출석체크"}
             </span>
