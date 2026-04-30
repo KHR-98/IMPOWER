@@ -1,5 +1,6 @@
-import Link from "next/link";
+import { Suspense } from "react";
 
+import { ViewToggle } from "@/components/view-toggle";
 import { requireSession } from "@/lib/auth";
 
 import { logoutAction } from "./actions";
@@ -24,14 +25,9 @@ export default async function ProtectedLayout({
           </div>
           <div className="nav-links">
             {isAdmin ? (
-              <>
-                <Link href="/dashboard?view=user" className="nav-link">
-                  사용자 화면
-                </Link>
-                <Link href="/admin" className="nav-link">
-                  관리자 화면
-                </Link>
-              </>
+              <Suspense>
+                <ViewToggle />
+              </Suspense>
             ) : null}
             <form action={logoutAction}>
               <button type="submit" className="button-ghost">
