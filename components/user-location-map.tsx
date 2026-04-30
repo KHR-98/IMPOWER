@@ -262,9 +262,6 @@ export function UserLocationMap({ zones }: { zones: Zone[] }) {
     <div className="user-location-map-wrap">
       <div>
         <h2 className="section-title">출입가능구역</h2>
-        <p className="section-subtitle" style={{ marginTop: 2, fontSize: "0.78rem" }}>
-          현장 구역과 내 위치를 확인합니다.
-        </p>
       </div>
       <div ref={mapContainerRef} className="user-location-map-canvas" />
       {status ? <div className="notice small">{status}</div> : null}
