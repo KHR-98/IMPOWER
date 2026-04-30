@@ -2133,7 +2133,7 @@ button {
   right: 16px;
   z-index: 100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
