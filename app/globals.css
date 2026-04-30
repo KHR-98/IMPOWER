@@ -2122,6 +2122,12 @@ button {
 }
 
 
+.logout-icon-btn {
+  padding: 10px;
+  width: 42px;
+  height: 42px;
+}
+
 .view-toggle-fixed {
   position: fixed;
   top: 14px;
