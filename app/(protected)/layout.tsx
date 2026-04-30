@@ -29,13 +29,15 @@ export default async function ProtectedLayout({
                 로그아웃
               </button>
             </form>
-            {isAdmin ? (
-              <Suspense>
-                <ViewToggle />
-              </Suspense>
-            ) : null}
           </div>
         </header>
+        {isAdmin ? (
+          <div className="view-toggle-fixed">
+            <Suspense>
+              <ViewToggle />
+            </Suspense>
+          </div>
+        ) : null}
         {children}
       </div>
     </div>
