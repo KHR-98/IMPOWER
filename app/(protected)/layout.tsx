@@ -39,6 +39,9 @@ export default async function ProtectedLayout({
         </header>
         {isAdmin ? (
           <div className="view-toggle-fixed">
+            <Suspense>
+              <ViewToggle />
+            </Suspense>
             <form action={logoutAction}>
               <button type="submit" className="button-ghost logout-icon-btn" aria-label="로그아웃" title="로그아웃">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -48,9 +51,6 @@ export default async function ProtectedLayout({
                 </svg>
               </button>
             </form>
-            <Suspense>
-              <ViewToggle />
-            </Suspense>
           </div>
         ) : null}
         {children}
