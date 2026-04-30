@@ -1896,29 +1896,6 @@ button {
   }
 }
 
-.topbar-site-nav {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.topbar-site-link {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--fg-2);
-  text-decoration: none;
-  padding: 4px 10px;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
-}
-
-.topbar-site-link:hover {
-  color: var(--fg);
-  background: var(--surface-2, rgba(255, 255, 255, 0.06));
-}
-
 .topbar-compact {
   margin-bottom: 12px;
 }

@@ -1,16 +1,9 @@
-import Link from "next/link";
 import { Suspense } from "react";
 
 import { ViewToggle } from "@/components/view-toggle";
 import { requireSession } from "@/lib/auth";
 
 import { logoutAction } from "./actions";
-
-const SITE_NAV_ITEMS = [
-  { label: "메모리PCS", href: "#" },
-  { label: "파운드리PCS", href: "#" },
-  { label: "메모리", href: "#" },
-] as const;
 
 const LogoutIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -36,15 +29,6 @@ export default async function ProtectedLayout({
             <span className="brand-kicker">아임파워(주)</span>
             <span className="brand-title">IM-ON</span>
           </div>
-          {isAdmin ? (
-            <nav className="topbar-site-nav" aria-label="사이트 전환">
-              {SITE_NAV_ITEMS.map((item) => (
-                <Link key={item.label} href={item.href} className="topbar-site-link">
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
         </header>
 
         <div className="view-toggle-fixed">
