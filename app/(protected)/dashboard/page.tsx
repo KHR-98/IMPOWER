@@ -4,6 +4,7 @@ import { AttendanceActionPanel } from "@/components/attendance-action-panel";
 import { getShiftLabel } from "@/lib/attendance-events";
 import { getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 
 export default async function DashboardPage({
@@ -15,7 +16,7 @@ export default async function DashboardPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const isAdminUserPreview = resolvedSearchParams?.view === "user";
 
-  if (session.role === "admin" && !isAdminUserPreview) {
+  if (isAdminRole(session.role) && !isAdminUserPreview) {
     redirect("/admin");
   }
 

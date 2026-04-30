@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { findUserByKakaoId } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
+import { isAdminRole } from "@/lib/permissions";
 
 const KAKAO_PENDING_COOKIE = "kakao_pending";
 
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
 
   if (existingUser) {
     await createSession(existingUser);
-    redirect(existingUser.role === "admin" ? "/admin" : "/dashboard");
+    redirect(isAdminRole(existingUser.role) ? "/admin" : "/dashboard");
   }
 
   // 4. New user — issue pending token and redirect to name registration

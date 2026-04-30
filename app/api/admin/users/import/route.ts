@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getSheetUserImportPreview, importUsersFromSheet } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 const importSchema = z.object({
   password: z.string().trim().min(4, "초기 비밀번호는 4자 이상이어야 합니다."),
@@ -12,7 +13,7 @@ const importSchema = z.object({
 async function requireAdminSession() {
   const session = await getSession();
 
-  if (!session || session.role !== "admin") {
+  if (!session || !isAdminRole(session.role)) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 

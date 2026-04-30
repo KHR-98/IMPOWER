@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { saveAdminAttendanceCorrection } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 const correctionSchema = z.object({
   workDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "근무일 형식이 올바르지 않습니다."),
@@ -17,7 +18,7 @@ const correctionSchema = z.object({
 export async function PATCH(request: Request) {
   const session = await getSession();
 
-  if (!session || session.role !== "admin") {
+  if (!session || !isAdminRole(session.role)) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 

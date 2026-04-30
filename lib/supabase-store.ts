@@ -8,6 +8,7 @@ import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period"
 import { buildOperationalSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
+import { isAdminRole } from "@/lib/permissions";
 import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
@@ -31,6 +32,7 @@ import type {
   SessionUser,
   SheetUserImportPreview,
   UserTodayView,
+  UserRole,
   Zone,
 } from "@/lib/types";
 
@@ -146,12 +148,34 @@ function mapRosterEntry(row: Record<string, unknown>, displayName: string): Rost
   };
 }
 
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function normalizeUserRole(value: unknown): UserRole {
+  return value === "admin" || value === "department_admin" ? value : "user";
+}
+
+function mapSessionUser(row: Record<string, unknown>): SessionUser {
+  return {
+    username: String(row.username),
+    displayName: String(row.display_name),
+    role: normalizeUserRole(row.role),
+    departmentId: nullableString(row.department_id),
+    departmentCode: null,
+    departmentName: null,
+  };
+}
+
 function mapAdminUserListItem(row: Record<string, unknown>): AdminUserListItem {
   return {
     id: String(row.id),
     username: String(row.username),
     displayName: String(row.display_name),
-    role: row.role === "admin" ? "admin" : "user",
+    role: normalizeUserRole(row.role),
+    departmentId: nullableString(row.department_id),
+    departmentCode: null,
+    departmentName: null,
     isActive: Boolean(row.is_active),
     createdAt: String(row.created_at),
   };
@@ -474,7 +498,7 @@ export async function authenticateSupabaseUser(username: string, password: strin
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active, password_hash")
+    .select("username, display_name, role, department_id, is_active, password_hash")
     .eq("username", username)
     .maybeSingle();
 
@@ -490,11 +514,7 @@ export async function authenticateSupabaseUser(username: string, password: strin
     return null;
   }
 
-  return {
-    username: data.username,
-    displayName: data.display_name,
-    role: data.role,
-  };
+  return mapSessionUser(data);
 }
 
 export async function changeSupabasePassword(input: {
@@ -546,7 +566,7 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active")
+    .select("username, display_name, role, department_id, is_active")
     .eq("username", username)
     .maybeSingle();
 
@@ -558,18 +578,14 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
     return null;
   }
 
-  return {
-    username: data.username,
-    displayName: data.display_name,
-    role: data.role,
-  };
+  return mapSessionUser(data);
 }
 
 export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active")
+    .select("username, display_name, role, department_id, is_active")
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
@@ -581,11 +597,7 @@ export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionU
     return null;
   }
 
-  return {
-    username: data.username,
-    displayName: data.display_name,
-    role: data.role,
-  };
+  return mapSessionUser(data);
 }
 
 export async function createKakaoUser(kakaoId: string, displayName: string): Promise<SessionUser> {
@@ -598,6 +610,7 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
     password_hash: null,
     kakao_id: kakaoId,
     role: "user",
+    department_id: null,
     is_active: true,
   });
 
@@ -609,6 +622,9 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
     username,
     displayName,
     role: "user",
+    departmentId: null,
+    departmentCode: null,
+    departmentName: null,
   };
 }
 
@@ -616,7 +632,7 @@ export async function getSupabaseAdminUsers(): Promise<AdminUserListItem[]> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("id, username, display_name, role, is_active, created_at")
+    .select("id, username, display_name, role, department_id, is_active, created_at")
     .order("role", { ascending: true })
     .order("display_name", { ascending: true });
 
@@ -653,6 +669,7 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
       display_name: input.displayName,
       password_hash: hashSync(input.password ?? "", 10),
       role: input.role,
+      department_id: input.departmentId,
       is_active: input.isActive,
     });
 
@@ -709,12 +726,14 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
 
   const updatePayload: {
     display_name: string;
-    role: "user" | "admin";
+    role: UserRole;
+    department_id: string | null;
     is_active: boolean;
     password_hash?: string;
   } = {
     display_name: input.displayName,
     role: input.role,
+    department_id: input.departmentId,
     is_active: input.isActive,
   };
 
@@ -887,6 +906,7 @@ export async function importSupabaseUsersFromSheet(
       display_name: name,
       password_hash: hashSync(input.password, 10),
       role: "user" as const,
+      department_id: null,
       is_active: true,
     }));
 
@@ -1027,7 +1047,7 @@ async function getSupabaseActiveUsers() {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active")
+    .select("username, display_name, role, department_id, is_active")
     .eq("is_active", true)
     .order("display_name");
 
@@ -1054,7 +1074,7 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
 
   const rosterEntry = rosterRow
     ? mapRosterEntry(rosterRow, user.displayName)
-    : user.role === "admin"
+    : isAdminRole(user.role)
       ? {
           id: `${workDate}-${username}`,
           workDate,

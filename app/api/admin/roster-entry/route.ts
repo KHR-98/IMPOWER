@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { saveAdminRosterEntry } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 const workDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -20,7 +21,7 @@ const schema = z.object({
 export async function PATCH(request: Request) {
   const session = await getSession();
 
-  if (!session || session.role !== "admin") {
+  if (!session || !isAdminRole(session.role)) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 

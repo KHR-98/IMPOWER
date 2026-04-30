@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { getRoleLabel } from "@/lib/permissions";
 import type { AdminUserListItem, UserRole } from "@/lib/types";
 
 interface AdminUserManagementPanelProps {
@@ -44,6 +45,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
           username: user.username,
           displayName: user.displayName,
           role,
+          departmentId: user.departmentId,
           isActive,
           password: null,
         }),
@@ -129,7 +131,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                   disabled={isSaving}
                 >
                   <span className="mgmt-user-name">{isSaving ? "처리 중..." : user.displayName}</span>
-                  <span className="badge">{user.role === "admin" ? "관리자" : "일반"}</span>
+                  <span className="badge">{getRoleLabel(user.role)}</span>
                   {!user.isActive && (
                     <span className="badge" style={{ background: "#e53e3e", color: "#fff" }}>비활성</span>
                   )}
@@ -145,6 +147,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                         onChange={(e) => setRole(e.target.value as UserRole)}
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
+                        <option value="department_admin">부서장</option>
                         <option value="user">일반 사용자</option>
                         <option value="admin">관리자</option>
                       </select>

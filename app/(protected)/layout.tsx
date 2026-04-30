@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { requireSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 import { logoutAction } from "./actions";
 
@@ -10,7 +11,7 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   const session = await requireSession();
-  const isAdmin = session.role === "admin";
+  const isAdmin = isAdminRole(session.role);
 
   return (
     <div className="shell">

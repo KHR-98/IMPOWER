@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth-config";
+import { isAdminRole } from "@/lib/permissions";
 import { encodeSessionToken, verifySessionToken } from "@/lib/session-token";
 import type { SessionUser } from "@/lib/types";
 
@@ -43,6 +44,9 @@ export async function getSession(): Promise<SessionUser | null> {
     username: payload.username,
     displayName: payload.displayName,
     role: payload.role,
+    departmentId: payload.departmentId ?? null,
+    departmentCode: payload.departmentCode ?? null,
+    departmentName: payload.departmentName ?? null,
   };
 }
 
@@ -59,7 +63,7 @@ export async function requireSession(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const session = await requireSession();
 
-  if (session.role !== "admin") {
+  if (!isAdminRole(session.role)) {
     redirect("/");
   }
 
