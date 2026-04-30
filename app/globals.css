@@ -2129,7 +2129,7 @@ button {
 
 .view-toggle-fixed {
   position: fixed;
-  top: 22px;
+  top: 30px;
   right: 16px;
   z-index: 100;
   display: flex;
