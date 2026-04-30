@@ -24,16 +24,16 @@ export default async function ProtectedLayout({
             </span>
           </div>
           <div className="nav-links">
-            {isAdmin ? (
-              <Suspense>
-                <ViewToggle />
-              </Suspense>
-            ) : null}
             <form action={logoutAction}>
               <button type="submit" className="button-ghost">
                 로그아웃
               </button>
             </form>
+            {isAdmin ? (
+              <Suspense>
+                <ViewToggle />
+              </Suspense>
+            ) : null}
           </div>
         </header>
         {children}
