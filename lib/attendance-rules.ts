@@ -245,10 +245,6 @@ export function buildEventAvailability(
     return buildUnavailableState(code, getCompletedReason(code), occurredAt);
   }
 
-  if (code !== "check_in" && !record?.checkIn) {
-    return buildHiddenPendingState(code, "출근 후 이용할 수 있습니다.");
-  }
-
   if (code === "lunch_out" && !record?.lunchRegister) {
     return buildHiddenPendingState(code, "점심 등록 후 점심 출문을 할 수 있습니다.");
   }

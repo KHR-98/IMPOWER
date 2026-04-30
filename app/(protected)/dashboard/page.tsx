@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { AttendanceActionPanel } from "@/components/attendance-action-panel";
+import { UserLocationMap } from "@/components/user-location-map";
 import { getShiftLabel } from "@/lib/attendance-events";
-import { getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
+import { getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView, getZones } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
 
 
@@ -19,10 +20,11 @@ export default async function DashboardPage({
     redirect("/admin");
   }
 
-  const [view, devCoordinates, runtime] = await Promise.all([
+  const [view, devCoordinates, runtime, zones] = await Promise.all([
     getUserTodayView(session.username, session),
     getDevCoordinatesForTesting(),
     getRuntimeInfo(),
+    getZones(),
   ]);
   return (
     <main className="check-screen">
@@ -43,6 +45,7 @@ export default async function DashboardPage({
 {runtime.setupMessage ? <div className="error-box">{runtime.setupMessage}</div> : null}
 
         <AttendanceActionPanel eventStates={view.eventStates} devCoordinates={devCoordinates} variant="quick" />
+        <UserLocationMap zones={zones} />
       </section>
     </main>
   );

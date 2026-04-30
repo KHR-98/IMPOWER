@@ -2122,6 +2122,30 @@ button {
 }
 
 
+.user-location-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+}
+
+.user-location-map-canvas {
+  width: 100%;
+  min-height: 320px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #eef5fb 0%, #dae8f7 100%);
+}
+
+@media (max-width: 780px) {
+  .user-location-map-canvas {
+    min-height: 260px;
+  }
+}
+
 .compact-list {
   gap: 0;
 }
