@@ -20,7 +20,7 @@ export default async function ProtectedLayout({
           <div className="brand">
             <span className="brand-kicker">{isAdmin ? "Attendance System" : "Check In"}</span>
             <span className={`brand-title${isAdmin ? "" : " brand-title-compact"}`}>
-              {isAdmin ? "출퇴근통합시스템" : "출석체크"}
+              {isAdmin ? "아임파워(주)" : "출석체크"}
             </span>
           </div>
           <div className="nav-links">
