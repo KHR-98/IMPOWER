@@ -37,9 +37,17 @@ export async function kakaoRegisterAction(
     return { error: "이름은 20자 이하로 입력해주세요." };
   }
 
+  const VALID_DEPT_CODES = ["memory_pcs", "foundry_pcs", "memory"] as const;
+  type DeptCode = (typeof VALID_DEPT_CODES)[number];
+
+  const departmentCode = (formData.get("departmentCode") as string | null)?.trim() ?? "";
+  if (!VALID_DEPT_CODES.includes(departmentCode as DeptCode)) {
+    return { error: "부서를 선택해주세요." };
+  }
+
   let user;
   try {
-    user = await registerKakaoUser(pending.kakaoId, displayName);
+    user = await registerKakaoUser(pending.kakaoId, displayName, departmentCode as DeptCode);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "알 수 없는 오류";
     // Duplicate kakao_id (race condition)

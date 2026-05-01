@@ -689,9 +689,15 @@ export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionU
   };
 }
 
-export async function createKakaoUser(kakaoId: string, displayName: string): Promise<SessionUser> {
+export async function createKakaoUser(kakaoId: string, displayName: string, departmentCode: string): Promise<SessionUser> {
   const client = getSupabaseAdminClient();
   const username = `kakao_${kakaoId}`;
+
+  const { data: deptRow } = await client
+    .from("departments")
+    .select("id, name")
+    .eq("code", departmentCode)
+    .single();
 
   const { error } = await client.from("users").insert({
     username,
@@ -700,6 +706,7 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
     kakao_id: kakaoId,
     role: "user",
     is_active: true,
+    department_id: deptRow?.id ?? null,
   });
 
   if (error) {
@@ -710,9 +717,9 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
     username,
     displayName,
     role: "user",
-    departmentId: null,
-    departmentCode: null,
-    departmentName: null,
+    departmentId: deptRow?.id ?? null,
+    departmentCode: deptRow ? departmentCode : null,
+    departmentName: deptRow?.name ?? null,
   };
 }
 

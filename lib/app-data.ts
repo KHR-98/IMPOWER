@@ -114,11 +114,11 @@ export async function findUserByKakaoId(kakaoId: string): Promise<SessionUser | 
   return getSessionUserByKakaoId(kakaoId);
 }
 
-export async function registerKakaoUser(kakaoId: string, displayName: string): Promise<SessionUser> {
+export async function registerKakaoUser(kakaoId: string, displayName: string, departmentCode: string): Promise<SessionUser> {
   if (resolveDataSource().dataSource !== "supabase") {
     throw new Error("카카오 회원가입은 Supabase 모드에서만 지원됩니다.");
   }
-  return createKakaoUser(kakaoId, displayName);
+  return createKakaoUser(kakaoId, displayName, departmentCode);
 }
 
 export async function getUserTodayView(username: string, sessionUser?: SessionUser): Promise<UserTodayView> {
