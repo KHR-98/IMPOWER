@@ -61,7 +61,12 @@ function getLateLunchEntries(entries: RosterEntry[]): RosterEntry[] {
 }
 
 function getShiftSettings(settings: AppSettings, shiftType: RosterEntry["shiftType"]): ShiftAttendanceSettings | null {
-  const shift = shiftType === "late" ? settings.lateShift : settings.dayShift;
+  const shift =
+    shiftType === "late"
+      ? settings.lateShift
+      : shiftType === "weekend"
+        ? (settings.weekendShift ?? settings.dayShift)
+        : settings.dayShift;
 
   if (!shift || typeof shift !== "object") {
     return null;

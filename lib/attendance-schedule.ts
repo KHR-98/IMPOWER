@@ -25,6 +25,7 @@ export function buildDepartmentAttendanceSettings(
     ...department,
     dayShift: cloneShiftSettings(baseSettings.dayShift),
     lateShift: cloneShiftSettings(baseSettings.lateShift),
+    weekendShift: cloneShiftSettings(baseSettings.weekendShift ?? baseSettings.dayShift),
   };
 }
 
@@ -50,6 +51,17 @@ export const DEFAULT_LATE_SHIFT_SETTINGS: ShiftAttendanceSettings = {
   earlyCheckOutWindow: null,
 };
 
+export const DEFAULT_WEEKEND_SHIFT_SETTINGS: ShiftAttendanceSettings = {
+  checkInWindow: { ...DEFAULT_DAY_SHIFT_SETTINGS.checkInWindow },
+  tbmMorningWindow: null,
+  lunchOutWindow: null,
+  lunchInWindow: null,
+  tbmAfternoonWindow: null,
+  tbmCheckoutWindow: null,
+  checkOutWindow: { ...DEFAULT_DAY_SHIFT_SETTINGS.checkOutWindow },
+  earlyCheckOutWindow: null,
+};
+
 export function buildOperationalSettings(maxGpsAccuracyM: number = 100): AppSettings {
   return {
     checkInWindow: { ...DEFAULT_DAY_SHIFT_SETTINGS.checkInWindow },
@@ -61,6 +73,7 @@ export function buildOperationalSettings(maxGpsAccuracyM: number = 100): AppSett
     lateCheckOutWindow: { ...DEFAULT_LATE_SHIFT_SETTINGS.checkOutWindow },
     dayShift: cloneShiftSettings(DEFAULT_DAY_SHIFT_SETTINGS),
     lateShift: cloneShiftSettings(DEFAULT_LATE_SHIFT_SETTINGS),
+    weekendShift: cloneShiftSettings(DEFAULT_WEEKEND_SHIFT_SETTINGS),
     departmentSettings: [],
     maxGpsAccuracyM,
   };

@@ -2,7 +2,7 @@ export type UserRole = "user" | "admin" | "sub_admin" | "master";
 export type ZoneType = "entry" | "tbm";
 export type AttendanceAction = "check-in" | "tbm" | "lunch-register" | "lunch-out" | "lunch-in" | "check-out";
 export type DataSourceKind = "demo" | "supabase";
-export type ShiftType = "day" | "late";
+export type ShiftType = "day" | "late" | "weekend";
 export type RosterReasonCode =
   | "not_listed"
   | "sheet_missing"
@@ -125,6 +125,7 @@ export interface ShiftAttendanceSettings {
 export interface DepartmentAttendanceSettings extends Department {
   dayShift: ShiftAttendanceSettings;
   lateShift: ShiftAttendanceSettings;
+  weekendShift?: ShiftAttendanceSettings;
 }
 
 export interface AppSettings {
@@ -137,6 +138,7 @@ export interface AppSettings {
   lateCheckOutWindow: TimeWindow;
   dayShift: ShiftAttendanceSettings;
   lateShift: ShiftAttendanceSettings;
+  weekendShift?: ShiftAttendanceSettings;
   departmentSettings: DepartmentAttendanceSettings[];
   maxGpsAccuracyM: number;
 }
