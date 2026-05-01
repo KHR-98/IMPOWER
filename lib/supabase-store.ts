@@ -768,6 +768,7 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
       password_hash: hashSync(input.password ?? "", 10),
       role: input.role,
       is_active: input.isActive,
+      department_id: input.departmentId ?? null,
     });
 
     if (insertError) {

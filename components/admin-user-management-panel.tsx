@@ -155,12 +155,11 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                         <option value="master">마스터</option>
                       </select>
                       <select
-                        value={departmentId ?? ""}
+                        value={departmentId ?? departments[0]?.id ?? ""}
                         disabled={!enabled || isSaving || departments.length === 0}
-                        onChange={(e) => setDepartmentId(e.target.value || null)}
+                        onChange={(e) => setDepartmentId(e.target.value)}
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
-                        <option value="">부서 미지정</option>
                         {departments.map((department) => (
                           <option key={department.id} value={department.id}>
                             {department.name}
