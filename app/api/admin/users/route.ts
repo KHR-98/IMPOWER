@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { deleteAdminUser, saveAdminUser } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isSystemAdminRole } from "@/lib/permissions";
 
 const adminUserSchema = z
   .object({
@@ -38,7 +38,7 @@ const deleteUserSchema = z.object({
 async function requireAdminSession() {
   const session = await getSession();
 
-  if (!session || !isAdminRole(session.role)) {
+  if (!session || !isSystemAdminRole(session.role)) {
     return {
       session: null,
       response: NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 }),

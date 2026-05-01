@@ -4,7 +4,7 @@ import { z } from "zod";
 import { saveAdminConfiguration } from "@/lib/app-data";
 import { buildOperationalSettings } from "@/lib/attendance-schedule";
 import { getSession } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { isSystemAdminRole } from "@/lib/permissions";
 
 const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
@@ -108,7 +108,7 @@ const adminSettingsSchema = z
 export async function PATCH(request: Request) {
   const session = await getSession();
 
-  if (!session || !isAdminRole(session.role)) {
+  if (!session || !isSystemAdminRole(session.role)) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 

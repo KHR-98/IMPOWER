@@ -61,13 +61,14 @@ export default async function AdminPage({
 }) {
   const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
+  const canUseManagementSections = session.role !== "sub_admin";
+  const selectedSection = canUseManagementSections ? normalizeAdminSection(resolvedSearchParams?.section) : "overview";
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const filterDeptId = undefined;
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(filterDeptId),
     getRuntimeInfo(),
-    getAdminUserList(filterDeptId),
+    canUseManagementSections ? getAdminUserList(filterDeptId) : Promise.resolve([]),
     selectedSection === "overview" ? getUserTodayView(session.username) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
@@ -153,17 +154,19 @@ export default async function AdminPage({
           <span className="brand-kicker">Admin Console</span>
         </div>
 
-        <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
-          {ADMIN_SECTION_OPTIONS.map((option) => (
-            <Link
-              key={option.key}
-              href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
-              className={`admin-section-link${selectedSection === option.key ? " admin-section-link-active" : ""}`}
-            >
-              {option.label}
-            </Link>
-          ))}
-        </nav>
+        {canUseManagementSections ? (
+          <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
+            {ADMIN_SECTION_OPTIONS.map((option) => (
+              <Link
+                key={option.key}
+                href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
+                className={`admin-section-link${selectedSection === option.key ? " admin-section-link-active" : ""}`}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
       </section>
 
       {selectedSection === "overview" ? (
