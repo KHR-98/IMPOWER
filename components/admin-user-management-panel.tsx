@@ -3,7 +3,18 @@
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { getRoleLabel } from "@/lib/permissions";
 import type { AdminUserListItem, DepartmentAttendanceSettings, UserRole } from "@/lib/types";
+
+const ROLE_ORDER: Record<string, number> = { master: 0, admin: 1, sub_admin: 2, user: 3 };
+
+function sortUsers(users: AdminUserListItem[]): AdminUserListItem[] {
+  return [...users].sort((a, b) => {
+    const roleDiff = (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99);
+    if (roleDiff !== 0) return roleDiff;
+    return a.displayName.localeCompare(b.displayName, "ko");
+  });
+}
 
 interface AdminUserManagementPanelProps {
   initialUsers: AdminUserListItem[];
@@ -97,7 +108,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
     }
   }
 
-  const filteredUsers = initialUsers.filter((u) => u.displayName.includes(search.trim()));
+  const filteredUsers = sortUsers(initialUsers.filter((u) => u.displayName.includes(search.trim())));
 
   return (
     <div className="stack">
@@ -133,7 +144,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                   disabled={isSaving}
                 >
                   <span className="mgmt-user-name">{isSaving ? "처리 중..." : user.displayName}</span>
-                  <span className="badge">{user.role === "admin" ? "관리자" : user.role === "sub_admin" ? "부관리자" : "일반"}</span>
+                  <span className="badge">{getRoleLabel(user.role)}</span>
                   {!user.isActive && (
                     <span className="badge" style={{ background: "#e53e3e", color: "#fff" }}>비활성</span>
                   )}
