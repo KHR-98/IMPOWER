@@ -150,7 +150,6 @@ export default async function AdminPage({
       <section className="admin-page-header">
         <div className="admin-page-heading">
           <span className="brand-kicker">Admin Console</span>
-          <h1 className="admin-page-title">관리자 대시보드</h1>
         </div>
 
         <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
