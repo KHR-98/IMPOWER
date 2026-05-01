@@ -154,7 +154,7 @@ function nullableString(value: unknown): string | null {
 }
 
 function normalizeUserRole(value: unknown): UserRole {
-  return value === "admin" || value === "sub_admin" ? value : "user";
+  return value === "master" || value === "admin" || value === "sub_admin" ? value : "user";
 }
 
 function mapDepartment(row: Record<string, unknown>): Department {
@@ -819,7 +819,7 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
 
   const updatePayload: {
     display_name: string;
-    role: "user" | "admin" | "sub_admin";
+    role: "user" | "admin" | "sub_admin" | "master";
     is_active: boolean;
     department_id: string | null;
     password_hash?: string;

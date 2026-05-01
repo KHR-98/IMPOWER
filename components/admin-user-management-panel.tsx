@@ -152,6 +152,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                         <option value="user">일반 사용자</option>
                         <option value="sub_admin">부관리자</option>
                         <option value="admin">관리자</option>
+                        <option value="master">마스터</option>
                       </select>
                       <select
                         value={departmentId ?? ""}
