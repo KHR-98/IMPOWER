@@ -1,16 +1,26 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { NextResponse } from "next/server";
 
 import { findUserByKakaoId } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
+import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
 
 const KAKAO_PENDING_COOKIE = "kakao_pending";
 
-function getRedirectBase(request: Request): string {
-  const url = new URL(request.url);
-  return `${url.protocol}//${url.host}`;
+type KakaoTokenError = {
+  error?: string;
+  error_code?: string;
+  error_description?: string;
+};
+
+async function getTokenErrorCode(response: Response): Promise<string | null> {
+  try {
+    const body = (await response.json()) as KakaoTokenError;
+    return body.error_code ?? body.error ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function GET(request: Request) {
@@ -22,22 +32,18 @@ export async function GET(request: Request) {
     redirect("/login?error=kakao_cancelled");
   }
 
-  const restApiKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
+  const restApiKey = getKakaoRestApiKey();
   if (!restApiKey) {
-    return NextResponse.json({ error: "카카오 API 키가 설정되지 않았습니다." }, { status: 500 });
+    redirect("/login?error=kakao_config");
   }
 
-  const redirectUri = `${getRedirectBase(request)}/api/auth/kakao/callback`;
-
-  // 1. Exchange code for access token
   const tokenParams: Record<string, string> = {
     grant_type: "authorization_code",
     client_id: restApiKey,
-    redirect_uri: redirectUri,
+    redirect_uri: getKakaoRedirectUri(request),
     code,
   };
 
-  // Client Secret is now enabled by default — include if configured
   const clientSecret = process.env.KAKAO_CLIENT_SECRET;
   if (clientSecret) {
     tokenParams.client_secret = clientSecret;
@@ -50,6 +56,11 @@ export async function GET(request: Request) {
   });
 
   if (!tokenRes.ok) {
+    const tokenErrorCode = await getTokenErrorCode(tokenRes);
+    if (tokenErrorCode === "KOE010" || tokenErrorCode === "invalid_client") {
+      redirect("/login?error=kakao_credentials");
+    }
+
     redirect("/login?error=kakao_token");
   }
 
@@ -60,7 +71,6 @@ export async function GET(request: Request) {
     redirect("/login?error=kakao_token");
   }
 
-  // 2. Fetch Kakao user profile
   const profileRes = await fetch("https://kapi.kakao.com/v2/user/me", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -81,7 +91,6 @@ export async function GET(request: Request) {
     redirect("/login?error=kakao_profile");
   }
 
-  // 3. Check if user already registered
   const existingUser = await findUserByKakaoId(kakaoId);
 
   if (existingUser) {
@@ -89,7 +98,6 @@ export async function GET(request: Request) {
     redirect(existingUser.role === "admin" ? "/admin" : "/dashboard");
   }
 
-  // 4. New user — issue pending token and redirect to name registration
   const pendingToken = await encodeKakaoPendingToken({ kakaoId, kakaoNickname });
   const store = await cookies();
   store.set(KAKAO_PENDING_COOKIE, pendingToken, {
@@ -97,7 +105,7 @@ export async function GET(request: Request) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 600, // 10 minutes
+    maxAge: 600,
   });
 
   redirect("/login/kakao-register");

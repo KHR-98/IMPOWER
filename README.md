@@ -42,10 +42,14 @@ Copy `.env.example` to `.env.local` and fill the values.
 - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
 - `GOOGLE_PRIVATE_KEY`
 - `NEXT_PUBLIC_KAKAO_MAP_APP_KEY`
+- `KAKAO_REST_API_KEY`
+- `KAKAO_CLIENT_SECRET`
 
 For `GOOGLE_PRIVATE_KEY`, preserve newline characters by storing it with `\n` escapes in the env file.
 
 `NEXT_PUBLIC_KAKAO_MAP_APP_KEY` is optional. When it is set, the admin page shows a Kakao map so zones can be chosen by search and map click. Without it, manual latitude/longitude input still works.
+
+`KAKAO_REST_API_KEY` is used by the server-side Kakao login redirect. `NEXT_PUBLIC_KAKAO_REST_API_KEY` is still accepted as a legacy fallback.
 
 ## Database setup
 

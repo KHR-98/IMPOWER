@@ -1,17 +1,8 @@
 "use client";
 
-const KAKAO_AUTH_BASE = "https://kauth.kakao.com/oauth/authorize";
-
 export function KakaoLoginButton() {
-  const restApiKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY;
-
-  if (!restApiKey) return null;
-
-  const redirectUri = `${window.location.origin}/api/auth/kakao/callback`;
-  const kakaoUrl = `${KAKAO_AUTH_BASE}?client_id=${restApiKey}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code`;
-
   return (
-    <a href={kakaoUrl} className="button kakao-login-button">
+    <a href="/api/auth/kakao/start" className="button kakao-login-button">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
         <path
           fillRule="evenodd"

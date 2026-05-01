@@ -363,13 +363,20 @@ button {
 .login-shell {
   min-height: 100dvh;
   display: flex;
-  align-items: safe center;
+  align-items: flex-start;
   justify-content: center;
   padding: 24px 20px;
+  overflow-y: auto;
   background:
     radial-gradient(ellipse at 20% 10%, rgba(15, 109, 95, 0.18) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 90%, rgba(10, 79, 69, 0.14) 0%, transparent 50%),
     linear-gradient(160deg, #e8f4f1 0%, #f0f7fb 50%, #eaf2ee 100%);
+}
+
+@media (min-height: 720px) {
+  .login-shell {
+    align-items: center;
+  }
 }
 
 /* ── Login Card ──────────────────────────────── */
@@ -456,7 +463,7 @@ button {
 
 .login-form-stack {
   flex-direction: column;
-  gap: 0;
+  gap: 14px;
 }
 
 /* ── Kakao Button ────────────────────────────── */
@@ -1432,7 +1439,15 @@ button {
   }
 
   .login-shell {
-    padding: 24px 16px;
+    padding: 16px;
+  }
+
+  .login-brand-strip {
+    padding: 40px 28px 34px;
+  }
+
+  .login-body {
+    padding: 28px 24px 32px;
   }
 
   .login-description {
