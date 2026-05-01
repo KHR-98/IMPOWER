@@ -121,12 +121,15 @@ function patchDepartmentWindow(
 
 export function AdminSettingsPanel({ initialSettings, initialZones, enabled, actorDepartmentId }: AdminSettingsPanelProps) {
   const router = useRouter();
-  const isDeptAdmin = Boolean(actorDepartmentId);
+  // undefined = master(전체), string = 부서 admin, null = 부서 미지정 admin
+  const isDeptAdmin = actorDepartmentId !== undefined;
   const [isEditing, setIsEditing] = useState(false);
   const [isMapEditing, setIsMapEditing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
-    actorDepartmentId ?? initialSettings.departmentSettings[0]?.id ?? null,
+    actorDepartmentId !== undefined
+      ? actorDepartmentId
+      : initialSettings.departmentSettings[0]?.id ?? null,
   );
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);

@@ -722,8 +722,12 @@ export async function getSupabaseAdminUsers(departmentId?: string | null): Promi
     .from("users")
     .select("id, username, display_name, role, is_active, created_at, department_id");
 
-  if (departmentId) {
-    query = query.eq("department_id", departmentId);
+  if (departmentId !== undefined) {
+    if (departmentId) {
+      query = query.eq("department_id", departmentId);
+    } else {
+      query = query.is("department_id", null);
+    }
   }
 
   const { data, error } = await query
@@ -1165,8 +1169,13 @@ async function getSupabaseActiveUsers(departmentId?: string | null) {
     .select("username, display_name, role, is_active")
     .eq("is_active", true);
 
-  if (departmentId) {
-    query = query.eq("department_id", departmentId);
+  if (departmentId !== undefined) {
+    // undefined = master (필터 없음), string = 부서 필터, null = 부서 미지정 필터
+    if (departmentId) {
+      query = query.eq("department_id", departmentId);
+    } else {
+      query = query.is("department_id", null);
+    }
   }
 
   const { data, error } = await query.order("display_name");
@@ -1650,12 +1659,13 @@ export async function correctSupabaseAttendanceRecord(
 }
 export async function saveSupabaseAdminConfiguration(
   input: { settings: AppSettings; zones: Zone[] },
-  actorDepartmentId?: string | null,
+  actorRole: "master" | "admin" | "sub_admin" | "user",
+  actorDepartmentId: string | null,
 ): Promise<{ ok: boolean; message: string }> {
   const client = getSupabaseAdminClient();
 
   // 부서 admin: 자기 부서 시간 설정만 department_settings에 저장
-  if (actorDepartmentId) {
+  if (actorRole !== "master" && actorDepartmentId) {
     const deptSetting = input.settings.departmentSettings.find((d) => d.id === actorDepartmentId);
 
     if (!deptSetting) {

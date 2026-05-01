@@ -52,6 +52,7 @@ import type {
   RuntimeInfo,
   SessionUser,
   SheetUserImportPreview,
+  UserRole,
   UserTodayView,
   Zone,
 } from "@/lib/types";
@@ -184,7 +185,8 @@ export async function syncRoster(): Promise<RosterSyncResult> {
 
 export async function saveAdminConfiguration(
   input: { settings: AppSettings; zones: Zone[] },
-  actorDepartmentId?: string | null,
+  actorRole: UserRole,
+  actorDepartmentId: string | null,
 ): Promise<{ ok: boolean; message: string }> {
   const resolved = resolveDataSource();
 
@@ -195,7 +197,7 @@ export async function saveAdminConfiguration(
     };
   }
 
-  return saveSupabaseAdminConfiguration(input, actorDepartmentId);
+  return saveSupabaseAdminConfiguration(input, actorRole, actorDepartmentId);
 }
 
 export async function saveAdminUser(input: AdminUserMutationInput): Promise<{ ok: boolean; message: string }> {
