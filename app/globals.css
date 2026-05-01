@@ -84,6 +84,32 @@ button {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
+  position: relative;
+}
+
+.topbar-site-nav {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.topbar-site-nav-item {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.topbar-site-nav-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 .brand {

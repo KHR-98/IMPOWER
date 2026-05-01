@@ -29,6 +29,15 @@ export default async function ProtectedLayout({
             <span className="brand-kicker">아임파워(주)</span>
             <span className="brand-title">IM-ON</span>
           </div>
+          {isAdmin ? (
+            <nav className="topbar-site-nav" aria-label="사이트 구분">
+              <span className="topbar-site-nav-item">메모리PCS</span>
+              <span className="topbar-site-nav-divider" aria-hidden="true" />
+              <span className="topbar-site-nav-item">파운드리PCS</span>
+              <span className="topbar-site-nav-divider" aria-hidden="true" />
+              <span className="topbar-site-nav-item">메모리</span>
+            </nav>
+          ) : null}
         </header>
 
         <div className="view-toggle-fixed">
