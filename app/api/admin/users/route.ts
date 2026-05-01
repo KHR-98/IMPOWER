@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { deleteAdminUser, saveAdminUser } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 const adminUserSchema = z
   .object({
@@ -10,6 +11,7 @@ const adminUserSchema = z
     username: z.string().trim().min(1, "로그인 ID를 입력하세요.").max(40, "로그인 ID가 너무 깁니다.").regex(/^\S+$/, "로그인 ID에는 공백을 넣을 수 없습니다."),
     displayName: z.string().trim().min(1, "표시 이름을 입력하세요.").max(40, "표시 이름이 너무 깁니다."),
     role: z.enum(["user", "admin", "sub_admin"]),
+    departmentId: z.string().uuid().nullable().optional(),
     isActive: z.boolean(),
     password: z.string().trim().nullable(),
   })
@@ -36,7 +38,7 @@ const deleteUserSchema = z.object({
 async function requireAdminSession() {
   const session = await getSession();
 
-  if (!session || session.role !== "admin") {
+  if (!session || !isAdminRole(session.role)) {
     return {
       session: null,
       response: NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 }),
@@ -63,7 +65,10 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
   }
 
-  const result = await saveAdminUser(parsed.data);
+  const result = await saveAdminUser({
+    ...parsed.data,
+    departmentId: parsed.data.departmentId ?? null,
+  });
 
   if (!result.ok) {
     return NextResponse.json({ error: result.message }, { status: 400 });

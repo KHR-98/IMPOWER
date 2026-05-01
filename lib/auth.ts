@@ -43,6 +43,9 @@ export async function getSession(): Promise<SessionUser | null> {
     username: payload.username,
     displayName: payload.displayName,
     role: payload.role,
+    departmentId: payload.departmentId ?? null,
+    departmentCode: payload.departmentCode ?? null,
+    departmentName: payload.departmentName ?? null,
   };
 }
 

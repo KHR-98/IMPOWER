@@ -3,17 +3,19 @@
 import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import type { AdminUserListItem, UserRole } from "@/lib/types";
+import type { AdminUserListItem, DepartmentAttendanceSettings, UserRole } from "@/lib/types";
 
 interface AdminUserManagementPanelProps {
   initialUsers: AdminUserListItem[];
+  departments: DepartmentAttendanceSettings[];
   enabled: boolean;
 }
 
-export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserManagementPanelProps) {
+export function AdminUserManagementPanel({ initialUsers, departments, enabled }: AdminUserManagementPanelProps) {
   const router = useRouter();
   const [openUsername, setOpenUsername] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>("user");
+  const [departmentId, setDepartmentId] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -27,6 +29,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
   useEffect(() => {
     if (openUser) {
       setRole(openUser.role);
+      setDepartmentId(openUser.departmentId);
       setIsActive(openUser.isActive);
     }
   }, [openUser]);
@@ -44,6 +47,7 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
           username: user.username,
           displayName: user.displayName,
           role,
+          departmentId,
           isActive,
           password: null,
         }),
@@ -148,6 +152,19 @@ export function AdminUserManagementPanel({ initialUsers, enabled }: AdminUserMan
                         <option value="user">일반 사용자</option>
                         <option value="sub_admin">부관리자</option>
                         <option value="admin">관리자</option>
+                      </select>
+                      <select
+                        value={departmentId ?? ""}
+                        disabled={!enabled || isSaving || departments.length === 0}
+                        onChange={(e) => setDepartmentId(e.target.value || null)}
+                        style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
+                      >
+                        <option value="">부서 미지정</option>
+                        {departments.map((department) => (
+                          <option key={department.id} value={department.id}>
+                            {department.name}
+                          </option>
+                        ))}
                       </select>
                       <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.82rem", whiteSpace: "nowrap", cursor: enabled ? "pointer" : "default" }}>
                         <input

@@ -39,6 +39,9 @@ export interface SessionUser {
   username: string;
   displayName: string;
   role: UserRole;
+  departmentId: string | null;
+  departmentCode: string | null;
+  departmentName: string | null;
 }
 
 export interface UserAccount extends SessionUser {
@@ -54,6 +57,13 @@ export interface Zone {
   latitude: number;
   longitude: number;
   radiusM: number;
+  isActive: boolean;
+}
+
+export interface Department {
+  id: string;
+  code: string;
+  name: string;
   isActive: boolean;
 }
 
@@ -112,6 +122,11 @@ export interface ShiftAttendanceSettings {
   earlyCheckOutWindow: TimeWindow | null;
 }
 
+export interface DepartmentAttendanceSettings extends Department {
+  dayShift: ShiftAttendanceSettings;
+  lateShift: ShiftAttendanceSettings;
+}
+
 export interface AppSettings {
   checkInWindow: TimeWindow;
   tbmWindow: TimeWindow;
@@ -122,6 +137,7 @@ export interface AppSettings {
   lateCheckOutWindow: TimeWindow;
   dayShift: ShiftAttendanceSettings;
   lateShift: ShiftAttendanceSettings;
+  departmentSettings: DepartmentAttendanceSettings[];
   maxGpsAccuracyM: number;
 }
 
@@ -253,6 +269,7 @@ export interface RosterSyncPreview {
 export interface RosterSyncUser {
   username: string;
   displayName: string;
+  departmentId?: string | null;
 }
 
 export interface SheetRosterAssignment {
@@ -284,6 +301,9 @@ export interface AdminUserListItem {
   username: string;
   displayName: string;
   role: UserRole;
+  departmentId: string | null;
+  departmentCode: string | null;
+  departmentName: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -293,6 +313,7 @@ export interface AdminUserMutationInput {
   username: string;
   displayName: string;
   role: UserRole;
+  departmentId: string | null;
   isActive: boolean;
   password: string | null;
 }

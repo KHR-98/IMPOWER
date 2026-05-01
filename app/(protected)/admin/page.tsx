@@ -9,7 +9,7 @@ import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
 import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
-import { requireAdminOrSubAdmin } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode } from "@/lib/types";
@@ -59,10 +59,9 @@ export default async function AdminPage({
 }: {
   searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string }>;
 }) {
-  const session = await requireAdminOrSubAdmin();
-  const isSubAdmin = session.role === "sub_admin";
+  const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const selectedSection = isSubAdmin ? "overview" : normalizeAdminSection(resolvedSearchParams?.section);
+  const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(),
@@ -141,7 +140,7 @@ export default async function AdminPage({
       : periodLabel.includes("늦조")
       ? "늦조 출결표"
       : periodLabel.includes("주간조")
-      ? "주간조 출결표"
+      ? "주간조 시간대 출결표"
       : `${periodLabel} 출결표`;
 
   return (
@@ -151,21 +150,20 @@ export default async function AdminPage({
       <section className="admin-page-header">
         <div className="admin-page-heading">
           <span className="brand-kicker">Admin Console</span>
+          <h1 className="admin-page-title">관리자 대시보드</h1>
         </div>
 
-        {!isSubAdmin ? (
-          <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
-            {ADMIN_SECTION_OPTIONS.map((option) => (
-              <Link
-                key={option.key}
-                href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
-                className={`admin-section-link${selectedSection === option.key ? " admin-section-link-active" : ""}`}
-              >
-                {option.label}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
+        <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
+          {ADMIN_SECTION_OPTIONS.map((option) => (
+            <Link
+              key={option.key}
+              href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
+              className={`admin-section-link${selectedSection === option.key ? " admin-section-link-active" : ""}`}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </nav>
       </section>
 
       {selectedSection === "overview" ? (
@@ -290,7 +288,11 @@ export default async function AdminPage({
       {selectedSection === "accounts" ? (
         <section className="stack">
           <article className="glass-panel stack admin-management-panel">
-            <AdminUserManagementPanel initialUsers={adminUsers} enabled={runtime.dataSource === "supabase"} />
+            <AdminUserManagementPanel
+              initialUsers={adminUsers}
+              departments={dashboard.settings.departmentSettings}
+              enabled={runtime.dataSource === "supabase"}
+            />
           </article>
         </section>
       ) : null}

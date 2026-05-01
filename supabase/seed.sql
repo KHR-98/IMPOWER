@@ -1,3 +1,12 @@
+insert into departments (code, name, is_active)
+values
+  ('memory_pcs', '메모리PCS', true),
+  ('foundry_pcs', '파운드리PCS', true),
+  ('memory', '메모리', true)
+on conflict (code) do update set
+  name = excluded.name,
+  is_active = excluded.is_active;
+
 insert into users (username, display_name, password_hash, role, is_active)
 values
   ('admin', '현장관리자', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'admin', true),
@@ -6,6 +15,10 @@ values
   ('choi', '최유진', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
   ('lee', '이서준', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true)
 on conflict (username) do nothing;
+
+update users
+set department_id = (select id from departments where code = 'memory_pcs')
+where department_id is null;
 
 insert into zones (name, type, latitude, longitude, radius_m, is_active)
 values

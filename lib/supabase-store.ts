@@ -5,7 +5,7 @@ import { compareSync, hashSync } from "bcryptjs";
 
 import { buildEventStates } from "@/lib/attendance-events";
 import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period";
-import { buildOperationalSettings } from "@/lib/attendance-schedule";
+import { buildDepartmentAttendanceSettings, buildOperationalSettings, cloneShiftSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
 import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
@@ -25,12 +25,15 @@ import type {
   AttendancePoint,
   AttendanceRecord,
   DashboardView,
+  Department,
+  DepartmentAttendanceSettings,
   RosterEntry,
   RosterSyncPreview,
   RosterSyncResult,
   SessionUser,
   SheetUserImportPreview,
   UserTodayView,
+  UserRole,
   Zone,
 } from "@/lib/types";
 
@@ -146,12 +149,101 @@ function mapRosterEntry(row: Record<string, unknown>, displayName: string): Rost
   };
 }
 
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function normalizeUserRole(value: unknown): UserRole {
+  return value === "admin" || value === "sub_admin" ? value : "user";
+}
+
+function mapDepartment(row: Record<string, unknown>): Department {
+  return {
+    id: String(row.id),
+    code: String(row.code),
+    name: String(row.name),
+    isActive: Boolean(row.is_active),
+  };
+}
+
+function mergeDepartmentShiftSettings(
+  row: Record<string, unknown> | null,
+  department: Department,
+  baseSettings: AppSettings,
+): DepartmentAttendanceSettings {
+  const departmentSettings = buildDepartmentAttendanceSettings(department, baseSettings);
+
+  if (!row) {
+    return departmentSettings;
+  }
+
+  departmentSettings.dayShift.checkInWindow = {
+    start: String(row.day_check_in_start ?? departmentSettings.dayShift.checkInWindow.start),
+    end: String(row.day_check_in_end ?? departmentSettings.dayShift.checkInWindow.end),
+  };
+  departmentSettings.dayShift.tbmMorningWindow = {
+    start: String(row.day_tbm_start ?? departmentSettings.dayShift.tbmMorningWindow?.start ?? departmentSettings.dayShift.checkInWindow.start),
+    end: String(row.day_tbm_end ?? departmentSettings.dayShift.tbmMorningWindow?.end ?? departmentSettings.dayShift.checkInWindow.end),
+  };
+  departmentSettings.dayShift.tbmAfternoonWindow = {
+    start: String(row.day_tbm_afternoon_start ?? departmentSettings.dayShift.tbmAfternoonWindow?.start ?? "13:35"),
+    end: String(row.day_tbm_afternoon_end ?? departmentSettings.dayShift.tbmAfternoonWindow?.end ?? "13:45"),
+  };
+  departmentSettings.dayShift.tbmCheckoutWindow = {
+    start: String(row.day_tbm_checkout_start ?? departmentSettings.dayShift.tbmCheckoutWindow?.start ?? "16:30"),
+    end: String(row.day_tbm_checkout_end ?? departmentSettings.dayShift.tbmCheckoutWindow?.end ?? "16:45"),
+  };
+  departmentSettings.dayShift.checkOutWindow = {
+    start: String(row.day_check_out_start ?? departmentSettings.dayShift.checkOutWindow.start),
+    end: String(row.day_check_out_end ?? departmentSettings.dayShift.checkOutWindow.end),
+  };
+  departmentSettings.lateShift.checkInWindow = {
+    start: String(row.late_check_in_start ?? departmentSettings.lateShift.checkInWindow.start),
+    end: String(row.late_check_in_end ?? departmentSettings.lateShift.checkInWindow.end),
+  };
+  departmentSettings.lateShift.checkOutWindow = {
+    start: String(row.late_check_out_start ?? departmentSettings.lateShift.checkOutWindow.start),
+    end: String(row.late_check_out_end ?? departmentSettings.lateShift.checkOutWindow.end),
+  };
+
+  return departmentSettings;
+}
+
+function applyDepartmentSettings(baseSettings: AppSettings, departmentId: string | null): AppSettings {
+  if (!departmentId) {
+    return baseSettings;
+  }
+
+  const departmentSettings = baseSettings.departmentSettings.find((s) => s.id === departmentId);
+
+  if (!departmentSettings) {
+    return baseSettings;
+  }
+
+  return {
+    ...baseSettings,
+    checkInWindow: { ...departmentSettings.dayShift.checkInWindow },
+    tbmWindow: { ...(departmentSettings.dayShift.tbmMorningWindow ?? departmentSettings.dayShift.checkInWindow) },
+    tbmAfternoonWindow: { ...(departmentSettings.dayShift.tbmAfternoonWindow ?? baseSettings.tbmAfternoonWindow) },
+    tbmCheckoutWindow: { ...(departmentSettings.dayShift.tbmCheckoutWindow ?? baseSettings.tbmCheckoutWindow) },
+    checkOutWindow: { ...departmentSettings.dayShift.checkOutWindow },
+    lateCheckInWindow: { ...departmentSettings.lateShift.checkInWindow },
+    lateCheckOutWindow: { ...departmentSettings.lateShift.checkOutWindow },
+    dayShift: cloneShiftSettings(departmentSettings.dayShift),
+    lateShift: cloneShiftSettings(departmentSettings.lateShift),
+    departmentSettings: baseSettings.departmentSettings,
+  };
+}
+
 function mapAdminUserListItem(row: Record<string, unknown>): AdminUserListItem {
   return {
     id: String(row.id),
     username: String(row.username),
     displayName: String(row.display_name),
-    role: row.role === "admin" ? "admin" : row.role === "sub_admin" ? "sub_admin" : "user",
+    role: normalizeUserRole(row.role),
+    departmentId: nullableString(row.department_id),
+    departmentCode: null,
+    departmentName: null,
     isActive: Boolean(row.is_active),
     createdAt: String(row.created_at),
   };
@@ -474,7 +566,7 @@ export async function authenticateSupabaseUser(username: string, password: strin
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active, password_hash")
+    .select("username, display_name, role, is_active, password_hash, department_id")
     .eq("username", username)
     .maybeSingle();
 
@@ -493,7 +585,10 @@ export async function authenticateSupabaseUser(username: string, password: strin
   return {
     username: data.username,
     displayName: data.display_name,
-    role: data.role,
+    role: normalizeUserRole(data.role),
+    departmentId: nullableString(data.department_id),
+    departmentCode: null,
+    departmentName: null,
   };
 }
 
@@ -546,7 +641,7 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active")
+    .select("username, display_name, role, is_active, department_id")
     .eq("username", username)
     .maybeSingle();
 
@@ -561,7 +656,10 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
   return {
     username: data.username,
     displayName: data.display_name,
-    role: data.role,
+    role: normalizeUserRole(data.role),
+    departmentId: nullableString(data.department_id),
+    departmentCode: null,
+    departmentName: null,
   };
 }
 
@@ -569,7 +667,7 @@ export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionU
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("username, display_name, role, is_active")
+    .select("username, display_name, role, is_active, department_id")
     .eq("kakao_id", kakaoId)
     .maybeSingle();
 
@@ -584,7 +682,10 @@ export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionU
   return {
     username: data.username,
     displayName: data.display_name,
-    role: data.role,
+    role: normalizeUserRole(data.role),
+    departmentId: nullableString(data.department_id),
+    departmentCode: null,
+    departmentName: null,
   };
 }
 
@@ -609,6 +710,9 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
     username,
     displayName,
     role: "user",
+    departmentId: null,
+    departmentCode: null,
+    departmentName: null,
   };
 }
 
@@ -616,7 +720,7 @@ export async function getSupabaseAdminUsers(): Promise<AdminUserListItem[]> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from("users")
-    .select("id, username, display_name, role, is_active, created_at")
+    .select("id, username, display_name, role, is_active, created_at, department_id")
     .order("role", { ascending: true })
     .order("display_name", { ascending: true });
 
@@ -711,11 +815,13 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
     display_name: string;
     role: "user" | "admin" | "sub_admin";
     is_active: boolean;
+    department_id: string | null;
     password_hash?: string;
   } = {
     display_name: input.displayName,
     role: input.role,
     is_active: input.isActive,
+    department_id: input.departmentId ?? null,
   };
 
   if (input.password) {
@@ -982,6 +1088,29 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
   settings.lateShift.checkInWindow = { ...settings.lateCheckInWindow };
   settings.lateShift.checkOutWindow = { ...settings.lateCheckOutWindow };
 
+  const { data: deptRows } = await client
+    .from("departments")
+    .select("id, code, name, is_active")
+    .eq("is_active", true)
+    .order("name");
+
+  const departments: Department[] = (deptRows ?? []).map(mapDepartment);
+
+  if (departments.length > 0) {
+    const { data: deptSettingsRows } = await client
+      .from("department_settings")
+      .select("*")
+      .in("department_id", departments.map((d) => d.id));
+
+    const deptSettingsMap = new Map(
+      (deptSettingsRows ?? []).map((row) => [String(row.department_id), row as Record<string, unknown>]),
+    );
+
+    settings.departmentSettings = departments.map((dept) =>
+      mergeDepartmentShiftSettings(deptSettingsMap.get(dept.id) ?? null, dept, settings),
+    );
+  }
+
   return settings;
 }
 
@@ -1079,7 +1208,8 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
         };
   const record = recordRow ? mapAttendanceRecord(recordRow) : null;
   const shiftType = rosterEntry.shiftType;
-  const currentPeriod = getCurrentPeriod(settings);
+  const effectiveSettings = applyDepartmentSettings(settings, user.departmentId);
+  const currentPeriod = getCurrentPeriod(effectiveSettings);
 
   return {
     dateKey: workDate,
@@ -1090,12 +1220,12 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
     currentPeriod,
     record,
     actionStates: [
-      buildActionAvailability("check-in", rosterEntry, record, settings),
-      buildActionAvailability("tbm", rosterEntry, record, settings),
-      buildActionAvailability("lunch-register", rosterEntry, record, settings),
-      buildActionAvailability("lunch-out", rosterEntry, record, settings),
-      buildActionAvailability("lunch-in", rosterEntry, record, settings),
-      buildActionAvailability("check-out", rosterEntry, record, settings),
+      buildActionAvailability("check-in", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("tbm", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("lunch-register", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("lunch-out", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("lunch-in", rosterEntry, record, effectiveSettings),
+      buildActionAvailability("check-out", rosterEntry, record, effectiveSettings),
     ],
     eventStates: buildEventStates({
       shiftType,
