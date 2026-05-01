@@ -63,7 +63,7 @@ export default async function AdminPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
-  const filterDeptId = session.role === "master" ? undefined : session.departmentId;
+  const filterDeptId = undefined;
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(filterDeptId),
     getRuntimeInfo(),
