@@ -38,7 +38,8 @@ export default async function ProtectedLayout({
             <span className="brand-kicker">아임파워(주)</span>
             <span className="brand-title">IM-ON</span>
             {deptName && (
-              <span style={{ fontSize: "0.72rem", color: "var(--fg-muted)", marginTop: 2 }}>
+              <span className="brand-department-chip" title={`소속 부서: ${deptName}`}>
+                <span className="brand-department-dot" aria-hidden="true" />
                 {deptName}
               </span>
             )}
