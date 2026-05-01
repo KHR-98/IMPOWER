@@ -361,9 +361,9 @@ button {
 
 /* ── Login Shell ─────────────────────────────── */
 .login-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 24px 20px;
   background:
