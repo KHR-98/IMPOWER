@@ -41,7 +41,7 @@ export function ViewToggle() {
         </Link>
       </div>
       {!isUserView ? (
-        <div className="view-toggle">
+        <div className="view-toggle view-toggle-sm">
           {DEPARTMENTS.map((dept) => (
             <Link
               key={dept.code}

@@ -2167,6 +2167,12 @@ button {
   box-shadow: 0 4px 14px rgba(15, 109, 95, 0.24);
 }
 
+.view-toggle-sm .view-toggle-option {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .user-location-map-wrap {
   display: flex;
   flex-direction: column;
