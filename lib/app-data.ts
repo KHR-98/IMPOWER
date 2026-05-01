@@ -124,16 +124,18 @@ export async function getUserTodayView(username: string, sessionUser?: SessionUs
     : getDemoUserTodayView(username);
 }
 
-export async function getDashboardView(): Promise<DashboardView> {
-  return resolveDataSource().dataSource === "supabase" ? getSupabaseDashboardView() : getDemoDashboardView();
+export async function getDashboardView(departmentId?: string | null): Promise<DashboardView> {
+  return resolveDataSource().dataSource === "supabase"
+    ? getSupabaseDashboardView(departmentId)
+    : getDemoDashboardView();
 }
 
 export async function getZones(): Promise<Zone[]> {
   return resolveDataSource().dataSource === "supabase" ? getSupabaseZones() : getDemoZones();
 }
 
-export async function getAdminUserList(): Promise<AdminUserListItem[]> {
-  return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers() : [];
+export async function getAdminUserList(departmentId?: string | null): Promise<AdminUserListItem[]> {
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers(departmentId) : [];
 }
 
 export async function performAttendanceAction(input: {
@@ -180,10 +182,10 @@ export async function syncRoster(): Promise<RosterSyncResult> {
   return syncSupabaseRoster();
 }
 
-export async function saveAdminConfiguration(input: {
-  settings: AppSettings;
-  zones: Zone[];
-}): Promise<{ ok: boolean; message: string }> {
+export async function saveAdminConfiguration(
+  input: { settings: AppSettings; zones: Zone[] },
+  actorDepartmentId?: string | null,
+): Promise<{ ok: boolean; message: string }> {
   const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
@@ -193,7 +195,7 @@ export async function saveAdminConfiguration(input: {
     };
   }
 
-  return saveSupabaseAdminConfiguration(input);
+  return saveSupabaseAdminConfiguration(input, actorDepartmentId);
 }
 
 export async function saveAdminUser(input: AdminUserMutationInput): Promise<{ ok: boolean; message: string }> {

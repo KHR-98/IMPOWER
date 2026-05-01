@@ -716,11 +716,17 @@ export async function createKakaoUser(kakaoId: string, displayName: string): Pro
   };
 }
 
-export async function getSupabaseAdminUsers(): Promise<AdminUserListItem[]> {
+export async function getSupabaseAdminUsers(departmentId?: string | null): Promise<AdminUserListItem[]> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  let query = client
     .from("users")
-    .select("id, username, display_name, role, is_active, created_at, department_id")
+    .select("id, username, display_name, role, is_active, created_at, department_id");
+
+  if (departmentId) {
+    query = query.eq("department_id", departmentId);
+  }
+
+  const { data, error } = await query
     .order("role", { ascending: true })
     .order("display_name", { ascending: true });
 
@@ -1152,13 +1158,18 @@ async function getSupabaseAttendanceRecords(workDate: string) {
   return data ?? [];
 }
 
-async function getSupabaseActiveUsers() {
+async function getSupabaseActiveUsers(departmentId?: string | null) {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client
+  let query = client
     .from("users")
     .select("username, display_name, role, is_active")
-    .eq("is_active", true)
-    .order("display_name");
+    .eq("is_active", true);
+
+  if (departmentId) {
+    query = query.eq("department_id", departmentId);
+  }
+
+  const { data, error } = await query.order("display_name");
 
   if (error) {
     throw error;
@@ -1236,10 +1247,10 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
   };
 }
 
-export async function getSupabaseDashboardView(): Promise<DashboardView> {
+export async function getSupabaseDashboardView(departmentId?: string | null): Promise<DashboardView> {
   const workDate = getKoreaDateKey();
   const [users, zones, settings, rosterRows, recordRows] = await Promise.all([
-    getSupabaseActiveUsers(),
+    getSupabaseActiveUsers(departmentId),
     getSupabaseZones(),
     getSupabaseSettings(),
     getSupabaseRosterEntries(workDate),
@@ -1637,11 +1648,49 @@ export async function correctSupabaseAttendanceRecord(
     message: "기록을 정정하고 변경 이력을 저장했습니다.",
   };
 }
-export async function saveSupabaseAdminConfiguration(input: {
-  settings: AppSettings;
-  zones: Zone[];
-}): Promise<{ ok: boolean; message: string }> {
+export async function saveSupabaseAdminConfiguration(
+  input: { settings: AppSettings; zones: Zone[] },
+  actorDepartmentId?: string | null,
+): Promise<{ ok: boolean; message: string }> {
   const client = getSupabaseAdminClient();
+
+  // 부서 admin: 자기 부서 시간 설정만 department_settings에 저장
+  if (actorDepartmentId) {
+    const deptSetting = input.settings.departmentSettings.find((d) => d.id === actorDepartmentId);
+
+    if (!deptSetting) {
+      return { ok: false, message: "부서 설정 정보를 찾을 수 없습니다." };
+    }
+
+    const { error } = await client
+      .from("department_settings")
+      .update({
+        day_check_in_start: deptSetting.dayShift.checkInWindow.start,
+        day_check_in_end: deptSetting.dayShift.checkInWindow.end,
+        day_tbm_start: deptSetting.dayShift.tbmMorningWindow?.start ?? deptSetting.dayShift.checkInWindow.start,
+        day_tbm_end: deptSetting.dayShift.tbmMorningWindow?.end ?? deptSetting.dayShift.checkInWindow.end,
+        day_tbm_afternoon_start: deptSetting.dayShift.tbmAfternoonWindow?.start ?? "13:35",
+        day_tbm_afternoon_end: deptSetting.dayShift.tbmAfternoonWindow?.end ?? "13:45",
+        day_tbm_checkout_start: deptSetting.dayShift.tbmCheckoutWindow?.start ?? "16:30",
+        day_tbm_checkout_end: deptSetting.dayShift.tbmCheckoutWindow?.end ?? "16:45",
+        day_check_out_start: deptSetting.dayShift.checkOutWindow.start,
+        day_check_out_end: deptSetting.dayShift.checkOutWindow.end,
+        late_check_in_start: deptSetting.lateShift.checkInWindow.start,
+        late_check_in_end: deptSetting.lateShift.checkInWindow.end,
+        late_check_out_start: deptSetting.lateShift.checkOutWindow.start,
+        late_check_out_end: deptSetting.lateShift.checkOutWindow.end,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("department_id", actorDepartmentId);
+
+    if (error) {
+      throw error;
+    }
+
+    return { ok: true, message: "부서 시간 설정을 저장했습니다." };
+  }
+
+  // 전역 admin: app_settings + 모든 department_settings + zones 저장
   const { data: latestSettingsRow, error: settingsLookupError } = await client
     .from("app_settings")
     .select("id, google_sheet_id, google_sheet_tab_name")
@@ -1681,6 +1730,34 @@ export async function saveSupabaseAdminConfiguration(input: {
     }
   } else {
     const { error } = await client.from("app_settings").insert(settingsPayload);
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  // 전역 admin: 모든 부서 설정 저장
+  for (const deptSetting of input.settings.departmentSettings) {
+    const { error } = await client
+      .from("department_settings")
+      .update({
+        day_check_in_start: deptSetting.dayShift.checkInWindow.start,
+        day_check_in_end: deptSetting.dayShift.checkInWindow.end,
+        day_tbm_start: deptSetting.dayShift.tbmMorningWindow?.start ?? deptSetting.dayShift.checkInWindow.start,
+        day_tbm_end: deptSetting.dayShift.tbmMorningWindow?.end ?? deptSetting.dayShift.checkInWindow.end,
+        day_tbm_afternoon_start: deptSetting.dayShift.tbmAfternoonWindow?.start ?? "13:35",
+        day_tbm_afternoon_end: deptSetting.dayShift.tbmAfternoonWindow?.end ?? "13:45",
+        day_tbm_checkout_start: deptSetting.dayShift.tbmCheckoutWindow?.start ?? "16:30",
+        day_tbm_checkout_end: deptSetting.dayShift.tbmCheckoutWindow?.end ?? "16:45",
+        day_check_out_start: deptSetting.dayShift.checkOutWindow.start,
+        day_check_out_end: deptSetting.dayShift.checkOutWindow.end,
+        late_check_in_start: deptSetting.lateShift.checkInWindow.start,
+        late_check_in_end: deptSetting.lateShift.checkInWindow.end,
+        late_check_out_start: deptSetting.lateShift.checkOutWindow.start,
+        late_check_out_end: deptSetting.lateShift.checkOutWindow.end,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("department_id", deptSetting.id);
 
     if (error) {
       throw error;

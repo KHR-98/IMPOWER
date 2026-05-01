@@ -23,6 +23,7 @@ interface AdminSettingsPanelProps {
   initialSettings: AppSettings;
   initialZones: Zone[];
   enabled: boolean;
+  actorDepartmentId?: string | null;
 }
 
 function createZoneDraft(zones: Zone[]): Zone {
@@ -118,13 +119,14 @@ function patchDepartmentWindow(
   return next;
 }
 
-export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: AdminSettingsPanelProps) {
+export function AdminSettingsPanel({ initialSettings, initialZones, enabled, actorDepartmentId }: AdminSettingsPanelProps) {
   const router = useRouter();
+  const isDeptAdmin = Boolean(actorDepartmentId);
   const [isEditing, setIsEditing] = useState(false);
   const [isMapEditing, setIsMapEditing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
-    initialSettings.departmentSettings[0]?.id ?? null,
+    actorDepartmentId ?? initialSettings.departmentSettings[0]?.id ?? null,
   );
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
@@ -140,6 +142,11 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
   }, [selectedZoneId, zones]);
 
   useEffect(() => {
+    if (actorDepartmentId) {
+      setSelectedDepartmentId(actorDepartmentId);
+      return;
+    }
+
     if (settings.departmentSettings.length === 0) {
       setSelectedDepartmentId(null);
       return;
@@ -148,7 +155,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
     if (!selectedDepartmentId || !settings.departmentSettings.some((department) => department.id === selectedDepartmentId)) {
       setSelectedDepartmentId(settings.departmentSettings[0]?.id ?? null);
     }
-  }, [selectedDepartmentId, settings.departmentSettings]);
+  }, [actorDepartmentId, selectedDepartmentId, settings.departmentSettings]);
 
   const selectedDepartment = settings.departmentSettings.find((department) => department.id === selectedDepartmentId) ?? null;
   const pickerSettings = getDepartmentPickerSettings(settings, selectedDepartment);
@@ -251,17 +258,19 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
       <div className="wheel-settings-wrap">
         {settings.departmentSettings.length > 0 ? (
           <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
-            {settings.departmentSettings.map((department) => (
-              <button
-                key={department.id}
-                type="button"
-                className={department.id === selectedDepartmentId ? "button" : "button-subtle"}
-                disabled={!enabled || pending}
-                onClick={() => setSelectedDepartmentId(department.id)}
-              >
-                {department.name}
-              </button>
-            ))}
+            {settings.departmentSettings
+              .filter((department) => !isDeptAdmin || department.id === actorDepartmentId)
+              .map((department) => (
+                <button
+                  key={department.id}
+                  type="button"
+                  className={department.id === selectedDepartmentId ? "button" : "button-subtle"}
+                  disabled={!enabled || pending || isDeptAdmin}
+                  onClick={() => setSelectedDepartmentId(department.id)}
+                >
+                  {department.name}
+                </button>
+              ))}
           </div>
         ) : null}
 
@@ -285,53 +294,59 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
         </div>
       </div>
 
-      <KakaoZoneMap
-        zones={zones}
-        selectedZoneId={selectedZoneId}
-        enabled={enabled}
-        isEditing={isMapEditing}
-        onToggleEditing={() => { setIsMapEditing((v) => !v); }}
-        onSelectZone={setSelectedZoneId}
-        onPickCoordinates={updateZoneCoordinates}
-      />
+      {!isDeptAdmin ? (
+        <KakaoZoneMap
+          zones={zones}
+          selectedZoneId={selectedZoneId}
+          enabled={enabled}
+          isEditing={isMapEditing}
+          onToggleEditing={() => { setIsMapEditing((v) => !v); }}
+          onSelectZone={setSelectedZoneId}
+          onPickCoordinates={updateZoneCoordinates}
+        />
+      ) : null}
 
-      <div className="panel-header">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 className="section-title">지점 편집</h2>
-          <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
+      {!isDeptAdmin ? (
+        <div className="panel-header">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 className="section-title">지점 편집</h2>
+            <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
+          </div>
+          <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
+            <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending} onClick={addZone}>
+              지점 추가
+            </button>
+            <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending || !selectedZoneId} onClick={deleteZone}>
+              지점 삭제
+            </button>
+          </div>
         </div>
-        <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
-          <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending} onClick={addZone}>
-            지점 추가
-          </button>
-          <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending || !selectedZoneId} onClick={deleteZone}>
-            지점 삭제
-          </button>
-        </div>
-      </div>
+      ) : null}
 
-      <div className="zone-editor-list user-mgmt-grid">
-        {zones.map((zone, index) => {
-          const selected = zone.id === selectedZoneId;
+      {!isDeptAdmin ? (
+        <div className="zone-editor-list user-mgmt-grid">
+          {zones.map((zone, index) => {
+            const selected = zone.id === selectedZoneId;
 
-          return (
-            <div key={zone.id} className={`zone-editor-card stack${selected ? " zone-editor-card-selected" : ""}`} style={{ gap: 10 }}>
-              <strong>{zone.name || `지점 ${index + 1}`}</strong>
-              <div className="inline-row" style={{ gap: 6 }}>
-                <span className={`status-pill ${zone.isActive ? "status-ready" : "status-locked"}`}>
-                  {zone.isActive ? "활성" : "비활성"}
-                </span>
-                <span className="badge">{zone.type === "tbm" ? "TBM" : "출입"}</span>
+            return (
+              <div key={zone.id} className={`zone-editor-card stack${selected ? " zone-editor-card-selected" : ""}`} style={{ gap: 10 }}>
+                <strong>{zone.name || `지점 ${index + 1}`}</strong>
+                <div className="inline-row" style={{ gap: 6 }}>
+                  <span className={`status-pill ${zone.isActive ? "status-ready" : "status-locked"}`}>
+                    {zone.isActive ? "활성" : "비활성"}
+                  </span>
+                  <span className="badge">{zone.type === "tbm" ? "TBM" : "출입"}</span>
+                </div>
+                <button type="button" className="button-subtle" onClick={() => setSelectedZoneId(selected ? null : zone.id)}>
+                  {selected ? "선택 중" : "선택"}
+                </button>
               </div>
-              <button type="button" className="button-subtle" onClick={() => setSelectedZoneId(selected ? null : zone.id)}>
-                {selected ? "선택 중" : "선택"}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : null}
 
-      {(() => {
+      {!isDeptAdmin ? (() => {
         const selectedZone = zones.find((z) => z.id === selectedZoneId) ?? null;
         if (!selectedZone) return null;
         return (
@@ -404,10 +419,15 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled }: A
             </label>
           </div>
         );
-      })()}
+      })() : null}
 
       <div className="inline-row">
-        <button type="button" className="button" disabled={(!isEditing && !isMapEditing) || !enabled || pending} onClick={handleSave}>
+        <button
+          type="button"
+          className="button"
+          disabled={(isDeptAdmin ? !isEditing : (!isEditing && !isMapEditing)) || !enabled || pending}
+          onClick={handleSave}
+        >
           {pending ? "저장 중..." : "운영 설정 저장"}
         </button>
       </div>

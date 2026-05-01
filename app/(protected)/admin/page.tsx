@@ -64,9 +64,9 @@ export default async function AdminPage({
   const selectedSection = normalizeAdminSection(resolvedSearchParams?.section);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
-    getDashboardView(),
+    getDashboardView(session.departmentId),
     getRuntimeInfo(),
-    getAdminUserList(),
+    getAdminUserList(session.departmentId),
     selectedSection === "overview" ? getUserTodayView(session.username) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
@@ -309,6 +309,7 @@ export default async function AdminPage({
               enabled={runtime.dataSource === "supabase"}
               initialSettings={dashboard.settings}
               initialZones={dashboard.zones}
+              actorDepartmentId={session.departmentId}
             />
           </article>
         </section>

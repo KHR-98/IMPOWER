@@ -120,34 +120,37 @@ export async function PATCH(request: Request) {
   }
 
   const baseSettings = buildOperationalSettings(parsed.data.settings.maxGpsAccuracyM);
-  const result = await saveAdminConfiguration({
-    settings: {
-      ...baseSettings,
-      checkInWindow: parsed.data.settings.checkInWindow,
-      tbmWindow: parsed.data.settings.tbmWindow,
-      tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
-      tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
-      checkOutWindow: parsed.data.settings.checkOutWindow,
-      lateCheckInWindow: parsed.data.settings.lateCheckInWindow,
-      lateCheckOutWindow: parsed.data.settings.lateCheckOutWindow,
-      departmentSettings: parsed.data.settings.departmentSettings,
-      maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
-      dayShift: {
-        ...baseSettings.dayShift,
+  const result = await saveAdminConfiguration(
+    {
+      settings: {
+        ...baseSettings,
         checkInWindow: parsed.data.settings.checkInWindow,
-        tbmMorningWindow: parsed.data.settings.tbmWindow,
+        tbmWindow: parsed.data.settings.tbmWindow,
         tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
         tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
         checkOutWindow: parsed.data.settings.checkOutWindow,
+        lateCheckInWindow: parsed.data.settings.lateCheckInWindow,
+        lateCheckOutWindow: parsed.data.settings.lateCheckOutWindow,
+        departmentSettings: parsed.data.settings.departmentSettings,
+        maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
+        dayShift: {
+          ...baseSettings.dayShift,
+          checkInWindow: parsed.data.settings.checkInWindow,
+          tbmMorningWindow: parsed.data.settings.tbmWindow,
+          tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
+          tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
+          checkOutWindow: parsed.data.settings.checkOutWindow,
+        },
+        lateShift: {
+          ...baseSettings.lateShift,
+          checkInWindow: parsed.data.settings.lateCheckInWindow,
+          checkOutWindow: parsed.data.settings.lateCheckOutWindow,
+        },
       },
-      lateShift: {
-        ...baseSettings.lateShift,
-        checkInWindow: parsed.data.settings.lateCheckInWindow,
-        checkOutWindow: parsed.data.settings.lateCheckOutWindow,
-      },
+      zones: parsed.data.zones,
     },
-    zones: parsed.data.zones,
-  });
+    session.departmentId,
+  );
 
   if (!result.ok) {
     return NextResponse.json({ error: result.message }, { status: 400 });
