@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { ViewToggle } from "@/components/view-toggle";
-import { getDepartments } from "@/lib/app-data";
+import { getDepartments, getSessionUserByUsername } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
 
@@ -22,8 +22,13 @@ export default async function ProtectedLayout({
 }>) {
   const session = await requireSession();
   const isAdmin = isAdminRole(session.role);
-  const departments = session.departmentId ? await getDepartments() : [];
-  const deptName = departments.find((d) => d.id === session.departmentId)?.name ?? null;
+  const [dbUser, departments] = await Promise.all([
+    getSessionUserByUsername(session.username),
+    getDepartments(),
+  ]);
+  const deptName = dbUser?.departmentId
+    ? (departments.find((d) => d.id === dbUser.departmentId)?.name ?? null)
+    : null;
 
   return (
     <div className="shell">
