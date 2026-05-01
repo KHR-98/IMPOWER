@@ -25,7 +25,7 @@ export function ViewToggle() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
       <div className="view-toggle">
         <Link
           href="/dashboard?view=user"

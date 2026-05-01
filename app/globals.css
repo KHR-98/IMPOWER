@@ -80,16 +80,24 @@ button {
 
 .topbar {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
 .brand {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
+}
+
+.logout-fixed {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
 }
 
 .brand-kicker {
@@ -1228,8 +1236,7 @@ button {
   }
 
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
   }
 
   .table-head {

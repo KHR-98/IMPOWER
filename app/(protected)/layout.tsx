@@ -29,14 +29,14 @@ export default async function ProtectedLayout({
             <span className="brand-kicker">아임파워(주)</span>
             <span className="brand-title">IM-ON</span>
           </div>
-        </header>
-
-        <div className="view-toggle-fixed">
           {isAdmin ? (
             <Suspense>
               <ViewToggle />
             </Suspense>
           ) : null}
+        </header>
+
+        <div className="logout-fixed">
           <form action={logoutAction}>
             <button type="submit" className="button-ghost logout-icon-btn" aria-label="로그아웃" title="로그아웃">
               <LogoutIcon />
