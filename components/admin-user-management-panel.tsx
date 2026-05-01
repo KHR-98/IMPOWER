@@ -133,8 +133,6 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
             const isSaving = saving === user.username;
             const isConfirmingDelete = confirmDelete === user.username;
 
-            const deptName = departments.find((d) => d.id === user.departmentId)?.name ?? null;
-
             return (
               <div key={user.id} className={`mgmt-user-row${isOpen ? " mgmt-user-row-open" : ""}`}>
                 <button
@@ -146,7 +144,6 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                   disabled={isSaving}
                 >
                   <span className="mgmt-user-name">{isSaving ? "처리 중..." : user.displayName}</span>
-                  {deptName && <span style={{ fontSize: "0.78rem", color: "var(--fg-muted)", flexShrink: 0 }}>{deptName}</span>}
                   <span className="badge">{getRoleLabel(user.role)}</span>
                   {!user.isActive && (
                     <span className="badge" style={{ background: "#e53e3e", color: "#fff" }}>비활성</span>
