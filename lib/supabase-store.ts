@@ -1705,6 +1705,16 @@ export async function saveSupabaseAdminConfiguration(input: {
     throw zoneError;
   }
 
+  const savedIds = zonePayload.map((z) => z.id);
+  const { error: deleteError } = await client
+    .from("zones")
+    .delete()
+    .not("id", "in", `(${savedIds.join(",")})`);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
   return {
     ok: true,
     message: "운영 설정과 지점 정보를 저장했습니다.",
