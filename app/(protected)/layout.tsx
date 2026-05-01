@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 
 import { ViewToggle } from "@/components/view-toggle";
+import { getDepartments } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 import { logoutAction } from "./actions";
 
@@ -19,7 +21,9 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   const session = await requireSession();
-  const isAdmin = session.role === "admin" || session.role === "sub_admin";
+  const isAdmin = isAdminRole(session.role);
+  const departments = session.departmentId ? await getDepartments() : [];
+  const deptName = departments.find((d) => d.id === session.departmentId)?.name ?? null;
 
   return (
     <div className="shell">
@@ -28,6 +32,11 @@ export default async function ProtectedLayout({
           <div className="brand">
             <span className="brand-kicker">아임파워(주)</span>
             <span className="brand-title">IM-ON</span>
+            {deptName && (
+              <span style={{ fontSize: "0.72rem", color: "var(--fg-muted)", marginTop: 2 }}>
+                {deptName}
+              </span>
+            )}
           </div>
         </header>
 

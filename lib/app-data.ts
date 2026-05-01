@@ -23,6 +23,7 @@ import {
   getSessionUserByKakaoId,
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
+  getSupabaseDepartments,
   getSupabaseSessionUser,
   getSupabaseSheetUserImportPreview,
   getSupabaseUserTodayView,
@@ -48,6 +49,7 @@ import type {
   CoordinatePayload,
   DashboardView,
   DataSourceKind,
+  Department,
   RosterSyncResult,
   RuntimeInfo,
   SessionUser,
@@ -129,6 +131,10 @@ export async function getDashboardView(departmentId?: string | null): Promise<Da
   return resolveDataSource().dataSource === "supabase"
     ? getSupabaseDashboardView(departmentId)
     : getDemoDashboardView();
+}
+
+export async function getDepartments(): Promise<Department[]> {
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseDepartments() : [];
 }
 
 export async function getZones(): Promise<Zone[]> {

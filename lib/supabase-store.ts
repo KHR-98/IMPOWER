@@ -1030,6 +1030,21 @@ export async function importSupabaseUsersFromSheet(
   };
 }
 
+export async function getSupabaseDepartments(): Promise<Department[]> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from("departments")
+    .select("id, code, name, is_active")
+    .eq("is_active", true)
+    .order("name");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapDepartment);
+}
+
 export async function getSupabaseZones(): Promise<Zone[]> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client.from("zones").select("*").order("name");
