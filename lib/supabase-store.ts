@@ -2016,35 +2016,103 @@ export async function correctSupabaseAttendanceRecord(
     message: "기록을 정정하고 변경 이력을 저장했습니다.",
   };
 }
-async function upsertSupabaseWeekendAttendanceWindows(
+function buildAttendanceWindowPayload(department: DepartmentAttendanceSettings) {
+  const dayShift = department.dayShift;
+  const lateShift = department.lateShift;
+  const weekendShift = department.weekendShift ?? department.dayShift;
+  const tbmMorningWindow = dayShift.tbmMorningWindow ?? dayShift.checkInWindow;
+  const tbmAfternoonWindow = dayShift.tbmAfternoonWindow ?? { start: "13:35", end: "13:45" };
+  const tbmCheckoutWindow = dayShift.tbmCheckoutWindow ?? { start: "16:30", end: "16:45" };
+
+  return [
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "check_in",
+      window_start: dayShift.checkInWindow.start,
+      window_end: dayShift.checkInWindow.end,
+      is_enabled: true,
+      sort_order: 10,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "tbm_morning",
+      window_start: tbmMorningWindow.start,
+      window_end: tbmMorningWindow.end,
+      is_enabled: true,
+      sort_order: 20,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "tbm_afternoon",
+      window_start: tbmAfternoonWindow.start,
+      window_end: tbmAfternoonWindow.end,
+      is_enabled: true,
+      sort_order: 30,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "tbm_checkout",
+      window_start: tbmCheckoutWindow.start,
+      window_end: tbmCheckoutWindow.end,
+      is_enabled: true,
+      sort_order: 40,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "check_out",
+      window_start: dayShift.checkOutWindow.start,
+      window_end: dayShift.checkOutWindow.end,
+      is_enabled: true,
+      sort_order: 50,
+    },
+    {
+      department_id: department.id,
+      shift_type: "late",
+      action_type: "check_in",
+      window_start: lateShift.checkInWindow.start,
+      window_end: lateShift.checkInWindow.end,
+      is_enabled: true,
+      sort_order: 10,
+    },
+    {
+      department_id: department.id,
+      shift_type: "late",
+      action_type: "check_out",
+      window_start: lateShift.checkOutWindow.start,
+      window_end: lateShift.checkOutWindow.end,
+      is_enabled: true,
+      sort_order: 20,
+    },
+    {
+      department_id: department.id,
+      shift_type: "weekend",
+      action_type: "check_in",
+      window_start: weekendShift.checkInWindow.start,
+      window_end: weekendShift.checkInWindow.end,
+      is_enabled: true,
+      sort_order: 10,
+    },
+    {
+      department_id: department.id,
+      shift_type: "weekend",
+      action_type: "check_out",
+      window_start: weekendShift.checkOutWindow.start,
+      window_end: weekendShift.checkOutWindow.end,
+      is_enabled: true,
+      sort_order: 20,
+    },
+  ];
+}
+
+async function upsertSupabaseAttendanceWindows(
   departmentSettings: DepartmentAttendanceSettings[],
 ): Promise<void> {
-  const payload = departmentSettings.flatMap((department) => {
-    const weekendShift = department.weekendShift;
-
-    if (!weekendShift) {
-      return [];
-    }
-
-    return [
-      {
-        department_id: department.id,
-        shift_type: "weekend",
-        action_type: "check_in",
-        window_start: weekendShift.checkInWindow.start,
-        window_end: weekendShift.checkInWindow.end,
-        is_enabled: true,
-      },
-      {
-        department_id: department.id,
-        shift_type: "weekend",
-        action_type: "check_out",
-        window_start: weekendShift.checkOutWindow.start,
-        window_end: weekendShift.checkOutWindow.end,
-        is_enabled: true,
-      },
-    ];
-  });
+  const payload = departmentSettings.flatMap(buildAttendanceWindowPayload);
 
   if (payload.length === 0) {
     return;
@@ -2108,7 +2176,7 @@ export async function saveSupabaseAdminConfiguration(
       throw error;
     }
 
-    await upsertSupabaseWeekendAttendanceWindows([deptSetting]);
+    await upsertSupabaseAttendanceWindows([deptSetting]);
 
     return { ok: true, message: "부서 시간 설정을 저장했습니다." };
   }
@@ -2187,7 +2255,7 @@ export async function saveSupabaseAdminConfiguration(
     }
   }
 
-  await upsertSupabaseWeekendAttendanceWindows(input.settings.departmentSettings);
+  await upsertSupabaseAttendanceWindows(input.settings.departmentSettings);
 
   const zonePayload = input.zones.map((zone) => ({
     id: zoneIdPattern.test(zone.id) ? zone.id : randomUUID(),

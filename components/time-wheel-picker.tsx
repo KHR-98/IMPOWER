@@ -129,7 +129,15 @@ export function TimeWheelPicker({ label, value, onChange, disabled }: TimeWheelP
 }
 
 /* ── Combined Time Settings Picker ────────────── */
-const SEGMENTS = [
+export type SettingsKey = "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow";
+
+export interface TimeSettingsSegment {
+  label: string;
+  key: SettingsKey;
+  field: "start" | "end";
+}
+
+const SEGMENTS: TimeSettingsSegment[] = [
   { label: "출근 시작",       key: "checkInWindow"      as const, field: "start" as const },
   { label: "출근 종료",       key: "checkInWindow"      as const, field: "end"   as const },
   { label: "오전TBM 시작",    key: "tbmWindow"          as const, field: "start" as const },
@@ -146,24 +154,24 @@ const SEGMENTS = [
   { label: "늦조 퇴근 종료",   key: "lateCheckOutWindow" as const, field: "end"   as const },
 ];
 
-const SEGMENT_LABELS = SEGMENTS.map((s) => s.label);
-
-export type SettingsKey = "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow";
-
 export interface CombinedTimeSettingsPickerProps {
   settings: Record<SettingsKey, { start: string; end: string }>;
   onChangeWindow: (key: SettingsKey, field: "start" | "end", value: string) => void;
   disabled?: boolean;
+  segments?: TimeSettingsSegment[];
 }
 
 export function CombinedTimeSettingsPicker({
   settings,
   onChangeWindow,
   disabled,
+  segments,
 }: CombinedTimeSettingsPickerProps) {
   const [segIdx, setSegIdx] = useState(0);
+  const activeSegments = segments && segments.length > 0 ? segments : SEGMENTS;
+  const activeSegIdx = Math.min(segIdx, activeSegments.length - 1);
 
-  const seg         = SEGMENTS[segIdx];
+  const seg         = activeSegments[activeSegIdx] ?? SEGMENTS[0];
   const currentTime = settings[seg.key][seg.field];
 
   const parts  = currentTime.split(":");
@@ -193,8 +201,8 @@ export function CombinedTimeSettingsPicker({
         <div className="wheel-picker-lbl">구간</div>
         <div className="wheel-picker-body">
           <WheelCol
-            items={SEGMENT_LABELS}
-            value={segIdx}
+            items={activeSegments.map((segment) => segment.label)}
+            value={activeSegIdx}
             onChange={setSegIdx}
             disabled={disabled}
             segMode

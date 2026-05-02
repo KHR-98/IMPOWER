@@ -4,7 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { KakaoZoneMap } from "@/components/kakao-zone-map";
-import { CombinedTimeSettingsPicker, TimeWheelPicker, type SettingsKey } from "@/components/time-wheel-picker";
+import { CombinedTimeSettingsPicker, type SettingsKey, type TimeSettingsSegment } from "@/components/time-wheel-picker";
 import type { AppSettings, DepartmentAttendanceSettings, ShiftAttendanceSettings, TimeWindow, Zone, ZoneType } from "@/lib/types";
 
 const DEFAULT_ZONE_CENTER = {
@@ -33,6 +33,48 @@ type WeekendSettingsKey = "checkInWindow" | "checkOutWindow";
 const TIME_MODE_OPTIONS: Array<{ key: TimeSettingsMode; label: string }> = [
   { key: "weekday", label: "주간" },
   { key: "weekend", label: "주말" },
+];
+
+const WEEKDAY_TIME_GROUPS: Array<{
+  title: string;
+  segments: TimeSettingsSegment[];
+}> = [
+  {
+    title: "주간조",
+    segments: [
+      { label: "주간조 출근 시작", key: "checkInWindow", field: "start" },
+      { label: "주간조 출근 종료", key: "checkInWindow", field: "end" },
+      { label: "주간조 퇴근 시작", key: "checkOutWindow", field: "start" },
+      { label: "주간조 퇴근 종료", key: "checkOutWindow", field: "end" },
+    ],
+  },
+  {
+    title: "TBM",
+    segments: [
+      { label: "오전 TBM 시작", key: "tbmWindow", field: "start" },
+      { label: "오전 TBM 종료", key: "tbmWindow", field: "end" },
+      { label: "오후 TBM 시작", key: "tbmAfternoonWindow", field: "start" },
+      { label: "오후 TBM 종료", key: "tbmAfternoonWindow", field: "end" },
+      { label: "퇴근 TBM 시작", key: "tbmCheckoutWindow", field: "start" },
+      { label: "퇴근 TBM 종료", key: "tbmCheckoutWindow", field: "end" },
+    ],
+  },
+  {
+    title: "늦조",
+    segments: [
+      { label: "늦조 출근 시작", key: "lateCheckInWindow", field: "start" },
+      { label: "늦조 출근 종료", key: "lateCheckInWindow", field: "end" },
+      { label: "늦조 퇴근 시작", key: "lateCheckOutWindow", field: "start" },
+      { label: "늦조 퇴근 종료", key: "lateCheckOutWindow", field: "end" },
+    ],
+  },
+];
+
+const WEEKEND_TIME_SEGMENTS: TimeSettingsSegment[] = [
+  { label: "주말 출근 시작", key: "checkInWindow", field: "start" },
+  { label: "주말 출근 종료", key: "checkInWindow", field: "end" },
+  { label: "주말 퇴근 시작", key: "checkOutWindow", field: "start" },
+  { label: "주말 퇴근 종료", key: "checkOutWindow", field: "end" },
 ];
 
 function createZoneDraft(zones: Zone[]): Zone {
@@ -172,54 +214,58 @@ interface WeekendTimeSettingsPickerProps {
   disabled?: boolean;
 }
 
-function WeekendTimeSettingsPicker({ settings, onChangeWindow, disabled }: WeekendTimeSettingsPickerProps) {
-  return (
-    <div className="settings-grid" style={{ width: "100%" }}>
-      <div className="stack" style={{ gap: 12 }}>
-        <div className="inline-row" style={{ gap: 8 }}>
-          <span className="badge">주말 출근</span>
-          <span className="section-subtitle">
-            {settings.checkInWindow.start} - {settings.checkInWindow.end}
-          </span>
-        </div>
-        <div className="inline-row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <TimeWheelPicker
-            label="출근 시작"
-            value={settings.checkInWindow.start}
-            disabled={disabled}
-            onChange={(nextValue) => onChangeWindow("checkInWindow", "start", nextValue)}
-          />
-          <TimeWheelPicker
-            label="출근 종료"
-            value={settings.checkInWindow.end}
-            disabled={disabled}
-            onChange={(nextValue) => onChangeWindow("checkInWindow", "end", nextValue)}
-          />
-        </div>
-      </div>
+interface WeekdayTimeSettingsPickerProps {
+  settings: Record<SettingsKey, TimeWindow>;
+  onChangeWindow: (key: SettingsKey, field: "start" | "end", value: string) => void;
+  disabled?: boolean;
+}
 
-      <div className="stack" style={{ gap: 12 }}>
-        <div className="inline-row" style={{ gap: 8 }}>
-          <span className="badge">주말 퇴근</span>
-          <span className="section-subtitle">
-            {settings.checkOutWindow.start} - {settings.checkOutWindow.end}
-          </span>
-        </div>
-        <div className="inline-row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <TimeWheelPicker
-            label="퇴근 시작"
-            value={settings.checkOutWindow.start}
+function WeekdayTimeSettingsPicker({ settings, onChangeWindow, disabled }: WeekdayTimeSettingsPickerProps) {
+  return (
+    <div className="settings-grid weekday-time-settings-grid" style={{ width: "100%" }}>
+      {WEEKDAY_TIME_GROUPS.map((group) => (
+        <div key={group.title} className="stack weekday-time-settings-group">
+          <div className="inline-row" style={{ gap: 8 }}>
+            <span className="badge">{group.title}</span>
+          </div>
+          <CombinedTimeSettingsPicker
+            settings={settings}
+            segments={group.segments}
+            onChangeWindow={onChangeWindow}
             disabled={disabled}
-            onChange={(nextValue) => onChangeWindow("checkOutWindow", "start", nextValue)}
-          />
-          <TimeWheelPicker
-            label="퇴근 종료"
-            value={settings.checkOutWindow.end}
-            disabled={disabled}
-            onChange={(nextValue) => onChangeWindow("checkOutWindow", "end", nextValue)}
           />
         </div>
+      ))}
+    </div>
+  );
+}
+
+function WeekendTimeSettingsPicker({ settings, onChangeWindow, disabled }: WeekendTimeSettingsPickerProps) {
+  const pickerSettings: Record<SettingsKey, TimeWindow> = {
+    checkInWindow: settings.checkInWindow,
+    tbmWindow: settings.checkInWindow,
+    tbmAfternoonWindow: settings.checkInWindow,
+    tbmCheckoutWindow: settings.checkOutWindow,
+    checkOutWindow: settings.checkOutWindow,
+    lateCheckInWindow: settings.checkInWindow,
+    lateCheckOutWindow: settings.checkOutWindow,
+  };
+
+  return (
+    <div className="stack weekday-time-settings-group" style={{ width: "100%" }}>
+      <div className="inline-row" style={{ gap: 8 }}>
+        <span className="badge">주말</span>
       </div>
+      <CombinedTimeSettingsPicker
+        settings={pickerSettings}
+        segments={WEEKEND_TIME_SEGMENTS}
+        onChangeWindow={(key, field, value) => {
+          if (key === "checkInWindow" || key === "checkOutWindow") {
+            onChangeWindow(key, field, value);
+          }
+        }}
+        disabled={disabled}
+      />
     </div>
   );
 }
@@ -391,12 +437,13 @@ export function AdminSettingsPanel({
 
       <div className="wheel-settings-wrap">
         {visibleDepartments.length > 0 ? (
-          <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
+          <div className={`admin-settings-department-list${visibleDepartments.length > 1 ? " admin-settings-department-list-grid" : ""}`}>
             {visibleDepartments.map((department) => (
               <button
                 key={department.id}
                 type="button"
-                className={department.id === selectedDepartmentId ? "button" : "button-subtle"}
+                className={`button-subtle admin-settings-choice-button admin-settings-department-button${department.id === selectedDepartmentId ? " admin-settings-choice-button-selected admin-settings-department-button-selected" : ""}`}
+                aria-pressed={department.id === selectedDepartmentId}
                 disabled={!enabled || pending || isDeptAdmin}
                 onClick={() => {
                   setSelectedDepartmentId(department.id);
@@ -412,12 +459,13 @@ export function AdminSettingsPanel({
         ) : null}
 
         {selectedDepartment ? (
-          <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
+          <div className="inline-row admin-settings-time-mode-list">
             {timeModeOptions.map((option) => (
               <button
                 key={option.key}
                 type="button"
-                className={timeMode === option.key ? "button" : "button-subtle"}
+                className={`button-subtle admin-settings-choice-button admin-settings-time-mode-button${timeMode === option.key ? " admin-settings-choice-button-selected" : ""}`}
+                aria-pressed={timeMode === option.key}
                 disabled={!enabled || pending}
                 onClick={() => setTimeMode(option.key)}
               >
@@ -432,7 +480,7 @@ export function AdminSettingsPanel({
         )}
 
         {selectedDepartment && timeMode === "weekday" ? (
-          <CombinedTimeSettingsPicker
+          <WeekdayTimeSettingsPicker
             settings={pickerSettings}
             onChangeWindow={updateTimeWindow}
             disabled={!isEditing || !enabled || !canEdit || pending}

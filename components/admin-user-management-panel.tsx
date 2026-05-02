@@ -165,10 +165,10 @@ export function AdminUserManagementPanel({
       </div>
 
       {isMaster ? (
-        <div className="inline-row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <div className="inline-row account-department-filter-list">
           <button
             type="button"
-            className={departmentFilterId === "all" ? "button" : "button-subtle"}
+            className={`${departmentFilterId === "all" ? "button" : "button-subtle"} account-department-filter-button`}
             onClick={() => setDepartmentFilterId("all")}
           >
             전체
@@ -177,7 +177,7 @@ export function AdminUserManagementPanel({
             <button
               key={department.id}
               type="button"
-              className={departmentFilterId === department.id ? "button" : "button-subtle"}
+              className={`${departmentFilterId === department.id ? "button" : "button-subtle"} account-department-filter-button`}
               onClick={() => setDepartmentFilterId(department.id)}
             >
               {department.name}

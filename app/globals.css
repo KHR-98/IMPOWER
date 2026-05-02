@@ -1153,6 +1153,31 @@ button {
 }
 
 /* ── 근태 관리 유저 목록 ── */
+.account-department-filter-list {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.account-department-filter-button {
+  box-shadow: 0 10px 24px rgba(34, 48, 85, 0.08);
+  font-weight: 700;
+}
+
+.account-department-filter-button.button-subtle {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+}
+
+.account-department-filter-button.button-subtle:hover {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 30px rgba(34, 48, 85, 0.12);
+}
+
+.account-department-filter-button.button {
+  box-shadow: 0 14px 30px rgba(15, 109, 95, 0.22);
+}
+
 .mgmt-user-list {
   display: flex;
   flex-direction: column;
@@ -1629,6 +1654,27 @@ button {
   gap: 12px;
 }
 
+.weekday-time-settings-grid {
+  align-items: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.weekday-time-settings-group {
+  min-width: 0;
+  gap: 16px;
+}
+
+.weekday-time-settings-group .combined-time-picker {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .weekday-time-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Individual picker card */
 .wheel-picker {
   flex: 1;
@@ -1864,6 +1910,81 @@ button {
 .admin-settings-stack .button-subtle:disabled {
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
   color: white;
+}
+
+.admin-settings-stack .admin-settings-choice-button,
+.admin-settings-stack .admin-settings-choice-button:disabled {
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 10px 24px rgba(34, 48, 85, 0.06);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.admin-settings-stack .admin-settings-choice-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 30px rgba(15, 109, 95, 0.18);
+}
+
+.admin-settings-stack .admin-settings-choice-button-selected,
+.admin-settings-stack .admin-settings-choice-button-selected:disabled {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-strong) 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 14px 30px rgba(15, 109, 95, 0.2);
+}
+
+.admin-settings-department-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+}
+
+.admin-settings-department-list-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-settings-department-button {
+  min-height: 46px;
+  min-width: 112px;
+  border: 1px solid transparent;
+}
+
+.admin-settings-department-list:not(.admin-settings-department-list-grid) .admin-settings-department-button {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-settings-department-list-grid .admin-settings-department-button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.admin-settings-department-button-selected {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.78) inset,
+    0 14px 30px rgba(15, 109, 95, 0.24);
+}
+
+.admin-settings-time-mode-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.admin-settings-time-mode-button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 10px;
+  white-space: nowrap;
 }
 
 .map-canvas {
