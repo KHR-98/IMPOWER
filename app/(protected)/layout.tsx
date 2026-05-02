@@ -15,6 +15,16 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const ExcelExportIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M7 3.5h7.2L19 8.3v12.2H7z" />
+    <path d="M14 3.5v5h5" />
+    <path d="M4 8.5h8v8H4z" />
+    <path d="m6.2 10.5 3.6 4" />
+    <path d="m9.8 10.5-3.6 4" />
+  </svg>
+);
+
 export default async function ProtectedLayout({
   children,
 }: Readonly<{
@@ -29,13 +39,40 @@ export default async function ProtectedLayout({
   const deptName = dbUser?.departmentId
     ? (departments.find((d) => d.id === dbUser.departmentId)?.name ?? null)
     : null;
+  const attendanceExportLinks = session.role === "master"
+    ? [
+        { label: "전체", href: "/api/admin/attendance-export?departmentId=all" },
+        ...departments.map((department) => ({
+          label: department.name,
+          href: `/api/admin/attendance-export?departmentId=${encodeURIComponent(department.id)}`,
+        })),
+      ]
+    : [];
 
   return (
     <div className="shell">
       <div className="container">
         <header className="topbar">
           <div className="brand">
-            <span className="brand-kicker">아임파워(주)</span>
+            <div className="brand-kicker-row">
+              <span className="brand-kicker">아임파워(주)</span>
+              {attendanceExportLinks.length > 0 ? (
+                <details className="admin-export-actions brand-export-actions">
+                  <summary className="admin-export-trigger" aria-label="엑셀 다운로드" title="엑셀 다운로드">
+                    <span className="admin-export-icon">
+                      <ExcelExportIcon />
+                    </span>
+                  </summary>
+                  <div className="admin-export-options" aria-label="출결 엑셀 다운로드">
+                    {attendanceExportLinks.map((link) => (
+                      <a key={link.href} className="admin-export-link" href={link.href} download>
+                        {link.label}
+                      </a>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+            </div>
             <span className="brand-title">IM-ON</span>
             {deptName && (
               <span className="brand-department-chip" title={`소속 부서: ${deptName}`}>
@@ -52,11 +89,13 @@ export default async function ProtectedLayout({
               <ViewToggle />
             </Suspense>
           ) : null}
-          <form action={logoutAction}>
-            <button type="submit" className="button-ghost logout-icon-btn" aria-label="로그아웃" title="로그아웃">
-              <LogoutIcon />
-            </button>
-          </form>
+          <div className="topbar-action-stack">
+            <form action={logoutAction}>
+              <button type="submit" className="button-ghost logout-icon-btn" aria-label="로그아웃" title="로그아웃">
+                <LogoutIcon />
+              </button>
+            </form>
+          </div>
         </div>
 
         {children}
