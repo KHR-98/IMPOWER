@@ -1327,6 +1327,7 @@ button {
 .account-department-filter-button {
   width: 100%;
   min-width: 0;
+  border: 1px solid rgba(0, 0, 0, 0.28);
   box-shadow: 0 10px 24px rgba(34, 48, 85, 0.08);
   font-weight: 700;
   white-space: nowrap;
@@ -1334,7 +1335,7 @@ button {
 
 .account-department-filter-button.button-subtle {
   background: rgba(255, 255, 255, 0.86);
-  border-color: rgba(255, 255, 255, 0.82);
+  border-color: rgba(0, 0, 0, 0.28);
   color: var(--text);
 }
 
@@ -1344,6 +1345,7 @@ button {
 }
 
 .account-department-filter-button.button {
+  border-color: rgba(0, 0, 0, 0.32);
   box-shadow: 0 14px 30px rgba(15, 109, 95, 0.22);
 }
 
@@ -2640,4 +2642,51 @@ button {
   background: var(--accent);
   color: var(--brand-strong);
   border-color: rgba(15, 109, 95, 0.24);
+}
+
+button,
+.nav-link,
+.button,
+.button-ghost,
+.button-subtle,
+.button-danger,
+.dev-login-button,
+.kakao-login-button,
+.login-submit-button,
+.login-secondary-button,
+.admin-section-link,
+.admin-section-link-active,
+.admin-export-trigger,
+.admin-export-icon,
+.admin-export-link,
+.admin-overview-focus-button,
+.admin-overview-focus-button-active,
+.all-periods-trigger,
+.admin-disclosure-summary,
+.account-department-filter-button,
+.account-department-filter-button.button,
+.account-department-filter-button.button-subtle,
+.admin-settings-stack .admin-settings-choice-button,
+.admin-settings-stack .admin-settings-choice-button:disabled,
+.admin-settings-stack .admin-settings-choice-button-selected,
+.admin-settings-stack .admin-settings-choice-button-selected:disabled,
+.admin-settings-department-button,
+.admin-settings-department-button-selected,
+.admin-settings-time-mode-button,
+.check-button,
+.check-demo-button,
+.view-toggle-option,
+.view-toggle-option-active,
+.name-chip-button,
+.name-chip-button-selected {
+  border: 1px solid rgba(0, 0, 0, 0.28);
+}
+
+.admin-export-trigger,
+.admin-export-icon {
+  border: 0;
+}
+
+.admin-export-link {
+  border: 1px solid rgba(0, 0, 0, 0.28);
 }
