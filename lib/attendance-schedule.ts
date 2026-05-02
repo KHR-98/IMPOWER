@@ -54,8 +54,8 @@ export const DEFAULT_LATE_SHIFT_SETTINGS: ShiftAttendanceSettings = {
 export const DEFAULT_WEEKEND_SHIFT_SETTINGS: ShiftAttendanceSettings = {
   checkInWindow: { ...DEFAULT_DAY_SHIFT_SETTINGS.checkInWindow },
   tbmMorningWindow: null,
-  lunchOutWindow: null,
-  lunchInWindow: null,
+  lunchOutWindow: { start: "11:30", end: "13:50" },
+  lunchInWindow: { start: "11:30", end: "13:50" },
   tbmAfternoonWindow: null,
   tbmCheckoutWindow: null,
   checkOutWindow: { ...DEFAULT_DAY_SHIFT_SETTINGS.checkOutWindow },

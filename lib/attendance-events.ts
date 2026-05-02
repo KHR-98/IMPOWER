@@ -33,6 +33,9 @@ const SHIFT_EVENT_DEFINITIONS: Record<ShiftType, EventDefinition[]> = {
   ],
   weekend: [
     { code: "check_in", label: "출근" },
+    { code: "lunch_register", label: "점심 등록" },
+    { code: "lunch_out", label: "점심 출문" },
+    { code: "lunch_in", label: "점심 입문" },
     { code: "check_out", label: "퇴근" },
   ],
 };

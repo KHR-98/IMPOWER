@@ -45,11 +45,11 @@ export function AdminUserManagementPanel({
   );
 
   const isMaster = actorRole === "master";
-  const manageableUsers = isMaster
+  const visibleUsers = isMaster
     ? initialUsers
-    : initialUsers.filter((user) =>
-        user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"),
-      );
+    : initialUsers.filter((user) => user.departmentId === actorDepartmentId);
+  const canManageUser = (user: AdminUserListItem) =>
+    isMaster || (user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"));
   const roleOptions: Array<{ value: UserRole; label: string }> = isMaster
     ? [
         { value: "user", label: "대원" },
@@ -61,7 +61,7 @@ export function AdminUserManagementPanel({
         { value: "user", label: "대원" },
         { value: "sub_admin", label: "조장" },
       ];
-  const openUser = openUsername ? (manageableUsers.find((u) => u.username === openUsername) ?? null) : null;
+  const openUser = openUsername ? (visibleUsers.find((u) => u.username === openUsername) ?? null) : null;
 
   useEffect(() => {
     if (openUser) {
@@ -78,6 +78,11 @@ export function AdminUserManagementPanel({
   }, [departmentFilterId, departments]);
 
   async function handleSave(user: AdminUserListItem) {
+    if (!canManageUser(user)) {
+      setMessage("이 계정은 조회만 가능합니다.");
+      return;
+    }
+
     setSaving(user.username);
     setMessage(null);
 
@@ -113,6 +118,13 @@ export function AdminUserManagementPanel({
   }
 
   async function handleDelete(username: string) {
+    const targetUser = visibleUsers.find((user) => user.username === username);
+
+    if (!targetUser || !canManageUser(targetUser)) {
+      setMessage("이 계정은 비활성화할 수 없습니다.");
+      return;
+    }
+
     setSaving(username);
     setMessage(null);
     setConfirmDelete(null);
@@ -141,7 +153,7 @@ export function AdminUserManagementPanel({
   }
 
   const filteredUsers = sortUsers(
-    manageableUsers.filter((user) => {
+    visibleUsers.filter((user) => {
       const matchesDepartment = !isMaster || departmentFilterId === "all" || user.departmentId === departmentFilterId;
       const matchesSearch = user.displayName.includes(search.trim());
       return matchesDepartment && matchesSearch;
@@ -186,12 +198,14 @@ export function AdminUserManagementPanel({
         </div>
       ) : null}
 
-      {manageableUsers.length ? (
+      {visibleUsers.length ? (
         <div className="mgmt-user-list">
           {filteredUsers.length ? filteredUsers.map((user) => {
             const isOpen = openUsername === user.username;
             const isSaving = saving === user.username;
             const isConfirmingDelete = confirmDelete === user.username;
+            const canManage = canManageUser(user);
+            const departmentName = departments.find((department) => department.id === user.departmentId)?.name ?? "부서 미지정";
 
             return (
               <div key={user.id} className={`mgmt-user-row${isOpen ? " mgmt-user-row-open" : ""}`}>
@@ -205,13 +219,39 @@ export function AdminUserManagementPanel({
                 >
                   <span className="mgmt-user-name">{isSaving ? "처리 중..." : user.displayName}</span>
                   <span className="badge">{getRoleLabel(user.role)}</span>
+                  {!canManage && <span className="badge">조회 전용</span>}
                   {!user.isActive && (
                     <span className="badge" style={{ background: "#e53e3e", color: "#fff" }}>비활성</span>
                   )}
                   <span className="mgmt-user-chevron">{isOpen ? "▲" : "▼"}</span>
                 </button>
 
-                {isOpen && (
+                {isOpen && !canManage && (
+                  <div className="mgmt-user-options" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, padding: "10px 14px" }}>
+                    <div>
+                      <div className="section-subtitle">이름</div>
+                      <strong>{user.displayName}</strong>
+                    </div>
+                    <div>
+                      <div className="section-subtitle">로그인 ID</div>
+                      <strong>{user.username}</strong>
+                    </div>
+                    <div>
+                      <div className="section-subtitle">권한</div>
+                      <strong>{getRoleLabel(user.role)}</strong>
+                    </div>
+                    <div>
+                      <div className="section-subtitle">부서</div>
+                      <strong>{departmentName}</strong>
+                    </div>
+                    <div>
+                      <div className="section-subtitle">상태</div>
+                      <strong>{user.isActive ? "활성" : "비활성"}</strong>
+                    </div>
+                  </div>
+                )}
+
+                {isOpen && canManage && (
                   <div className="mgmt-user-options" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <select

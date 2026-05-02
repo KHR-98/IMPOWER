@@ -21,6 +21,7 @@ export type CurrentPeriodCode =
   | "lunch_day"
   | "tbm_afternoon"
   | "lunch_late"
+  | "lunch_weekend"
   | "tbm_checkout"
   | "day_checkout"
   | "late_checkout"

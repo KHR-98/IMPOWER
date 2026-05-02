@@ -5,7 +5,12 @@ import { compareSync, hashSync } from "bcryptjs";
 
 import { buildEventStates } from "@/lib/attendance-events";
 import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period";
-import { buildDepartmentAttendanceSettings, buildOperationalSettings, cloneShiftSettings } from "@/lib/attendance-schedule";
+import {
+  DEFAULT_WEEKEND_SHIFT_SETTINGS,
+  buildDepartmentAttendanceSettings,
+  buildOperationalSettings,
+  cloneShiftSettings,
+} from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
 import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
@@ -34,6 +39,7 @@ import type {
   ShiftAttendanceSettings,
   ShiftType,
   SheetUserImportPreview,
+  TimeWindow,
   UserTodayView,
   UserRole,
   Zone,
@@ -85,8 +91,14 @@ const TABLES = {
 } as const;
 
 const defaultSettings: AppSettings = buildOperationalSettings(100);
+const DEFAULT_WEEKEND_LUNCH_OUT_WINDOW = DEFAULT_WEEKEND_SHIFT_SETTINGS.lunchOutWindow ?? { start: "11:30", end: "13:50" };
+const DEFAULT_WEEKEND_LUNCH_IN_WINDOW = DEFAULT_WEEKEND_SHIFT_SETTINGS.lunchInWindow ?? DEFAULT_WEEKEND_LUNCH_OUT_WINDOW;
 
 const zoneIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function cloneTimeWindow(window: TimeWindow): TimeWindow {
+  return { start: window.start, end: window.end };
+}
 
 function normalizeUserLookupKey(value: string): string {
   return value.trim().replace(/\([^)]*\)/g, "").replace(/\s+/g, "").toLowerCase();
@@ -333,8 +345,8 @@ function mergeDepartmentShiftSettings(
     ...cloneShiftSettings(departmentSettings.weekendShift ?? departmentSettings.dayShift),
     checkInWindow: { ...departmentSettings.dayShift.checkInWindow },
     tbmMorningWindow: null,
-    lunchOutWindow: null,
-    lunchInWindow: null,
+    lunchOutWindow: cloneTimeWindow(DEFAULT_WEEKEND_LUNCH_OUT_WINDOW),
+    lunchInWindow: cloneTimeWindow(DEFAULT_WEEKEND_LUNCH_IN_WINDOW),
     tbmAfternoonWindow: null,
     tbmCheckoutWindow: null,
     checkOutWindow: { ...departmentSettings.dayShift.checkOutWindow },
@@ -1439,8 +1451,8 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
     ...cloneShiftSettings(settings.weekendShift ?? settings.dayShift),
     checkInWindow: { ...settings.checkInWindow },
     tbmMorningWindow: null,
-    lunchOutWindow: null,
-    lunchInWindow: null,
+    lunchOutWindow: cloneTimeWindow(DEFAULT_WEEKEND_LUNCH_OUT_WINDOW),
+    lunchInWindow: cloneTimeWindow(DEFAULT_WEEKEND_LUNCH_IN_WINDOW),
     tbmAfternoonWindow: null,
     tbmCheckoutWindow: null,
     checkOutWindow: { ...settings.checkOutWindow },
@@ -1586,7 +1598,7 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
   const record = recordRow ? mapAttendanceRecord(recordRow) : null;
   const shiftType = rosterEntry.shiftType;
   const effectiveSettings = applyDepartmentSettings(settings, user.departmentId);
-  const currentPeriod = getCurrentPeriod(effectiveSettings);
+  const currentPeriod = getCurrentPeriod(effectiveSettings, new Date(), [rosterEntry]);
 
   return {
     dateKey: workDate,
@@ -1651,7 +1663,7 @@ export async function getSupabaseDashboardView(departmentId?: string | null): Pr
   });
 
   const effectiveSettings = departmentId === undefined ? settings : applyDepartmentSettings(settings, departmentId);
-  const currentPeriod = getCurrentPeriod(effectiveSettings);
+  const currentPeriod = getCurrentPeriod(effectiveSettings, new Date(), scheduledUsers);
   const scheduledCount = scheduledUsers.filter((entry) => entry.isScheduled).length;
   const checkedInCount = rows.filter((row) => row.checkIn).length;
   const tbmCompleteCount = rows.filter((row) => row.tbm).length;
@@ -2027,7 +2039,7 @@ function buildAttendanceWindowPayload(department: DepartmentAttendanceSettings) 
   const tbmCheckoutWindow = dayShift.tbmCheckoutWindow ?? { start: "16:30", end: "16:45" };
   const lateLunchOutWindow = lateShift.lunchOutWindow ?? { start: "13:50", end: "15:40" };
   const lateLunchInWindow = lateShift.lunchInWindow ?? lateLunchOutWindow;
-  const weekendLunchOutWindow = weekendShift.lunchOutWindow ?? dayLunchOutWindow;
+  const weekendLunchOutWindow = weekendShift.lunchOutWindow ?? DEFAULT_WEEKEND_LUNCH_OUT_WINDOW;
   const weekendLunchInWindow = weekendShift.lunchInWindow ?? weekendLunchOutWindow;
 
   return [

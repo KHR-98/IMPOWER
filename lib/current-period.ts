@@ -60,6 +60,14 @@ function getLateLunchEntries(entries: RosterEntry[]): RosterEntry[] {
   return getLateEntries(entries).filter((entry) => entry.allowLunchOut);
 }
 
+function getWeekendEntries(entries: RosterEntry[]): RosterEntry[] {
+  return getScheduledEntries(entries).filter((entry) => entry.shiftType === "weekend");
+}
+
+function getWeekendLunchEntries(entries: RosterEntry[]): RosterEntry[] {
+  return getWeekendEntries(entries).filter((entry) => entry.allowLunchOut);
+}
+
 function getShiftSettings(settings: AppSettings, shiftType: RosterEntry["shiftType"]): ShiftAttendanceSettings | null {
   const shift =
     shiftType === "late"
@@ -160,6 +168,27 @@ const PERIOD_DEFINITIONS: PeriodDefinition[] = [
     description: "늦조 점심 등록, 출문, 입문을 확인하는 시간입니다.",
     getWindow: (settings) => getShiftWindow(settings, "late", (shift) => shift.lunchOutWindow),
     getEntries: getLateLunchEntries,
+    stages: [
+      {
+        label: "점심 등록",
+        getPoint: (record) => record?.lunchRegister ?? null,
+      },
+      {
+        label: "점심 출문",
+        getPoint: (record) => record?.lunchOut ?? null,
+      },
+      {
+        label: "점심 입문",
+        getPoint: (record) => record?.lunchIn ?? null,
+      },
+    ],
+  },
+  {
+    code: "lunch_weekend",
+    label: "주말 점심",
+    description: "주말 점심 등록, 출문, 입문을 확인하는 시간입니다.",
+    getWindow: (settings) => getShiftWindow(settings, "weekend", (shift) => shift.lunchOutWindow),
+    getEntries: getWeekendLunchEntries,
     stages: [
       {
         label: "점심 등록",
@@ -304,19 +333,29 @@ function buildStat(
   };
 }
 
-export function getCurrentPeriod(settings: AppSettings, now: Date = new Date()): CurrentPeriodInfo {
-  for (const definition of PERIOD_DEFINITIONS) {
+export function getCurrentPeriod(
+  settings: AppSettings,
+  now: Date = new Date(),
+  scheduledUsers?: RosterEntry[],
+): CurrentPeriodInfo {
+  const activeDefinitions = PERIOD_DEFINITIONS.filter((definition) => {
     const window = definition.getWindow(settings);
-    if (window && isWithinWindow(window.start, window.end, now)) {
-      return {
-        code: definition.code,
-        label: definition.label,
-        description: definition.description,
-      };
-    }
+    return window ? isWithinWindow(window.start, window.end, now) : false;
+  });
+
+  if (activeDefinitions.length === 0) {
+    return NONE_PERIOD;
   }
 
-  return NONE_PERIOD;
+  const definition = scheduledUsers
+    ? activeDefinitions.find((item) => item.getEntries(scheduledUsers).length > 0) ?? activeDefinitions[0]
+    : activeDefinitions[0];
+
+  return {
+    code: definition.code,
+    label: definition.label,
+    description: definition.description,
+  };
 }
 
 export function buildCurrentPeriodStats(input: {

@@ -48,9 +48,6 @@ const EVENT_ZONE_TYPES: Record<AttendanceEventCode, ZoneType> = {
 const DAY_TBM_CODES: AttendanceEventCode[] = ["tbm_morning", "tbm_afternoon", "tbm_checkout"];
 const WEEKEND_UNAVAILABLE_CODES: AttendanceEventCode[] = [
   "tbm_morning",
-  "lunch_register",
-  "lunch_out",
-  "lunch_in",
   "tbm_afternoon",
   "tbm_checkout",
 ];
@@ -255,7 +252,7 @@ export function buildEventAvailability(
   }
 
   if (rosterEntry.shiftType === "weekend" && WEEKEND_UNAVAILABLE_CODES.includes(code)) {
-    return buildUnavailableState(code, "주말근무는 출근과 퇴근만 사용할 수 있습니다.", occurredAt);
+    return buildUnavailableState(code, "주말근무는 TBM 버튼을 사용하지 않습니다.", occurredAt);
   }
 
   if (occurredAt) {
