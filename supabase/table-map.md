@@ -7,12 +7,12 @@
 | 도메인 | 표준 테이블 | 한글 view | 역할 |
 | --- | --- | --- | --- |
 | 조직 | `org_departments` | `부서` | 부서 코드, 부서명, 활성 상태 |
-| 계정 | `account_roles` | - | 권한 코드와 한글 라벨 |
+| 계정 | `account_roles` | `권한 정의` | 권한 코드와 한글 라벨 |
 | 계정 | `account_users` | `계정` | 로그인 계정, 권한, 소속 부서, 비활성 상태 |
 | 위치 | `geo_zones` | `출결구역` | 출퇴근/TBM GPS 인증 구역 |
 | 근무 | `work_rosters` | `출결대상자` | 날짜별 근무 대상, 근무 유형, 점심 외출 허용 |
 | 출퇴근 | `attendance_daily_records` | `출결 일자정리표` | 사용자별 하루 출퇴근 요약 기록 |
-| 출퇴근 | `attendance_event_types` | - | 출근, TBM, 점심, 퇴근 이벤트 종류 |
+| 출퇴근 | `attendance_event_types` | `출퇴근 이벤트 종류` | 출근, TBM, 점심, 퇴근 이벤트 종류 |
 | 출퇴근 | `attendance_events` | `출결버튼클릭시간` | 개별 출퇴근 이벤트 로그 |
 | 감사 | `audit_attendance_logs` | `출결 정정기록` | 관리자 정정 전후 기록과 사유 |
 | 설정 | `config_global_settings` | `전체 데이터 설정` | 전체 기본 운영 설정 |

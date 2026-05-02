@@ -9,10 +9,12 @@ drop view if exists "전체_운영설정";
 drop view if exists "부서별_시간설정";
 drop view if exists "부서별_허용시간창";
 
+create or replace view "권한 정의" as select * from account_roles;
 create or replace view "계정" as select * from account_users;
 create or replace view "출결구역" as select * from geo_zones;
 create or replace view "출결대상자" as select * from work_rosters;
 create or replace view "출결 일자정리표" as select * from attendance_daily_records;
+create or replace view "출퇴근 이벤트 종류" as select * from attendance_event_types;
 create or replace view "출결버튼클릭시간" as select * from attendance_events;
 create or replace view "출결 정정기록" as select * from audit_attendance_logs;
 create or replace view "전체 데이터 설정" as select * from config_global_settings;
