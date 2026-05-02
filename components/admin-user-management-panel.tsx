@@ -52,14 +52,14 @@ export function AdminUserManagementPanel({
       );
   const roleOptions: Array<{ value: UserRole; label: string }> = isMaster
     ? [
-        { value: "user", label: "대원" },
-        { value: "sub_admin", label: "조장" },
-        { value: "admin", label: "팀장" },
+        { value: "user", label: "일반 사용자" },
+        { value: "sub_admin", label: "부관리자" },
+        { value: "admin", label: "관리자" },
         { value: "master", label: "마스터" },
       ]
     : [
-        { value: "user", label: "대원" },
-        { value: "sub_admin", label: "조장" },
+        { value: "user", label: "일반 사용자" },
+        { value: "sub_admin", label: "부관리자" },
       ];
   const openUser = openUsername ? (manageableUsers.find((u) => u.username === openUsername) ?? null) : null;
 
