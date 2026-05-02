@@ -72,6 +72,18 @@ const ATTENDANCE_WINDOW_ACTIONS = new Set<AttendanceEventCode>([
   "check_out",
 ]);
 
+const TABLES = {
+  departments: "org_departments",
+  users: "account_users",
+  zones: "geo_zones",
+  rosters: "work_rosters",
+  attendanceDailyRecords: "attendance_daily_records",
+  auditAttendanceLogs: "audit_attendance_logs",
+  globalSettings: "config_global_settings",
+  departmentSettings: "config_department_settings",
+  attendanceWindows: "config_attendance_windows",
+} as const;
+
 const defaultSettings: AppSettings = buildOperationalSettings(100);
 
 const zoneIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -485,7 +497,7 @@ function buildEventColumnPayload(
 async function getSupabaseAttendanceRecordRow(workDate: string, username: string) {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("attendance_records")
+    .from(TABLES.attendanceDailyRecords)
     .select("*")
     .eq("work_date", workDate)
     .eq("username", username)
@@ -535,7 +547,7 @@ async function persistAttendanceEvent(input: {
 
   if (input.currentRecord) {
     const { data, error } = await client
-      .from("attendance_records")
+      .from(TABLES.attendanceDailyRecords)
       .update(eventPayload)
       .eq("work_date", input.workDate)
       .eq("username", input.username)
@@ -564,7 +576,7 @@ async function persistAttendanceEvent(input: {
       ...eventPayload,
     };
 
-    const { data, error } = await client.from("attendance_records").insert(insertPayload).select("*").maybeSingle();
+    const { data, error } = await client.from(TABLES.attendanceDailyRecords).insert(insertPayload).select("*").maybeSingle();
 
     if (!error && data) {
       return {
@@ -667,7 +679,7 @@ function isSupabaseSchemaMissingError(error: unknown): boolean {
 
 export async function getSupabaseSetupStatus(): Promise<{ ready: boolean; message: string | null }> {
   const client = getSupabaseAdminClient();
-  const { error } = await client.from("users").select("username").limit(1);
+  const { error } = await client.from(TABLES.users).select("username").limit(1);
 
   if (!error) {
     return {
@@ -689,7 +701,7 @@ export async function getSupabaseSetupStatus(): Promise<{ ready: boolean; messag
 export async function authenticateSupabaseUser(username: string, password: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("users")
+    .from(TABLES.users)
     .select("username, display_name, role, is_active, password_hash, department_id")
     .eq("username", username)
     .maybeSingle();
@@ -723,7 +735,7 @@ export async function changeSupabasePassword(input: {
 }): Promise<{ ok: boolean; message: string }> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("users")
+    .from(TABLES.users)
     .select("username, is_active, password_hash")
     .eq("username", input.username)
     .maybeSingle();
@@ -747,7 +759,7 @@ export async function changeSupabasePassword(input: {
   }
 
   const { error: updateError } = await client
-    .from("users")
+    .from(TABLES.users)
     .update({ password_hash: hashSync(input.nextPassword, 10) })
     .eq("username", input.username);
 
@@ -764,7 +776,7 @@ export async function changeSupabasePassword(input: {
 export async function getSupabaseSessionUser(username: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("users")
+    .from(TABLES.users)
     .select("username, display_name, role, is_active, department_id")
     .eq("username", username)
     .maybeSingle();
@@ -790,7 +802,7 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
 export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("users")
+    .from(TABLES.users)
     .select("username, display_name, role, is_active, department_id")
     .eq("kakao_id", kakaoId)
     .maybeSingle();
@@ -818,7 +830,7 @@ export async function createKakaoUser(kakaoId: string, displayName: string, depa
   const username = `kakao_${kakaoId}`;
 
   const { data: deptRow, error: deptError } = await client
-    .from("departments")
+    .from(TABLES.departments)
     .select("id, name")
     .eq("code", departmentCode)
     .single();
@@ -831,7 +843,7 @@ export async function createKakaoUser(kakaoId: string, displayName: string, depa
     throw new Error("선택한 부서를 찾을 수 없습니다.");
   }
 
-  const { error } = await client.from("users").insert({
+  const { error } = await client.from(TABLES.users).insert({
     username,
     display_name: displayName,
     password_hash: null,
@@ -858,7 +870,7 @@ export async function createKakaoUser(kakaoId: string, displayName: string, depa
 export async function getSupabaseAdminUsers(departmentId?: string | null): Promise<AdminUserListItem[]> {
   const client = getSupabaseAdminClient();
   let query = client
-    .from("users")
+    .from(TABLES.users)
     .select("id, username, display_name, role, is_active, created_at, department_id");
 
   if (departmentId !== undefined) {
@@ -883,7 +895,7 @@ export async function getSupabaseAdminUsers(departmentId?: string | null): Promi
 async function hasActiveDepartment(departmentId: string): Promise<boolean> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("departments")
+    .from(TABLES.departments)
     .select("id")
     .eq("id", departmentId)
     .eq("is_active", true)
@@ -899,7 +911,7 @@ async function hasActiveDepartment(departmentId: string): Promise<boolean> {
 async function getDefaultActiveDepartmentId(): Promise<string | null> {
   const client = getSupabaseAdminClient();
   const { data: defaultDepartment, error: defaultDepartmentError } = await client
-    .from("departments")
+    .from(TABLES.departments)
     .select("id")
     .eq("code", "memory_pcs")
     .eq("is_active", true)
@@ -914,7 +926,7 @@ async function getDefaultActiveDepartmentId(): Promise<string | null> {
   }
 
   const { data: fallbackDepartment, error: fallbackDepartmentError } = await client
-    .from("departments")
+    .from(TABLES.departments)
     .select("id")
     .eq("is_active", true)
     .order("name", { ascending: true })
@@ -984,7 +996,7 @@ export async function saveSupabaseAdminUser(
 
   if (input.mode === "create") {
     const { data: existingUser, error: existingUserError } = await client
-      .from("users")
+      .from(TABLES.users)
       .select("username")
       .eq("username", input.username)
       .maybeSingle();
@@ -1000,7 +1012,7 @@ export async function saveSupabaseAdminUser(
       };
     }
 
-    const { error: insertError } = await client.from("users").insert({
+    const { error: insertError } = await client.from(TABLES.users).insert({
       username: input.username,
       display_name: input.displayName,
       password_hash: hashSync(input.password ?? "", 10),
@@ -1020,7 +1032,7 @@ export async function saveSupabaseAdminUser(
   }
 
   const { data: currentUser, error: currentUserError } = await client
-    .from("users")
+    .from(TABLES.users)
     .select("username, role, is_active, department_id")
     .eq("username", input.username)
     .maybeSingle();
@@ -1059,7 +1071,7 @@ export async function saveSupabaseAdminUser(
 
   if (removingLastActiveMaster) {
     const { count, error: countError } = await client
-      .from("users")
+      .from(TABLES.users)
       .select("*", { count: "exact", head: true })
       .eq("role", "master")
       .eq("is_active", true);
@@ -1093,7 +1105,7 @@ export async function saveSupabaseAdminUser(
     updatePayload.password_hash = hashSync(input.password, 10);
   }
 
-  const { error: updateError } = await client.from("users").update(updatePayload).eq("username", input.username);
+  const { error: updateError } = await client.from(TABLES.users).update(updatePayload).eq("username", input.username);
 
   if (updateError) {
     throw updateError;
@@ -1125,7 +1137,7 @@ export async function deleteSupabaseAdminUser(
   }
 
   const { data: currentUser, error: currentUserError } = await client
-    .from("users")
+    .from(TABLES.users)
     .select("username, role, is_active, department_id")
     .eq("username", username)
     .maybeSingle();
@@ -1166,7 +1178,7 @@ export async function deleteSupabaseAdminUser(
 
   if (currentUser.role === "master" && currentUser.is_active) {
     const { count, error: countError } = await client
-      .from("users")
+      .from(TABLES.users)
       .select("*", { count: "exact", head: true })
       .eq("role", "master")
       .eq("is_active", true);
@@ -1184,7 +1196,7 @@ export async function deleteSupabaseAdminUser(
   }
 
   const { error: updateError } = await client
-    .from("users")
+    .from(TABLES.users)
     .update({ is_active: false })
     .eq("username", username);
 
@@ -1262,7 +1274,7 @@ export async function importSupabaseUsersFromSheet(
     };
   }
 
-  const { data: currentUsers, error: currentUsersError } = await client.from("users").select("username, display_name");
+  const { data: currentUsers, error: currentUsersError } = await client.from(TABLES.users).select("username, display_name");
 
   if (currentUsersError) {
     throw currentUsersError;
@@ -1306,7 +1318,7 @@ export async function importSupabaseUsersFromSheet(
     };
   }
 
-  const { error: insertError } = await client.from("users").insert(rows);
+  const { error: insertError } = await client.from(TABLES.users).insert(rows);
 
   if (insertError) {
     throw insertError;
@@ -1323,7 +1335,7 @@ export async function importSupabaseUsersFromSheet(
 export async function getSupabaseDepartments(): Promise<Department[]> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("departments")
+    .from(TABLES.departments)
     .select("id, code, name, is_active")
     .eq("is_active", true)
     .order("name");
@@ -1337,7 +1349,7 @@ export async function getSupabaseDepartments(): Promise<Department[]> {
 
 export async function getSupabaseZones(): Promise<Zone[]> {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client.from("zones").select("*").order("name");
+  const { data, error } = await client.from(TABLES.zones).select("*").order("name");
 
   if (error) {
     throw error;
@@ -1353,7 +1365,7 @@ async function getSupabaseDepartmentAttendanceWindowRows(departmentIds: string[]
 
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("department_attendance_windows")
+    .from(TABLES.attendanceWindows)
     .select("department_id, shift_type, action_type, window_start, window_end, is_enabled")
     .in("department_id", departmentIds);
 
@@ -1371,7 +1383,7 @@ async function getSupabaseDepartmentAttendanceWindowRows(departmentIds: string[]
 export async function getSupabaseSettings(): Promise<AppSettings> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("app_settings")
+    .from(TABLES.globalSettings)
     .select("*")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -1436,7 +1448,7 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
   };
 
   const { data: deptRows } = await client
-    .from("departments")
+    .from(TABLES.departments)
     .select("id, code, name, is_active")
     .eq("is_active", true)
     .order("name");
@@ -1447,7 +1459,7 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
     const departmentIds = departments.map((d) => d.id);
     const [{ data: deptSettingsRows, error: deptSettingsError }, attendanceWindowRows] = await Promise.all([
       client
-        .from("department_settings")
+        .from(TABLES.departmentSettings)
         .select("*")
         .in("department_id", departmentIds),
       getSupabaseDepartmentAttendanceWindowRows(departmentIds),
@@ -1471,7 +1483,7 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
 
 async function getSupabaseRosterEntries(workDate: string) {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client.from("roster_entries").select("*").eq("work_date", workDate);
+  const { data, error } = await client.from(TABLES.rosters).select("*").eq("work_date", workDate);
 
   if (error) {
     throw error;
@@ -1483,7 +1495,7 @@ async function getSupabaseRosterEntries(workDate: string) {
 async function getSupabaseRosterEntryForUser(workDate: string, username: string) {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
-    .from("roster_entries")
+    .from(TABLES.rosters)
     .select("*")
     .eq("work_date", workDate)
     .eq("username", username)
@@ -1498,7 +1510,7 @@ async function getSupabaseRosterEntryForUser(workDate: string, username: string)
 
 async function getSupabaseAttendanceRecords(workDate: string) {
   const client = getSupabaseAdminClient();
-  const { data, error } = await client.from("attendance_records").select("*").eq("work_date", workDate);
+  const { data, error } = await client.from(TABLES.attendanceDailyRecords).select("*").eq("work_date", workDate);
 
   if (error) {
     throw error;
@@ -1510,7 +1522,7 @@ async function getSupabaseAttendanceRecords(workDate: string) {
 async function getSupabaseActiveUsers(departmentId?: string | null) {
   const client = getSupabaseAdminClient();
   let query = client
-    .from("users")
+    .from(TABLES.users)
     .select("username, display_name, role, is_active")
     .eq("is_active", true);
 
@@ -1694,7 +1706,7 @@ export async function saveSupabaseRosterControls(input: AdminRosterControlInput)
     };
   });
 
-  const { error } = await client.from("roster_entries").upsert(payload, {
+  const { error } = await client.from(TABLES.rosters).upsert(payload, {
     onConflict: "work_date,username",
   });
 
@@ -1722,7 +1734,7 @@ export async function saveSupabaseRosterEntry(input: AdminRosterEntryInput): Pro
 
   const sourceRowKey = encodeRosterSourceKey("admin", input.reasonCode);
 
-  const { error } = await client.from("roster_entries").upsert(
+  const { error } = await client.from(TABLES.rosters).upsert(
     {
       work_date: input.workDate,
       username: input.username,
@@ -1853,12 +1865,12 @@ export async function correctSupabaseAttendanceRecord(
   const client = getSupabaseAdminClient();
   const [userResult, existingResult] = await Promise.all([
     client
-      .from("users")
+      .from(TABLES.users)
       .select("username, display_name, is_active")
       .eq("username", input.username)
       .maybeSingle(),
     client
-      .from("attendance_records")
+      .from(TABLES.attendanceDailyRecords)
       .select("*")
       .eq("work_date", input.workDate)
       .eq("username", input.username)
@@ -1936,7 +1948,7 @@ export async function correctSupabaseAttendanceRecord(
     }
 
     const { data, error: updateError } = await client
-      .from("attendance_records")
+      .from(TABLES.attendanceDailyRecords)
       .update(payload)
       .eq("id", existingResult.data.id)
       .eq("updated_at", input.expectedUpdatedAt)
@@ -1956,7 +1968,7 @@ export async function correctSupabaseAttendanceRecord(
 
     savedRow = data;
   } else {
-    const { data, error: insertError } = await client.from("attendance_records").insert(payload).select("*").maybeSingle();
+    const { data, error: insertError } = await client.from(TABLES.attendanceDailyRecords).insert(payload).select("*").maybeSingle();
 
     if (insertError) {
       if (isUniqueViolation(insertError)) {
@@ -1986,7 +1998,7 @@ export async function correctSupabaseAttendanceRecord(
     };
   }
 
-  const { error: auditError } = await client.from("audit_logs").insert({
+  const { error: auditError } = await client.from(TABLES.auditAttendanceLogs).insert({
     target_record_id: savedRow.id,
     action_type: "admin_correction",
     before_json: previousRecord,
@@ -2039,7 +2051,7 @@ async function upsertSupabaseWeekendAttendanceWindows(
   }
 
   const client = getSupabaseAdminClient();
-  const { error } = await client.from("department_attendance_windows").upsert(payload, {
+  const { error } = await client.from(TABLES.attendanceWindows).upsert(payload, {
     onConflict: "department_id,shift_type,action_type",
   });
 
@@ -2063,7 +2075,7 @@ export async function saveSupabaseAdminConfiguration(
     return { ok: false, message: "소속 부서가 지정되지 않아 운영 설정을 저장할 수 없습니다." };
   }
 
-  // 부서 admin: 자기 부서 시간 설정만 department_settings에 저장
+  // 부서 admin: 자기 부서 시간 설정만 config_department_settings에 저장
   if (actorRole === "admin" && actorDepartmentId) {
     const deptSetting = input.settings.departmentSettings.find((d) => d.id === actorDepartmentId);
 
@@ -2072,7 +2084,7 @@ export async function saveSupabaseAdminConfiguration(
     }
 
     const { error } = await client
-      .from("department_settings")
+      .from(TABLES.departmentSettings)
       .update({
         day_check_in_start: deptSetting.dayShift.checkInWindow.start,
         day_check_in_end: deptSetting.dayShift.checkInWindow.end,
@@ -2101,9 +2113,9 @@ export async function saveSupabaseAdminConfiguration(
     return { ok: true, message: "부서 시간 설정을 저장했습니다." };
   }
 
-  // 전역 admin: app_settings + 모든 department_settings + zones 저장
+  // 전역 admin: config_global_settings + 모든 config_department_settings + geo_zones 저장
   const { data: latestSettingsRow, error: settingsLookupError } = await client
-    .from("app_settings")
+    .from(TABLES.globalSettings)
     .select("id, google_sheet_id, google_sheet_tab_name")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -2134,13 +2146,13 @@ export async function saveSupabaseAdminConfiguration(
   };
 
   if (latestSettingsRow?.id) {
-    const { error } = await client.from("app_settings").update(settingsPayload).eq("id", latestSettingsRow.id);
+    const { error } = await client.from(TABLES.globalSettings).update(settingsPayload).eq("id", latestSettingsRow.id);
 
     if (error) {
       throw error;
     }
   } else {
-    const { error } = await client.from("app_settings").insert(settingsPayload);
+    const { error } = await client.from(TABLES.globalSettings).insert(settingsPayload);
 
     if (error) {
       throw error;
@@ -2150,7 +2162,7 @@ export async function saveSupabaseAdminConfiguration(
   // 전역 admin: 모든 부서 설정 저장
   for (const deptSetting of input.settings.departmentSettings) {
     const { error } = await client
-      .from("department_settings")
+      .from(TABLES.departmentSettings)
       .update({
         day_check_in_start: deptSetting.dayShift.checkInWindow.start,
         day_check_in_end: deptSetting.dayShift.checkInWindow.end,
@@ -2187,7 +2199,7 @@ export async function saveSupabaseAdminConfiguration(
     is_active: zone.isActive,
   }));
 
-  const { error: zoneError } = await client.from("zones").upsert(zonePayload, {
+  const { error: zoneError } = await client.from(TABLES.zones).upsert(zonePayload, {
     onConflict: "id",
   });
 
@@ -2197,7 +2209,7 @@ export async function saveSupabaseAdminConfiguration(
 
   const savedIds = zonePayload.map((z) => z.id);
   const { error: deleteError } = await client
-    .from("zones")
+    .from(TABLES.zones)
     .delete()
     .not("id", "in", `(${savedIds.join(",")})`);
 
@@ -2244,7 +2256,7 @@ export async function syncSupabaseRoster(): Promise<RosterSyncResult> {
     };
   });
 
-  const { error } = await client.from("roster_entries").upsert(payload, {
+  const { error } = await client.from(TABLES.rosters).upsert(payload, {
     onConflict: "work_date,username",
   });
 

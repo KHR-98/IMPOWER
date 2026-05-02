@@ -21,7 +21,8 @@ Secure-worksite attendance web app for check-in, TBM attendance, and check-out.
   - Demo accounts are shown on the login page
   - Roster sync is disabled
 - Supabase mode: active when `NEXT_PUBLIC_SUPABASE_URL` and either `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` are set
-  - Uses `users`, `zones`, `roster_entries`, `attendance_records`, `audit_logs`, `app_settings`
+  - Uses standardized tables such as `account_users`, `geo_zones`, `work_rosters`, `attendance_daily_records`, `attendance_events`, `audit_attendance_logs`, and `config_global_settings`
+  - Legacy names such as `users` and `attendance_records` remain as compatibility views after the 20260503 migration
   - Admin dashboard can trigger daily roster sync if Google Sheet env vars are also set
 
 ## Demo accounts

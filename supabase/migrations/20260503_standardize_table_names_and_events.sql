@@ -1,12 +1,49 @@
 create extension if not exists pgcrypto;
 
-create table if not exists org_departments (
-  id uuid primary key default gen_random_uuid(),
-  code text not null unique,
-  name text not null,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
+do $$
+begin
+  if to_regclass('public.departments') is not null and to_regclass('public.org_departments') is null then
+    alter table departments rename to org_departments;
+  end if;
+
+  if to_regclass('public.users') is not null and to_regclass('public.account_users') is null then
+    alter table users rename to account_users;
+  end if;
+
+  if to_regclass('public.zones') is not null and to_regclass('public.geo_zones') is null then
+    alter table zones rename to geo_zones;
+  end if;
+
+  if to_regclass('public.roster_entries') is not null and to_regclass('public.work_rosters') is null then
+    alter table roster_entries rename to work_rosters;
+  end if;
+
+  if to_regclass('public.attendance_records') is not null and to_regclass('public.attendance_daily_records') is null then
+    alter table attendance_records rename to attendance_daily_records;
+  end if;
+
+  if to_regclass('public.audit_logs') is not null and to_regclass('public.audit_attendance_logs') is null then
+    alter table audit_logs rename to audit_attendance_logs;
+  end if;
+
+  if to_regclass('public.app_settings') is not null and to_regclass('public.config_global_settings') is null then
+    alter table app_settings rename to config_global_settings;
+  end if;
+
+  if to_regclass('public.department_settings') is not null and to_regclass('public.config_department_settings') is null then
+    alter table department_settings rename to config_department_settings;
+  end if;
+
+  if to_regclass('public.department_attendance_windows') is not null and to_regclass('public.config_attendance_windows') is null then
+    alter table department_attendance_windows rename to config_attendance_windows;
+  end if;
+end $$;
+
+alter index if exists users_department_id_idx rename to account_users_department_id_idx;
+alter index if exists idx_roster_entries_work_date_username rename to work_rosters_work_date_username_idx;
+alter index if exists idx_attendance_records_work_date_username rename to attendance_daily_records_work_date_username_idx;
+alter index if exists department_attendance_windows_department_id_idx rename to config_attendance_windows_department_id_idx;
+alter index if exists department_attendance_windows_shift_type_idx rename to config_attendance_windows_shift_type_idx;
 
 create table if not exists account_roles (
   code text primary key check (code in ('user', 'sub_admin', 'admin', 'master')),
@@ -16,112 +53,31 @@ create table if not exists account_roles (
   is_active boolean not null default true
 );
 
-create table if not exists account_users (
-  id uuid primary key default gen_random_uuid(),
-  username text not null unique,
-  display_name text not null,
-  password_hash text,
-  kakao_id text unique,
-  role text not null references account_roles(code),
-  department_id uuid not null references org_departments(id),
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
+insert into account_roles (code, label_ko, description_ko, sort_order, is_active)
+values
+  ('master', '마스터', '전체 부서와 전체 계정을 관리합니다.', 10, true),
+  ('admin', '팀장', '소속 부서의 사용자와 설정을 관리합니다.', 20, true),
+  ('sub_admin', '조장', '소속 부서 데이터를 조회합니다.', 30, true),
+  ('user', '대원', '출퇴근을 기록하는 일반 사용자입니다.', 40, true)
+on conflict (code) do update set
+  label_ko = excluded.label_ko,
+  description_ko = excluded.description_ko,
+  sort_order = excluded.sort_order,
+  is_active = excluded.is_active;
 
-create index if not exists account_users_department_id_idx on account_users(department_id);
-
-create table if not exists geo_zones (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  type text not null check (type in ('entry', 'tbm')),
-  latitude double precision not null,
-  longitude double precision not null,
-  radius_m integer not null,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists work_rosters (
-  id uuid primary key default gen_random_uuid(),
-  work_date date not null,
-  username text not null references account_users(username),
-  is_scheduled boolean not null,
-  shift_type text not null default 'day' check (shift_type in ('day', 'late', 'weekend')),
-  allow_lunch_out boolean not null default false,
-  source_row_key text,
-  synced_at timestamptz not null default now(),
-  unique (work_date, username)
-);
-
-create index if not exists work_rosters_work_date_username_idx
-  on work_rosters (work_date, username);
-
-create table if not exists attendance_daily_records (
-  id uuid primary key default gen_random_uuid(),
-  work_date date not null,
-  username text not null references account_users(username),
-  display_name text not null,
-  check_in_at timestamptz,
-  check_in_lat double precision,
-  check_in_lng double precision,
-  check_in_accuracy_m double precision,
-  check_in_zone_id uuid references geo_zones(id),
-  check_in_mdm_verified boolean,
-  check_in_camera_test text,
-  tbm_at timestamptz,
-  tbm_lat double precision,
-  tbm_lng double precision,
-  tbm_accuracy_m double precision,
-  tbm_zone_id uuid references geo_zones(id),
-  tbm_morning_at timestamptz,
-  tbm_morning_lat double precision,
-  tbm_morning_lng double precision,
-  tbm_morning_accuracy_m double precision,
-  tbm_morning_zone_id uuid references geo_zones(id),
-  lunch_register_at timestamptz,
-  lunch_register_lat double precision,
-  lunch_register_lng double precision,
-  lunch_register_accuracy_m double precision,
-  lunch_register_zone_id uuid references geo_zones(id),
-  lunch_register_mdm_verified boolean,
-  lunch_register_camera_test text,
-  lunch_out_at timestamptz,
-  lunch_out_lat double precision,
-  lunch_out_lng double precision,
-  lunch_out_accuracy_m double precision,
-  lunch_out_zone_id uuid references geo_zones(id),
-  lunch_in_at timestamptz,
-  lunch_in_lat double precision,
-  lunch_in_lng double precision,
-  lunch_in_accuracy_m double precision,
-  lunch_in_zone_id uuid references geo_zones(id),
-  lunch_in_mdm_verified boolean,
-  lunch_in_camera_test text,
-  tbm_afternoon_at timestamptz,
-  tbm_afternoon_lat double precision,
-  tbm_afternoon_lng double precision,
-  tbm_afternoon_accuracy_m double precision,
-  tbm_afternoon_zone_id uuid references geo_zones(id),
-  tbm_checkout_at timestamptz,
-  tbm_checkout_lat double precision,
-  tbm_checkout_lng double precision,
-  tbm_checkout_accuracy_m double precision,
-  tbm_checkout_zone_id uuid references geo_zones(id),
-  check_out_at timestamptz,
-  check_out_lat double precision,
-  check_out_lng double precision,
-  check_out_accuracy_m double precision,
-  check_out_zone_id uuid references geo_zones(id),
-  check_out_mdm_verified boolean,
-  check_out_camera_test text,
-  corrected_by_admin boolean not null default false,
-  correction_note text,
-  updated_at timestamptz not null default now(),
-  unique (work_date, username)
-);
-
-create index if not exists attendance_daily_records_work_date_username_idx
-  on attendance_daily_records (work_date, username);
+do $$
+begin
+  if to_regclass('public.account_users') is not null
+     and not exists (
+       select 1
+       from pg_constraint
+       where conname = 'account_users_role_fkey'
+         and conrelid = 'public.account_users'::regclass
+     ) then
+    alter table account_users
+      add constraint account_users_role_fkey foreign key (role) references account_roles(code);
+  end if;
+end $$;
 
 create table if not exists attendance_event_types (
   code text primary key check (
@@ -143,6 +99,23 @@ create table if not exists attendance_event_types (
   is_active boolean not null default true
 );
 
+insert into attendance_event_types (code, label_ko, sort_order, requires_location, requires_mdm, is_active)
+values
+  ('check_in', '출근', 10, true, true, true),
+  ('tbm_morning', '오전 TBM', 20, true, false, true),
+  ('lunch_register', '점심 등록', 30, true, true, true),
+  ('lunch_out', '점심 출문', 40, true, false, true),
+  ('lunch_in', '점심 입문', 50, true, true, true),
+  ('tbm_afternoon', '오후 TBM', 60, true, false, true),
+  ('tbm_checkout', '퇴근 전 TBM', 70, true, false, true),
+  ('check_out', '퇴근', 80, true, true, true)
+on conflict (code) do update set
+  label_ko = excluded.label_ko,
+  sort_order = excluded.sort_order,
+  requires_location = excluded.requires_location,
+  requires_mdm = excluded.requires_mdm,
+  is_active = excluded.is_active;
+
 create table if not exists attendance_events (
   id uuid primary key default gen_random_uuid(),
   attendance_daily_record_id uuid not null references attendance_daily_records(id) on delete cascade,
@@ -160,84 +133,62 @@ create table if not exists attendance_events (
   unique (attendance_daily_record_id, action_type)
 );
 
-create index if not exists attendance_events_daily_record_id_idx
-  on attendance_events(attendance_daily_record_id);
+create index if not exists account_users_department_id_idx on account_users(department_id);
+create index if not exists work_rosters_work_date_username_idx on work_rosters(work_date, username);
+create index if not exists attendance_daily_records_work_date_username_idx on attendance_daily_records(work_date, username);
+create index if not exists config_attendance_windows_department_id_idx on config_attendance_windows(department_id);
+create index if not exists config_attendance_windows_shift_type_idx on config_attendance_windows(shift_type);
+create index if not exists attendance_events_daily_record_id_idx on attendance_events(attendance_daily_record_id);
+create index if not exists attendance_events_action_type_idx on attendance_events(action_type);
 
-create index if not exists attendance_events_action_type_idx
-  on attendance_events(action_type);
-
-create table if not exists audit_attendance_logs (
-  id uuid primary key default gen_random_uuid(),
-  target_record_id uuid not null references attendance_daily_records(id) on delete cascade,
-  action_type text not null,
-  before_json jsonb,
-  after_json jsonb,
-  reason text not null,
-  actor_name text not null,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists config_global_settings (
-  id uuid primary key default gen_random_uuid(),
-  check_in_start text not null,
-  check_in_end text not null,
-  tbm_start text not null,
-  tbm_end text not null,
-  tbm_afternoon_start text not null default '13:35',
-  tbm_afternoon_end text not null default '13:45',
-  tbm_checkout_start text not null default '16:30',
-  tbm_checkout_end text not null default '16:45',
-  check_out_start text not null,
-  check_out_end text not null,
-  late_check_in_start text not null default '09:00',
-  late_check_in_end text not null default '11:00',
-  late_check_out_start text not null default '19:30',
-  late_check_out_end text not null default '21:00',
-  max_gps_accuracy_m integer not null,
-  google_sheet_id text,
-  google_sheet_tab_name text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists config_department_settings (
-  id uuid primary key default gen_random_uuid(),
-  department_id uuid not null unique references org_departments(id) on delete cascade,
-  day_check_in_start text not null default '06:00',
-  day_check_in_end text not null default '08:30',
-  day_tbm_start text not null default '06:00',
-  day_tbm_end text not null default '08:30',
-  day_tbm_afternoon_start text not null default '13:35',
-  day_tbm_afternoon_end text not null default '13:45',
-  day_tbm_checkout_start text not null default '16:30',
-  day_tbm_checkout_end text not null default '16:45',
-  day_check_out_start text not null default '16:30',
-  day_check_out_end text not null default '18:00',
-  late_check_in_start text not null default '09:00',
-  late_check_in_end text not null default '11:00',
-  late_check_out_start text not null default '19:30',
-  late_check_out_end text not null default '21:00',
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists config_attendance_windows (
-  id uuid primary key default gen_random_uuid(),
-  department_id uuid not null references org_departments(id) on delete cascade,
-  shift_type text not null check (shift_type in ('day', 'late', 'weekend')),
-  action_type text not null references attendance_event_types(code),
-  window_start text not null,
-  window_end text not null,
-  is_enabled boolean not null default true,
-  sort_order integer not null default 0,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (department_id, shift_type, action_type)
-);
-
-create index if not exists config_attendance_windows_department_id_idx
-  on config_attendance_windows(department_id);
-
-create index if not exists config_attendance_windows_shift_type_idx
-  on config_attendance_windows(shift_type);
+insert into attendance_events (
+  attendance_daily_record_id,
+  action_type,
+  occurred_at,
+  latitude,
+  longitude,
+  accuracy_m,
+  zone_id,
+  mdm_verified,
+  camera_test,
+  source,
+  updated_at
+)
+select
+  record.id,
+  event.action_type,
+  event.occurred_at,
+  event.latitude,
+  event.longitude,
+  event.accuracy_m,
+  event.zone_id,
+  event.mdm_verified,
+  event.camera_test,
+  'daily_record_sync',
+  now()
+from attendance_daily_records as record
+cross join lateral (
+  values
+    ('check_in'::text, record.check_in_at, record.check_in_lat, record.check_in_lng, record.check_in_accuracy_m, record.check_in_zone_id, record.check_in_mdm_verified, record.check_in_camera_test),
+    ('tbm_morning'::text, coalesce(record.tbm_morning_at, record.tbm_at), coalesce(record.tbm_morning_lat, record.tbm_lat), coalesce(record.tbm_morning_lng, record.tbm_lng), coalesce(record.tbm_morning_accuracy_m, record.tbm_accuracy_m), coalesce(record.tbm_morning_zone_id, record.tbm_zone_id), null::boolean, null::text),
+    ('lunch_register'::text, record.lunch_register_at, record.lunch_register_lat, record.lunch_register_lng, record.lunch_register_accuracy_m, record.lunch_register_zone_id, record.lunch_register_mdm_verified, record.lunch_register_camera_test),
+    ('lunch_out'::text, record.lunch_out_at, record.lunch_out_lat, record.lunch_out_lng, record.lunch_out_accuracy_m, record.lunch_out_zone_id, null::boolean, null::text),
+    ('lunch_in'::text, record.lunch_in_at, record.lunch_in_lat, record.lunch_in_lng, record.lunch_in_accuracy_m, record.lunch_in_zone_id, record.lunch_in_mdm_verified, record.lunch_in_camera_test),
+    ('tbm_afternoon'::text, record.tbm_afternoon_at, record.tbm_afternoon_lat, record.tbm_afternoon_lng, record.tbm_afternoon_accuracy_m, record.tbm_afternoon_zone_id, null::boolean, null::text),
+    ('tbm_checkout'::text, record.tbm_checkout_at, record.tbm_checkout_lat, record.tbm_checkout_lng, record.tbm_checkout_accuracy_m, record.tbm_checkout_zone_id, null::boolean, null::text),
+    ('check_out'::text, record.check_out_at, record.check_out_lat, record.check_out_lng, record.check_out_accuracy_m, record.check_out_zone_id, record.check_out_mdm_verified, record.check_out_camera_test)
+) as event(action_type, occurred_at, latitude, longitude, accuracy_m, zone_id, mdm_verified, camera_test)
+where event.occurred_at is not null
+on conflict (attendance_daily_record_id, action_type) do update set
+  occurred_at = excluded.occurred_at,
+  latitude = excluded.latitude,
+  longitude = excluded.longitude,
+  accuracy_m = excluded.accuracy_m,
+  zone_id = excluded.zone_id,
+  mdm_verified = excluded.mdm_verified,
+  camera_test = excluded.camera_test,
+  source = excluded.source,
+  updated_at = now();
 
 create or replace function sync_attendance_events_from_daily_record()
 returns trigger
