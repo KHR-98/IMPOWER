@@ -1317,13 +1317,19 @@ button {
 
 /* ── 근태 관리 유저 목록 ── */
 .account-department-filter-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
+  flex-wrap: nowrap;
 }
 
 .account-department-filter-button {
+  width: 100%;
+  min-width: 0;
   box-shadow: 0 10px 24px rgba(34, 48, 85, 0.08);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .account-department-filter-button.button-subtle {
