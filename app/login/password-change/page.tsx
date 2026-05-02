@@ -4,6 +4,7 @@ import { Space_Grotesk } from "next/font/google";
 
 import { PasswordChangeForm } from "@/components/password-change-form";
 import { getSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 const passwordTitleFont = Space_Grotesk({
   subsets: ["latin"],
@@ -14,7 +15,7 @@ export default async function PasswordChangePage() {
   const session = await getSession();
 
   if (session) {
-    redirect(session.role === "admin" ? "/admin" : "/dashboard");
+    redirect(isAdminRole(session.role) ? "/admin" : "/dashboard");
   }
 
   return (

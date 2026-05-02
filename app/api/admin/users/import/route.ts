@@ -12,7 +12,7 @@ const importSchema = z.object({
 async function requireAdminSession() {
   const session = await getSession();
 
-  if (!session || session.role !== "admin") {
+  if (!session || session.role !== "master") {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { authenticateUser, changePassword } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
+import { isAdminRole } from "@/lib/permissions";
 
 export interface LoginState {
   error: string | null;
@@ -66,7 +67,7 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   }
 
   await createSession(user);
-  redirect(user.role === "admin" || user.role === "sub_admin" ? "/admin" : "/dashboard");
+  redirect(isAdminRole(user.role) ? "/admin" : "/dashboard");
 }
 
 export async function changePasswordAction(

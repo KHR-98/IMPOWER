@@ -159,8 +159,8 @@ export async function PATCH(request: Request) {
       },
       zones: parsed.data.zones,
     },
-    "master",
-    null,
+    session.role,
+    session.departmentId,
   );
 
   if (!result.ok) {

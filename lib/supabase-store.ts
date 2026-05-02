@@ -817,11 +817,19 @@ export async function createKakaoUser(kakaoId: string, displayName: string, depa
   const client = getSupabaseAdminClient();
   const username = `kakao_${kakaoId}`;
 
-  const { data: deptRow } = await client
+  const { data: deptRow, error: deptError } = await client
     .from("departments")
     .select("id, name")
     .eq("code", departmentCode)
     .single();
+
+  if (deptError) {
+    throw deptError;
+  }
+
+  if (!deptRow?.id) {
+    throw new Error("선택한 부서를 찾을 수 없습니다.");
+  }
 
   const { error } = await client.from("users").insert({
     username,
@@ -830,7 +838,7 @@ export async function createKakaoUser(kakaoId: string, displayName: string, depa
     kakao_id: kakaoId,
     role: "user",
     is_active: true,
-    department_id: deptRow?.id ?? null,
+    department_id: deptRow.id,
   });
 
   if (error) {
@@ -841,9 +849,9 @@ export async function createKakaoUser(kakaoId: string, displayName: string, depa
     username,
     displayName,
     role: "user",
-    departmentId: deptRow?.id ?? null,
-    departmentCode: deptRow ? departmentCode : null,
-    departmentName: deptRow?.name ?? null,
+    departmentId: deptRow.id,
+    departmentCode,
+    departmentName: deptRow.name ?? null,
   };
 }
 
@@ -872,8 +880,107 @@ export async function getSupabaseAdminUsers(departmentId?: string | null): Promi
   return (data ?? []).map((row) => mapAdminUserListItem(row));
 }
 
-export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Promise<{ ok: boolean; message: string }> {
+async function hasActiveDepartment(departmentId: string): Promise<boolean> {
   const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from("departments")
+    .select("id")
+    .eq("id", departmentId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return Boolean(data);
+}
+
+async function getDefaultActiveDepartmentId(): Promise<string | null> {
+  const client = getSupabaseAdminClient();
+  const { data: defaultDepartment, error: defaultDepartmentError } = await client
+    .from("departments")
+    .select("id")
+    .eq("code", "memory_pcs")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (defaultDepartmentError) {
+    throw defaultDepartmentError;
+  }
+
+  if (defaultDepartment?.id) {
+    return String(defaultDepartment.id);
+  }
+
+  const { data: fallbackDepartment, error: fallbackDepartmentError } = await client
+    .from("departments")
+    .select("id")
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (fallbackDepartmentError) {
+    throw fallbackDepartmentError;
+  }
+
+  return fallbackDepartment?.id ? String(fallbackDepartment.id) : null;
+}
+
+function canDepartmentAdminManageRole(role: UserRole): boolean {
+  return role === "user" || role === "sub_admin";
+}
+
+export async function saveSupabaseAdminUser(
+  input: AdminUserMutationInput,
+  actor: SessionUser,
+): Promise<{ ok: boolean; message: string }> {
+  const client = getSupabaseAdminClient();
+
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return {
+      ok: false,
+      message: "계정 관리 권한이 없습니다.",
+    };
+  }
+
+  if (!input.departmentId) {
+    return {
+      ok: false,
+      message: "부서를 선택하세요.",
+    };
+  }
+
+  if (!(await hasActiveDepartment(input.departmentId))) {
+    return {
+      ok: false,
+      message: "선택한 부서를 찾을 수 없습니다.",
+    };
+  }
+
+  if (actor.role === "admin") {
+    if (!actor.departmentId) {
+      return {
+        ok: false,
+        message: "소속 부서가 지정되지 않아 계정을 관리할 수 없습니다.",
+      };
+    }
+
+    if (input.mode === "create") {
+      return {
+        ok: false,
+        message: "관리자는 새 계정을 생성할 수 없습니다.",
+      };
+    }
+
+    if (!canDepartmentAdminManageRole(input.role)) {
+      return {
+        ok: false,
+        message: "관리자는 일반 사용자와 부관리자 권한만 지정할 수 있습니다.",
+      };
+    }
+  }
 
   if (input.mode === "create") {
     const { data: existingUser, error: existingUserError } = await client
@@ -914,7 +1021,7 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
 
   const { data: currentUser, error: currentUserError } = await client
     .from("users")
-    .select("username, role, is_active")
+    .select("username, role, is_active, department_id")
     .eq("username", input.username)
     .maybeSingle();
 
@@ -929,16 +1036,32 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
     };
   }
 
-  const removingLastActiveAdmin =
-    currentUser.role === "admin" &&
-    currentUser.is_active &&
-    (input.role !== "admin" || !input.isActive);
+  if (actor.role === "admin") {
+    if (nullableString(currentUser.department_id) !== actor.departmentId) {
+      return {
+        ok: false,
+        message: "소속 부서 사용자만 관리할 수 있습니다.",
+      };
+    }
 
-  if (removingLastActiveAdmin) {
+    if (!canDepartmentAdminManageRole(normalizeUserRole(currentUser.role))) {
+      return {
+        ok: false,
+        message: "관리자 또는 마스터 계정은 수정할 수 없습니다.",
+      };
+    }
+  }
+
+  const removingLastActiveMaster =
+    currentUser.role === "master" &&
+    currentUser.is_active &&
+    (input.role !== "master" || !input.isActive);
+
+  if (removingLastActiveMaster) {
     const { count, error: countError } = await client
       .from("users")
       .select("*", { count: "exact", head: true })
-      .eq("role", "admin")
+      .eq("role", "master")
       .eq("is_active", true);
 
     if (countError) {
@@ -948,7 +1071,7 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
     if ((count ?? 0) <= 1) {
       return {
         ok: false,
-        message: "마지막 활성 관리자 계정은 비활성화하거나 일반 사용자로 변경할 수 없습니다.",
+        message: "마지막 활성 마스터 계정은 비활성화하거나 권한을 변경할 수 없습니다.",
       };
     }
   }
@@ -983,20 +1106,27 @@ export async function saveSupabaseAdminUser(input: AdminUserMutationInput): Prom
 }
 export async function deleteSupabaseAdminUser(
   username: string,
-  actorUsername: string,
+  actor: SessionUser,
 ): Promise<{ ok: boolean; message: string }> {
   const client = getSupabaseAdminClient();
 
-  if (username === actorUsername) {
+  if (username === actor.username) {
     return {
       ok: false,
-      message: "현재 로그인한 계정은 직접 삭제할 수 없습니다.",
+      message: "현재 로그인한 계정은 직접 비활성화할 수 없습니다.",
+    };
+  }
+
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return {
+      ok: false,
+      message: "계정 관리 권한이 없습니다.",
     };
   }
 
   const { data: currentUser, error: currentUserError } = await client
     .from("users")
-    .select("username, role, is_active")
+    .select("username, role, is_active, department_id")
     .eq("username", username)
     .maybeSingle();
 
@@ -1011,11 +1141,34 @@ export async function deleteSupabaseAdminUser(
     };
   }
 
-  if (currentUser.role === "admin" && currentUser.is_active) {
+  if (actor.role === "admin") {
+    if (!actor.departmentId) {
+      return {
+        ok: false,
+        message: "소속 부서가 지정되지 않아 계정을 관리할 수 없습니다.",
+      };
+    }
+
+    if (nullableString(currentUser.department_id) !== actor.departmentId) {
+      return {
+        ok: false,
+        message: "소속 부서 사용자만 비활성화할 수 있습니다.",
+      };
+    }
+
+    if (!canDepartmentAdminManageRole(normalizeUserRole(currentUser.role))) {
+      return {
+        ok: false,
+        message: "관리자 또는 마스터 계정은 비활성화할 수 없습니다.",
+      };
+    }
+  }
+
+  if (currentUser.role === "master" && currentUser.is_active) {
     const { count, error: countError } = await client
       .from("users")
       .select("*", { count: "exact", head: true })
-      .eq("role", "admin")
+      .eq("role", "master")
       .eq("is_active", true);
 
     if (countError) {
@@ -1025,29 +1178,23 @@ export async function deleteSupabaseAdminUser(
     if ((count ?? 0) <= 1) {
       return {
         ok: false,
-        message: "마지막 활성 관리자 계정은 삭제할 수 없습니다.",
+        message: "마지막 활성 마스터 계정은 비활성화할 수 없습니다.",
       };
     }
   }
 
-  const { error: rosterDeleteError } = await client.from("roster_entries").delete().eq("username", username);
-  if (rosterDeleteError) throw rosterDeleteError;
+  const { error: updateError } = await client
+    .from("users")
+    .update({ is_active: false })
+    .eq("username", username);
 
-  const { error: deleteError } = await client.from("users").delete().eq("username", username);
-  if (deleteError) {
-    const msg = String(deleteError.message ?? "");
-    if (/foreign key|violates/i.test(msg)) {
-      return {
-        ok: false,
-        message: "출퇴근 기록 외래키 제약이 남아 있습니다. Supabase SQL 에디터에서 다음을 실행하세요: ALTER TABLE attendance_records DROP CONSTRAINT attendance_records_username_fkey;",
-      };
-    }
-    throw deleteError;
+  if (updateError) {
+    throw updateError;
   }
 
   return {
     ok: true,
-    message: "계정을 삭제했습니다. 출퇴근 기록은 보존됩니다.",
+    message: "계정을 비활성화했습니다. 출퇴근 기록은 보존됩니다.",
   };
 }
 
@@ -1128,6 +1275,17 @@ export async function importSupabaseUsersFromSheet(
     existingKeys.add(normalizeUserLookupKey(String(user.display_name ?? "")));
   }
 
+  const defaultDepartmentId = await getDefaultActiveDepartmentId();
+
+  if (!defaultDepartmentId) {
+    return {
+      ok: false,
+      message: "기본 부서를 찾을 수 없어 시트 사용자 계정을 생성할 수 없습니다.",
+      createdCount: 0,
+      skippedCount: selectedNames.length,
+    };
+  }
+
   const rows = selectedNames
     .filter((name) => !existingKeys.has(normalizeUserLookupKey(name)))
     .map((name) => ({
@@ -1135,6 +1293,7 @@ export async function importSupabaseUsersFromSheet(
       display_name: name,
       password_hash: hashSync(input.password, 10),
       role: "user" as const,
+      department_id: defaultDepartmentId,
       is_active: true,
     }));
 
@@ -1389,7 +1548,7 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
 
   const rosterEntry = rosterRow
     ? mapRosterEntry(rosterRow, user.displayName)
-    : user.role === "admin"
+    : user.role === "master" || user.role === "admin" || user.role === "sub_admin"
       ? {
           id: `${workDate}-${username}`,
           workDate,
@@ -1479,7 +1638,8 @@ export async function getSupabaseDashboardView(departmentId?: string | null): Pr
     return recordRow ? mapAttendanceRecord(recordRow) : buildEmptyRecord(workDate, entry.username, entry.displayName);
   });
 
-  const currentPeriod = getCurrentPeriod(settings);
+  const effectiveSettings = departmentId === undefined ? settings : applyDepartmentSettings(settings, departmentId);
+  const currentPeriod = getCurrentPeriod(effectiveSettings);
   const scheduledCount = scheduledUsers.filter((entry) => entry.isScheduled).length;
   const checkedInCount = rows.filter((row) => row.checkIn).length;
   const tbmCompleteCount = rows.filter((row) => row.tbm).length;
@@ -1895,8 +2055,16 @@ export async function saveSupabaseAdminConfiguration(
 ): Promise<{ ok: boolean; message: string }> {
   const client = getSupabaseAdminClient();
 
+  if (actorRole !== "master" && actorRole !== "admin") {
+    return { ok: false, message: "운영 설정을 저장할 권한이 없습니다." };
+  }
+
+  if (actorRole === "admin" && !actorDepartmentId) {
+    return { ok: false, message: "소속 부서가 지정되지 않아 운영 설정을 저장할 수 없습니다." };
+  }
+
   // 부서 admin: 자기 부서 시간 설정만 department_settings에 저장
-  if (actorRole !== "master" && actorDepartmentId) {
+  if (actorRole === "admin" && actorDepartmentId) {
     const deptSetting = input.settings.departmentSettings.find((d) => d.id === actorDepartmentId);
 
     if (!deptSetting) {

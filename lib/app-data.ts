@@ -3,13 +3,18 @@ import "server-only";
 import {
   authenticateDemoUser,
   changeDemoPassword,
+  deleteAdminUser as deleteDemoAdminUser,
   getDashboardView as getDemoDashboardView,
+  getAdminUsers as getDemoAdminUsers,
+  getDepartments as getDemoDepartments,
   getDemoCredentials,
   getDevCoordinates,
   getSessionUser as getDemoSessionUser,
   getUserTodayView as getDemoUserTodayView,
   getZones as getDemoZones,
   performAttendanceAction as performDemoAttendanceAction,
+  saveAdminConfiguration as saveDemoAdminConfiguration,
+  saveAdminUser as saveDemoAdminUser,
 } from "@/lib/demo-store";
 import { hasGoogleSheetEnv, hasSupabaseEnv } from "@/lib/env";
 import { writeShiftTypeToSheet, writeSpecialStatusToSheet } from "@/lib/google-sheets";
@@ -130,11 +135,11 @@ export async function getUserTodayView(username: string, sessionUser?: SessionUs
 export async function getDashboardView(departmentId?: string | null): Promise<DashboardView> {
   return resolveDataSource().dataSource === "supabase"
     ? getSupabaseDashboardView(departmentId)
-    : getDemoDashboardView();
+    : getDemoDashboardView(departmentId);
 }
 
 export async function getDepartments(): Promise<Department[]> {
-  return resolveDataSource().dataSource === "supabase" ? getSupabaseDepartments() : [];
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseDepartments() : getDemoDepartments();
 }
 
 export async function getZones(): Promise<Zone[]> {
@@ -142,7 +147,7 @@ export async function getZones(): Promise<Zone[]> {
 }
 
 export async function getAdminUserList(departmentId?: string | null): Promise<AdminUserListItem[]> {
-  return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers(departmentId) : [];
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers(departmentId) : getDemoAdminUsers(departmentId);
 }
 
 export async function performAttendanceAction(input: {
@@ -197,39 +202,33 @@ export async function saveAdminConfiguration(
   const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
-    return {
-      ok: false,
-      message: resolved.setupMessage ?? "현재 저장소에서는 관리자 설정을 저장할 수 없습니다.",
-    };
+    return saveDemoAdminConfiguration(input, actorRole, actorDepartmentId);
   }
 
   return saveSupabaseAdminConfiguration(input, actorRole, actorDepartmentId);
 }
 
-export async function saveAdminUser(input: AdminUserMutationInput): Promise<{ ok: boolean; message: string }> {
+export async function saveAdminUser(
+  input: AdminUserMutationInput,
+  actor: SessionUser,
+): Promise<{ ok: boolean; message: string }> {
   const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
-    return {
-      ok: false,
-      message: resolved.setupMessage ?? "현재 저장소에서는 사용자 계정을 저장할 수 없습니다.",
-    };
+    return saveDemoAdminUser(input, actor);
   }
 
-  return saveSupabaseAdminUser(input);
+  return saveSupabaseAdminUser(input, actor);
 }
 
-export async function deleteAdminUser(username: string, actorUsername: string): Promise<{ ok: boolean; message: string }> {
+export async function deleteAdminUser(username: string, actor: SessionUser): Promise<{ ok: boolean; message: string }> {
   const resolved = resolveDataSource();
 
   if (resolved.dataSource !== "supabase") {
-    return {
-      ok: false,
-      message: resolved.setupMessage ?? "현재 저장소에서는 사용자 계정을 삭제할 수 없습니다.",
-    };
+    return deleteDemoAdminUser(username, actor);
   }
 
-  return deleteSupabaseAdminUser(username, actorUsername);
+  return deleteSupabaseAdminUser(username, actor);
 }
 
 export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promise<{ ok: boolean; message: string }> {

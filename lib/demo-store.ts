@@ -4,84 +4,96 @@ import { compareSync, hashSync } from "bcryptjs";
 
 import { buildEventStates } from "@/lib/attendance-events";
 import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period";
-import { buildOperationalSettings } from "@/lib/attendance-schedule";
+import { buildDepartmentAttendanceSettings, buildOperationalSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
 import { getRosterReasonMessage } from "@/lib/roster-reasons";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
 import type {
   AppSettings,
+  AdminUserListItem,
+  AdminUserMutationInput,
   AttendanceAction,
   AttendanceEventCode,
   AttendanceMutationResult,
   AttendanceRecord,
+  Department,
   RosterEntry,
   SessionUser,
   UserAccount,
+  UserRole,
   UserTodayView,
   Zone,
 } from "@/lib/types";
 
 const demoPasswordHash = hashSync("demo1234", 10);
+const demoCreatedAt = "2026-05-02T00:00:00.000Z";
 
-const users: UserAccount[] = [
+const departments: Department[] = [
   {
-    id: "user-admin",
-    username: "admin",
-    displayName: "현장관리자",
-    role: "admin",
-    departmentId: null,
-    departmentCode: null,
-    departmentName: null,
+    id: "dept-memory",
+    code: "memory",
+    name: "메모리",
     isActive: true,
-    passwordHash: demoPasswordHash,
   },
   {
-    id: "user-kim",
-    username: "kim",
-    displayName: "김민수",
-    role: "user",
-    departmentId: null,
-    departmentCode: null,
-    departmentName: null,
+    id: "dept-memory-pcs",
+    code: "memory_pcs",
+    name: "메모리PCS",
     isActive: true,
-    passwordHash: demoPasswordHash,
   },
   {
-    id: "user-park",
-    username: "park",
-    displayName: "박지훈",
-    role: "user",
-    departmentId: null,
-    departmentCode: null,
-    departmentName: null,
+    id: "dept-foundry-pcs",
+    code: "foundry_pcs",
+    name: "파운드리PCS",
     isActive: true,
-    passwordHash: demoPasswordHash,
-  },
-  {
-    id: "user-choi",
-    username: "choi",
-    displayName: "최유진",
-    role: "user",
-    departmentId: null,
-    departmentCode: null,
-    departmentName: null,
-    isActive: true,
-    passwordHash: demoPasswordHash,
-  },
-  {
-    id: "user-lee",
-    username: "lee",
-    displayName: "이서준",
-    role: "user",
-    departmentId: null,
-    departmentCode: null,
-    departmentName: null,
-    isActive: true,
-    passwordHash: demoPasswordHash,
   },
 ];
 
-const zones: Zone[] = [
+function getDepartment(departmentId: string | null): Department | null {
+  if (!departmentId) {
+    return null;
+  }
+
+  return departments.find((department) => department.id === departmentId) ?? null;
+}
+
+function buildUser(
+  id: string,
+  username: string,
+  displayName: string,
+  role: UserRole,
+  departmentId: string,
+  isActive: boolean = true,
+): UserAccount {
+  const department = getDepartment(departmentId);
+
+  return {
+    id,
+    username,
+    displayName,
+    role,
+    departmentId,
+    departmentCode: department?.code ?? null,
+    departmentName: department?.name ?? null,
+    isActive,
+    passwordHash: demoPasswordHash,
+  };
+}
+
+const users: UserAccount[] = [
+  buildUser("user-admin", "admin", "개발자 마스터", "master", "dept-memory-pcs"),
+  buildUser("user-memory-admin", "memory_admin", "메모리 부서장", "admin", "dept-memory"),
+  buildUser("user-memory-pcs-admin", "memory_pcs_admin", "메모리PCS 부서장", "admin", "dept-memory-pcs"),
+  buildUser("user-foundry-pcs-admin", "foundry_pcs_admin", "파운드리PCS 부서장", "admin", "dept-foundry-pcs"),
+  buildUser("user-kim", "kim", "김민수", "user", "dept-memory-pcs"),
+  buildUser("user-park", "park", "박지훈", "sub_admin", "dept-memory-pcs"),
+  buildUser("user-choi", "choi", "최유진", "user", "dept-memory"),
+  buildUser("user-lee", "lee", "이서준", "user", "dept-foundry-pcs"),
+  buildUser("user-han", "han", "한지아", "sub_admin", "dept-foundry-pcs"),
+  buildUser("user-yoon", "yoon", "윤도현", "user", "dept-memory", false),
+];
+
+let zones: Zone[] = [
   {
     id: "entry-main",
     name: "정문",
@@ -111,7 +123,28 @@ const zones: Zone[] = [
   },
 ];
 
-let settings: AppSettings = buildOperationalSettings(100);
+function buildDemoSettings(): AppSettings {
+  const nextSettings = buildOperationalSettings(100);
+  nextSettings.departmentSettings = departments.map((department) => {
+    const departmentSettings = buildDepartmentAttendanceSettings(department, nextSettings);
+
+    if (department.code === "memory") {
+      departmentSettings.dayShift.checkInWindow = { start: "06:10", end: "08:40" };
+      departmentSettings.dayShift.checkOutWindow = { start: "16:40", end: "18:10" };
+    }
+
+    if (department.code === "foundry_pcs") {
+      departmentSettings.dayShift.checkInWindow = { start: "05:50", end: "08:20" };
+      departmentSettings.dayShift.checkOutWindow = { start: "16:20", end: "17:50" };
+    }
+
+    return departmentSettings;
+  });
+
+  return nextSettings;
+}
+
+let settings: AppSettings = buildDemoSettings();
 
 let attendanceRecords: AttendanceRecord[] = [];
 
@@ -352,6 +385,161 @@ export function getSessionUser(username: string): SessionUser | null {
   };
 }
 
+function mapAdminUser(user: UserAccount): AdminUserListItem {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    departmentId: user.departmentId,
+    departmentCode: user.departmentCode,
+    departmentName: user.departmentName,
+    isActive: user.isActive,
+    createdAt: demoCreatedAt,
+  };
+}
+
+function canDepartmentAdminManageRole(role: UserRole): boolean {
+  return role === "user" || role === "sub_admin";
+}
+
+function applyDepartmentToUser(user: UserAccount, departmentId: string) {
+  const department = getDepartment(departmentId);
+
+  user.departmentId = departmentId;
+  user.departmentCode = department?.code ?? null;
+  user.departmentName = department?.name ?? null;
+}
+
+export function getDepartments(): Department[] {
+  return departments;
+}
+
+export function getAdminUsers(departmentId?: string | null): AdminUserListItem[] {
+  return users
+    .filter((user) => {
+      if (departmentId === undefined) {
+        return true;
+      }
+
+      return departmentId ? user.departmentId === departmentId : false;
+    })
+    .map(mapAdminUser);
+}
+
+export function saveAdminUser(
+  input: AdminUserMutationInput,
+  actor: SessionUser,
+): { ok: boolean; message: string } {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return { ok: false, message: "계정 관리 권한이 없습니다." };
+  }
+
+  if (!input.departmentId || !getDepartment(input.departmentId)) {
+    return { ok: false, message: "부서를 선택하세요." };
+  }
+
+  if (actor.role === "admin") {
+    if (!actor.departmentId) {
+      return { ok: false, message: "소속 부서가 지정되지 않아 계정을 관리할 수 없습니다." };
+    }
+
+    if (input.mode === "create") {
+      return { ok: false, message: "데모 정책상 부서장은 새 계정을 만들 수 없습니다." };
+    }
+
+    if (!canDepartmentAdminManageRole(input.role)) {
+      return { ok: false, message: "부서장은 일반 사용자와 부관리자 권한만 지정할 수 있습니다." };
+    }
+  }
+
+  if (input.mode === "create") {
+    if (users.some((user) => user.username === input.username)) {
+      return { ok: false, message: "이미 존재하는 아이디입니다." };
+    }
+
+    users.push(
+      buildUser(
+        `user-demo-${input.username}`,
+        input.username,
+        input.displayName,
+        input.role,
+        input.departmentId,
+        input.isActive,
+      ),
+    );
+
+    return { ok: true, message: "데모 계정을 생성했습니다." };
+  }
+
+  const user = users.find((entry) => entry.username === input.username);
+
+  if (!user) {
+    return { ok: false, message: "사용자 정보를 찾을 수 없습니다." };
+  }
+
+  if (actor.role === "admin") {
+    if (user.departmentId !== actor.departmentId) {
+      return { ok: false, message: "소속 부서 사용자만 관리할 수 있습니다." };
+    }
+
+    if (!canDepartmentAdminManageRole(user.role)) {
+      return { ok: false, message: "관리자 또는 마스터 계정은 수정할 수 없습니다." };
+    }
+  }
+
+  const lastActiveMaster =
+    user.role === "master" &&
+    user.isActive &&
+    (input.role !== "master" || !input.isActive) &&
+    users.filter((entry) => entry.role === "master" && entry.isActive).length <= 1;
+
+  if (lastActiveMaster) {
+    return { ok: false, message: "마지막 활성 마스터 계정은 변경할 수 없습니다." };
+  }
+
+  user.displayName = input.displayName;
+  user.role = input.role;
+  user.isActive = input.isActive;
+  applyDepartmentToUser(user, input.departmentId);
+
+  return { ok: true, message: "데모 사용자 정보를 저장했습니다." };
+}
+
+export function deleteAdminUser(username: string, actor: SessionUser): { ok: boolean; message: string } {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return { ok: false, message: "계정 관리 권한이 없습니다." };
+  }
+
+  if (actor.username === username) {
+    return { ok: false, message: "본인 계정은 비활성화할 수 없습니다." };
+  }
+
+  const user = users.find((entry) => entry.username === username);
+
+  if (!user) {
+    return { ok: false, message: "사용자 정보를 찾을 수 없습니다." };
+  }
+
+  if (actor.role === "admin") {
+    if (!actor.departmentId || user.departmentId !== actor.departmentId) {
+      return { ok: false, message: "소속 부서 사용자만 비활성화할 수 있습니다." };
+    }
+
+    if (!canDepartmentAdminManageRole(user.role)) {
+      return { ok: false, message: "관리자 또는 마스터 계정은 비활성화할 수 없습니다." };
+    }
+  }
+
+  if (user.role === "master" && user.isActive && users.filter((entry) => entry.role === "master" && entry.isActive).length <= 1) {
+    return { ok: false, message: "마지막 활성 마스터 계정은 비활성화할 수 없습니다." };
+  }
+
+  user.isActive = false;
+
+  return { ok: true, message: "데모 계정을 비활성화했습니다. 출퇴근 기록은 보존됩니다." };
+}
+
 export function getUserTodayView(username: string): UserTodayView {
   const sessionUser = getSessionUser(username);
 
@@ -390,9 +578,16 @@ export function getUserTodayView(username: string): UserTodayView {
   };
 }
 
-export function getDashboardView() {
+export function getDashboardView(departmentId?: string | null) {
   const workDate = getKoreaDateKey();
-  const scheduledUsers = getTodayRoster();
+  const scheduledUsers = getTodayRoster().filter((entry) => {
+    if (departmentId === undefined) {
+      return true;
+    }
+
+    const user = users.find((candidate) => candidate.username === entry.username);
+    return departmentId ? user?.departmentId === departmentId : false;
+  });
   const rows = scheduledUsers.map((entry) => getRecord(workDate, entry.username) ?? buildEmptyRecord(workDate, entry.username, entry.displayName));
   const currentPeriod = getCurrentPeriod(settings);
 
@@ -438,6 +633,42 @@ export function getZones(): Zone[] {
 
 export function getSettings(): AppSettings {
   return settings;
+}
+
+export function saveAdminConfiguration(
+  input: { settings: AppSettings; zones: Zone[] },
+  actorRole: UserRole,
+  actorDepartmentId: string | null,
+): { ok: boolean; message: string } {
+  if (actorRole !== "master" && actorRole !== "admin") {
+    return { ok: false, message: "운영 설정을 저장할 권한이 없습니다." };
+  }
+
+  if (actorRole === "admin") {
+    if (!actorDepartmentId) {
+      return { ok: false, message: "소속 부서가 지정되지 않아 운영 설정을 저장할 수 없습니다." };
+    }
+
+    const nextDepartmentSetting = input.settings.departmentSettings.find((department) => department.id === actorDepartmentId);
+
+    if (!nextDepartmentSetting) {
+      return { ok: false, message: "부서 설정 정보를 찾을 수 없습니다." };
+    }
+
+    settings = {
+      ...settings,
+      departmentSettings: settings.departmentSettings.map((department) =>
+        department.id === actorDepartmentId ? nextDepartmentSetting : department,
+      ),
+    };
+
+    return { ok: true, message: "데모 부서 시간 설정을 저장했습니다." };
+  }
+
+  settings = input.settings;
+  zones = input.zones;
+
+  return { ok: true, message: "데모 운영 설정을 저장했습니다." };
 }
 
 export function getDevCoordinates(): Partial<Record<AttendanceAction, { latitude: number; longitude: number; accuracyM: number }>> {
