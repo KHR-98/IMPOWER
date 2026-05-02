@@ -30,6 +30,11 @@ interface AdminSettingsPanelProps {
 type TimeSettingsMode = "weekday" | "weekend";
 type WeekendSettingsKey = "checkInWindow" | "checkOutWindow";
 
+const TIME_MODE_OPTIONS: Array<{ key: TimeSettingsMode; label: string }> = [
+  { key: "weekday", label: "주간" },
+  { key: "weekend", label: "주말" },
+];
+
 function createZoneDraft(zones: Zone[]): Zone {
   const fallbackZone = zones.find((zone) => !isLegacyPlaceholderZone(zone)) ?? zones[0];
 
@@ -236,7 +241,7 @@ export function AdminSettingsPanel({
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
     actorDepartmentId !== undefined
       ? actorDepartmentId
-      : initialSettings.departmentSettings[0]?.id ?? null,
+      : null,
   );
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
@@ -244,6 +249,12 @@ export function AdminSettingsPanel({
   const [message, setMessage] = useState<string | null>(
     enabled ? (canEdit ? null : "운영 설정은 조회만 가능합니다.") : "현재 저장소에서는 운영 설정을 수정할 수 없습니다.",
   );
+  const visibleDepartments = settings.departmentSettings.filter((department) => !isDeptAdmin || department.id === actorDepartmentId);
+  const selectedDepartment = visibleDepartments.find((department) => department.id === selectedDepartmentId) ?? null;
+  const selectedDepartmentHasWeekend = Boolean(selectedDepartment?.weekendShift);
+  const timeModeOptions = TIME_MODE_OPTIONS.filter((option) => option.key === "weekday" || selectedDepartmentHasWeekend);
+  const pickerSettings = getDepartmentPickerSettings(settings, selectedDepartment);
+  const weekendSettings = getWeekendShiftSettings(settings, selectedDepartment);
 
   useEffect(() => {
     if (selectedZoneId !== null && !zones.some((zone) => zone.id === selectedZoneId)) {
@@ -252,24 +263,21 @@ export function AdminSettingsPanel({
   }, [selectedZoneId, zones]);
 
   useEffect(() => {
-    if (actorDepartmentId) {
+    if (actorDepartmentId !== undefined) {
       setSelectedDepartmentId(actorDepartmentId);
       return;
     }
 
-    if (settings.departmentSettings.length === 0) {
+    if (selectedDepartmentId && !settings.departmentSettings.some((department) => department.id === selectedDepartmentId)) {
       setSelectedDepartmentId(null);
-      return;
-    }
-
-    if (!selectedDepartmentId || !settings.departmentSettings.some((department) => department.id === selectedDepartmentId)) {
-      setSelectedDepartmentId(settings.departmentSettings[0]?.id ?? null);
     }
   }, [actorDepartmentId, selectedDepartmentId, settings.departmentSettings]);
 
-  const selectedDepartment = settings.departmentSettings.find((department) => department.id === selectedDepartmentId) ?? null;
-  const pickerSettings = getDepartmentPickerSettings(settings, selectedDepartment);
-  const weekendSettings = getWeekendShiftSettings(settings, selectedDepartment);
+  useEffect(() => {
+    if (selectedDepartmentId && timeMode === "weekend" && !selectedDepartmentHasWeekend) {
+      setTimeMode("weekday");
+    }
+  }, [selectedDepartmentHasWeekend, selectedDepartmentId, timeMode]);
 
   function updateTimeWindow(key: SettingsKey, field: "start" | "end", value: string) {
     if (selectedDepartment) {
@@ -382,44 +390,48 @@ export function AdminSettingsPanel({
       </div>
 
       <div className="wheel-settings-wrap">
-        <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className={timeMode === "weekday" ? "button" : "button-subtle"}
-            disabled={!enabled || pending}
-            onClick={() => setTimeMode("weekday")}
-          >
-            주간
-          </button>
-          <button
-            type="button"
-            className={timeMode === "weekend" ? "button" : "button-subtle"}
-            disabled={!enabled || pending || settings.departmentSettings.length === 0}
-            onClick={() => setTimeMode("weekend")}
-          >
-            주말
-          </button>
-        </div>
-
-        {settings.departmentSettings.length > 0 ? (
+        {visibleDepartments.length > 0 ? (
           <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
-            {settings.departmentSettings
-              .filter((department) => !isDeptAdmin || department.id === actorDepartmentId)
-              .map((department) => (
-                <button
-                  key={department.id}
-                  type="button"
-                  className={department.id === selectedDepartmentId ? "button" : "button-subtle"}
-                  disabled={!enabled || pending || isDeptAdmin}
-                  onClick={() => setSelectedDepartmentId(department.id)}
-                >
-                  {department.name}
-                </button>
-              ))}
+            {visibleDepartments.map((department) => (
+              <button
+                key={department.id}
+                type="button"
+                className={department.id === selectedDepartmentId ? "button" : "button-subtle"}
+                disabled={!enabled || pending || isDeptAdmin}
+                onClick={() => {
+                  setSelectedDepartmentId(department.id);
+                  if (timeMode === "weekend" && !department.weekendShift) {
+                    setTimeMode("weekday");
+                  }
+                }}
+              >
+                {department.name}
+              </button>
+            ))}
           </div>
         ) : null}
 
-        {timeMode === "weekday" ? (
+        {selectedDepartment ? (
+          <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
+            {timeModeOptions.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={timeMode === option.key ? "button" : "button-subtle"}
+                disabled={!enabled || pending}
+                onClick={() => setTimeMode(option.key)}
+              >
+                {selectedDepartment.name} {option.label}
+              </button>
+            ))}
+          </div>
+        ) : visibleDepartments.length > 0 ? (
+          <div className="notice">부서를 선택하면 해당 부서의 주간/주말 시간 설정이 표시됩니다.</div>
+        ) : (
+          <div className="notice">시간 설정을 편집할 부서가 없습니다.</div>
+        )}
+
+        {selectedDepartment && timeMode === "weekday" ? (
           <CombinedTimeSettingsPicker
             settings={pickerSettings}
             onChangeWindow={updateTimeWindow}
@@ -431,9 +443,7 @@ export function AdminSettingsPanel({
             onChangeWindow={updateWeekendTimeWindow}
             disabled={!isEditing || !enabled || !canEdit || pending}
           />
-        ) : (
-          <div className="notice">주말 시간을 수정할 부서를 먼저 선택해주세요.</div>
-        )}
+        ) : null}
 
         <div className="field" style={{ maxWidth: 240 }}>
           <label htmlFor="max-gps-accuracy">GPS 허용 오차(m)</label>

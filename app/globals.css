@@ -496,6 +496,23 @@ button {
   gap: 14px;
 }
 
+.dev-login-stack form {
+  width: 100%;
+}
+
+.dev-login-button {
+  width: 100%;
+  min-height: 58px;
+  justify-content: space-between;
+  border-radius: 16px;
+  padding: 0 18px;
+}
+
+.dev-login-role {
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 /* ── Kakao Button ────────────────────────────── */
 .kakao-login-button {
   width: 100%;

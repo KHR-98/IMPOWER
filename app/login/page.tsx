@@ -26,7 +26,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   }
 
   const { error: errorCode } = await searchParams;
-  const kakaoError = errorCode ? (KAKAO_ERROR_MESSAGES[errorCode] ?? null) : null;
+  const isDevLogin = process.env.NODE_ENV !== "production";
+  const kakaoError = !isDevLogin && errorCode ? (KAKAO_ERROR_MESSAGES[errorCode] ?? null) : null;
 
   return (
     <main className="login-shell">
@@ -41,8 +42,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <div>{kakaoError}</div>
             </div>
           ) : null}
-          <p className="login-guide">카카오 계정으로 간편하게 로그인하세요</p>
-          <LoginForm />
+          <p className="login-guide">
+            {isDevLogin ? "개발 모드 계정을 선택하세요." : "카카오 계정으로 간편하게 로그인하세요"}
+          </p>
+          <LoginForm devMode={isDevLogin} />
         </div>
       </section>
     </main>

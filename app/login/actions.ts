@@ -3,9 +3,10 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { authenticateUser, changePassword } from "@/lib/app-data";
+import { authenticateUser, changePassword, getDepartments } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
 import { isAdminRole } from "@/lib/permissions";
+import type { SessionUser, UserRole } from "@/lib/types";
 
 export interface LoginState {
   error: string | null;
@@ -20,6 +21,44 @@ const loginSchema = z.object({
   username: z.string().trim().min(1, "아이디를 입력하세요."),
   password: z.string().trim().min(1, "비밀번호를 입력하세요."),
 });
+
+const devLoginSchema = z.object({
+  role: z.enum(["master", "admin", "sub_admin", "user"]),
+});
+
+const DEV_LOGIN_ACCOUNTS: Record<
+  UserRole,
+  { username: string; displayName: string; role: UserRole; departmentCode: string | null; departmentName: string | null }
+> = {
+  master: {
+    username: "admin",
+    displayName: "개발자 마스터",
+    role: "master",
+    departmentCode: null,
+    departmentName: null,
+  },
+  admin: {
+    username: "memory_pcs_admin",
+    displayName: "메모리PCS 팀장",
+    role: "admin",
+    departmentCode: "memory_pcs",
+    departmentName: "메모리PCS",
+  },
+  sub_admin: {
+    username: "park",
+    displayName: "메모리PCS 조장",
+    role: "sub_admin",
+    departmentCode: "memory_pcs",
+    departmentName: "메모리PCS",
+  },
+  user: {
+    username: "kim",
+    displayName: "김민수",
+    role: "user",
+    departmentCode: "memory_pcs",
+    departmentName: "메모리PCS",
+  },
+};
 
 const changePasswordSchema = z
   .object({
@@ -65,6 +104,39 @@ export async function loginAction(_previousState: LoginState, formData: FormData
       error: "아이디 또는 비밀번호가 올바르지 않습니다.",
     };
   }
+
+  await createSession(user);
+  redirect(isAdminRole(user.role) ? "/admin" : "/dashboard");
+}
+
+export async function devLoginAction(formData: FormData) {
+  if (process.env.NODE_ENV === "production") {
+    redirect("/login");
+  }
+
+  const parsed = devLoginSchema.safeParse({
+    role: formData.get("role"),
+  });
+
+  if (!parsed.success) {
+    redirect("/login");
+  }
+
+  const account = DEV_LOGIN_ACCOUNTS[parsed.data.role];
+  const authenticatedUser = await authenticateUser(account.username, "demo1234").catch(() => null);
+  const departments = await getDepartments().catch(() => []);
+  const fallbackDepartment = account.departmentCode
+    ? departments.find((department) => department.code === account.departmentCode)
+    : null;
+
+  const user: SessionUser = {
+    username: account.username,
+    displayName: authenticatedUser?.displayName ?? account.displayName,
+    role: account.role,
+    departmentId: authenticatedUser?.departmentId ?? fallbackDepartment?.id ?? null,
+    departmentCode: authenticatedUser?.departmentCode ?? fallbackDepartment?.code ?? account.departmentCode,
+    departmentName: authenticatedUser?.departmentName ?? fallbackDepartment?.name ?? account.departmentName,
+  };
 
   await createSession(user);
   redirect(isAdminRole(user.role) ? "/admin" : "/dashboard");

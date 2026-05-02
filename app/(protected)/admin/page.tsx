@@ -25,7 +25,7 @@ const ADMIN_SECTION_OPTIONS: Array<{ key: AdminSectionKey; label: string }> = [
 
 function getAdminSectionOptions(role: UserRole): Array<{ key: AdminSectionKey; label: string }> {
   if (role === "sub_admin") {
-    return ADMIN_SECTION_OPTIONS.filter((option) => option.key === "overview" || option.key === "system");
+    return ADMIN_SECTION_OPTIONS.filter((option) => option.key === "overview");
   }
 
   return ADMIN_SECTION_OPTIONS;
@@ -81,7 +81,7 @@ export default async function AdminPage({
     getDashboardView(filterDeptId),
     getRuntimeInfo(),
     canUseAccountManagement ? getAdminUserList(filterDeptId) : Promise.resolve([]),
-    selectedSection === "overview" ? getUserTodayView(session.username) : Promise.resolve(null),
+    selectedSection === "overview" ? getUserTodayView(session.username, session) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
   const currentPeriodRows = buildCurrentPeriodOperatorRows({

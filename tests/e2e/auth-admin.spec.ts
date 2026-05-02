@@ -11,7 +11,7 @@ test.describe("auth and admin smoke", () => {
     await page.goto("/admin");
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole("link", { name: "카카오로 로그인" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /마스터\s*입장/ })).toBeVisible();
   });
 
   test("clears invalid session cookie when visiting admin", async ({ context, page, baseURL }) => {
