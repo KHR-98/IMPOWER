@@ -2021,8 +2021,14 @@ function buildAttendanceWindowPayload(department: DepartmentAttendanceSettings) 
   const lateShift = department.lateShift;
   const weekendShift = department.weekendShift ?? department.dayShift;
   const tbmMorningWindow = dayShift.tbmMorningWindow ?? dayShift.checkInWindow;
+  const dayLunchOutWindow = dayShift.lunchOutWindow ?? { start: "11:40", end: "13:30" };
+  const dayLunchInWindow = dayShift.lunchInWindow ?? dayLunchOutWindow;
   const tbmAfternoonWindow = dayShift.tbmAfternoonWindow ?? { start: "13:35", end: "13:45" };
   const tbmCheckoutWindow = dayShift.tbmCheckoutWindow ?? { start: "16:30", end: "16:45" };
+  const lateLunchOutWindow = lateShift.lunchOutWindow ?? { start: "13:50", end: "15:40" };
+  const lateLunchInWindow = lateShift.lunchInWindow ?? lateLunchOutWindow;
+  const weekendLunchOutWindow = weekendShift.lunchOutWindow ?? dayLunchOutWindow;
+  const weekendLunchInWindow = weekendShift.lunchInWindow ?? weekendLunchOutWindow;
 
   return [
     {
@@ -2042,6 +2048,33 @@ function buildAttendanceWindowPayload(department: DepartmentAttendanceSettings) 
       window_end: tbmMorningWindow.end,
       is_enabled: true,
       sort_order: 20,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "lunch_register",
+      window_start: dayLunchOutWindow.start,
+      window_end: dayLunchOutWindow.end,
+      is_enabled: true,
+      sort_order: 25,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "lunch_out",
+      window_start: dayLunchOutWindow.start,
+      window_end: dayLunchOutWindow.end,
+      is_enabled: true,
+      sort_order: 26,
+    },
+    {
+      department_id: department.id,
+      shift_type: "day",
+      action_type: "lunch_in",
+      window_start: dayLunchInWindow.start,
+      window_end: dayLunchInWindow.end,
+      is_enabled: true,
+      sort_order: 27,
     },
     {
       department_id: department.id,
@@ -2082,11 +2115,38 @@ function buildAttendanceWindowPayload(department: DepartmentAttendanceSettings) 
     {
       department_id: department.id,
       shift_type: "late",
+      action_type: "lunch_register",
+      window_start: lateLunchOutWindow.start,
+      window_end: lateLunchOutWindow.end,
+      is_enabled: true,
+      sort_order: 20,
+    },
+    {
+      department_id: department.id,
+      shift_type: "late",
+      action_type: "lunch_out",
+      window_start: lateLunchOutWindow.start,
+      window_end: lateLunchOutWindow.end,
+      is_enabled: true,
+      sort_order: 21,
+    },
+    {
+      department_id: department.id,
+      shift_type: "late",
+      action_type: "lunch_in",
+      window_start: lateLunchInWindow.start,
+      window_end: lateLunchInWindow.end,
+      is_enabled: true,
+      sort_order: 22,
+    },
+    {
+      department_id: department.id,
+      shift_type: "late",
       action_type: "check_out",
       window_start: lateShift.checkOutWindow.start,
       window_end: lateShift.checkOutWindow.end,
       is_enabled: true,
-      sort_order: 20,
+      sort_order: 30,
     },
     {
       department_id: department.id,
@@ -2100,11 +2160,38 @@ function buildAttendanceWindowPayload(department: DepartmentAttendanceSettings) 
     {
       department_id: department.id,
       shift_type: "weekend",
+      action_type: "lunch_register",
+      window_start: weekendLunchOutWindow.start,
+      window_end: weekendLunchOutWindow.end,
+      is_enabled: true,
+      sort_order: 20,
+    },
+    {
+      department_id: department.id,
+      shift_type: "weekend",
+      action_type: "lunch_out",
+      window_start: weekendLunchOutWindow.start,
+      window_end: weekendLunchOutWindow.end,
+      is_enabled: true,
+      sort_order: 21,
+    },
+    {
+      department_id: department.id,
+      shift_type: "weekend",
+      action_type: "lunch_in",
+      window_start: weekendLunchInWindow.start,
+      window_end: weekendLunchInWindow.end,
+      is_enabled: true,
+      sort_order: 22,
+    },
+    {
+      department_id: department.id,
+      shift_type: "weekend",
       action_type: "check_out",
       window_start: weekendShift.checkOutWindow.start,
       window_end: weekendShift.checkOutWindow.end,
       is_enabled: true,
-      sort_order: 20,
+      sort_order: 30,
     },
   ];
 }

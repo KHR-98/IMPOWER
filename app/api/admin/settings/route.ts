@@ -71,10 +71,14 @@ const adminSettingsSchema = z
     const departmentWindows = value.settings.departmentSettings.flatMap((department) => [
       [`${department.name} 주간 출근`, department.dayShift.checkInWindow],
       [`${department.name} 주간 오전 TBM`, department.dayShift.tbmMorningWindow],
+      [`${department.name} 주간 점심 등록/출문`, department.dayShift.lunchOutWindow],
+      [`${department.name} 주간 점심 입문`, department.dayShift.lunchInWindow],
       [`${department.name} 주간 오후 TBM`, department.dayShift.tbmAfternoonWindow],
       [`${department.name} 주간 퇴근 TBM`, department.dayShift.tbmCheckoutWindow],
       [`${department.name} 주간 퇴근`, department.dayShift.checkOutWindow],
       [`${department.name} 늦조 출근`, department.lateShift.checkInWindow],
+      [`${department.name} 늦조 점심 등록/출문`, department.lateShift.lunchOutWindow],
+      [`${department.name} 늦조 점심 입문`, department.lateShift.lunchInWindow],
       [`${department.name} 늦조 퇴근`, department.lateShift.checkOutWindow],
     ] as const);
 
@@ -82,6 +86,8 @@ const adminSettingsSchema = z
       department.weekendShift
         ? ([
             [`${department.name} 주말 출근`, department.weekendShift.checkInWindow],
+            [`${department.name} 주말 점심 등록/출문`, department.weekendShift.lunchOutWindow],
+            [`${department.name} 주말 점심 입문`, department.weekendShift.lunchInWindow],
             [`${department.name} 주말 퇴근`, department.weekendShift.checkOutWindow],
           ] as const)
         : [],

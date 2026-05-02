@@ -28,7 +28,7 @@ interface AdminSettingsPanelProps {
 }
 
 type TimeSettingsMode = "weekday" | "weekend";
-type WeekendSettingsKey = "checkInWindow" | "checkOutWindow";
+type WeekendSettingsKey = "checkInWindow" | "lunchOutWindow" | "lunchInWindow" | "checkOutWindow";
 
 const TIME_MODE_OPTIONS: Array<{ key: TimeSettingsMode; label: string }> = [
   { key: "weekday", label: "주간" },
@@ -44,6 +44,10 @@ const WEEKDAY_TIME_GROUPS: Array<{
     segments: [
       { label: "주간조 출근 시작", key: "checkInWindow", field: "start" },
       { label: "주간조 출근 종료", key: "checkInWindow", field: "end" },
+      { label: "주간조 점심 등록/출문 시작", key: "lunchOutWindow", field: "start" },
+      { label: "주간조 점심 등록/출문 종료", key: "lunchOutWindow", field: "end" },
+      { label: "주간조 점심 입문 시작", key: "lunchInWindow", field: "start" },
+      { label: "주간조 점심 입문 종료", key: "lunchInWindow", field: "end" },
       { label: "주간조 퇴근 시작", key: "checkOutWindow", field: "start" },
       { label: "주간조 퇴근 종료", key: "checkOutWindow", field: "end" },
     ],
@@ -64,6 +68,10 @@ const WEEKDAY_TIME_GROUPS: Array<{
     segments: [
       { label: "늦조 출근 시작", key: "lateCheckInWindow", field: "start" },
       { label: "늦조 출근 종료", key: "lateCheckInWindow", field: "end" },
+      { label: "늦조 점심 등록/출문 시작", key: "lateLunchOutWindow", field: "start" },
+      { label: "늦조 점심 등록/출문 종료", key: "lateLunchOutWindow", field: "end" },
+      { label: "늦조 점심 입문 시작", key: "lateLunchInWindow", field: "start" },
+      { label: "늦조 점심 입문 종료", key: "lateLunchInWindow", field: "end" },
       { label: "늦조 퇴근 시작", key: "lateCheckOutWindow", field: "start" },
       { label: "늦조 퇴근 종료", key: "lateCheckOutWindow", field: "end" },
     ],
@@ -73,6 +81,10 @@ const WEEKDAY_TIME_GROUPS: Array<{
 const WEEKEND_TIME_SEGMENTS: TimeSettingsSegment[] = [
   { label: "주말 출근 시작", key: "checkInWindow", field: "start" },
   { label: "주말 출근 종료", key: "checkInWindow", field: "end" },
+  { label: "주말 점심 등록/출문 시작", key: "lunchOutWindow", field: "start" },
+  { label: "주말 점심 등록/출문 종료", key: "lunchOutWindow", field: "end" },
+  { label: "주말 점심 입문 시작", key: "lunchInWindow", field: "start" },
+  { label: "주말 점심 입문 종료", key: "lunchInWindow", field: "end" },
   { label: "주말 퇴근 시작", key: "checkOutWindow", field: "start" },
   { label: "주말 퇴근 종료", key: "checkOutWindow", field: "end" },
 ];
@@ -114,10 +126,14 @@ function getDepartmentPickerSettings(
     return {
       checkInWindow: settings.checkInWindow,
       tbmWindow: settings.tbmWindow,
+      lunchOutWindow: fallbackWindow(settings.dayShift.lunchOutWindow, settings.checkInWindow),
+      lunchInWindow: fallbackWindow(settings.dayShift.lunchInWindow, settings.checkOutWindow),
       tbmAfternoonWindow: settings.tbmAfternoonWindow,
       tbmCheckoutWindow: settings.tbmCheckoutWindow,
       checkOutWindow: settings.checkOutWindow,
       lateCheckInWindow: settings.lateCheckInWindow,
+      lateLunchOutWindow: fallbackWindow(settings.lateShift.lunchOutWindow, settings.lateCheckInWindow),
+      lateLunchInWindow: fallbackWindow(settings.lateShift.lunchInWindow, settings.lateCheckOutWindow),
       lateCheckOutWindow: settings.lateCheckOutWindow,
     };
   }
@@ -125,10 +141,14 @@ function getDepartmentPickerSettings(
   return {
     checkInWindow: department.dayShift.checkInWindow,
     tbmWindow: fallbackWindow(department.dayShift.tbmMorningWindow, department.dayShift.checkInWindow),
+    lunchOutWindow: fallbackWindow(department.dayShift.lunchOutWindow, settings.dayShift.lunchOutWindow ?? department.dayShift.checkInWindow),
+    lunchInWindow: fallbackWindow(department.dayShift.lunchInWindow, settings.dayShift.lunchInWindow ?? department.dayShift.checkOutWindow),
     tbmAfternoonWindow: fallbackWindow(department.dayShift.tbmAfternoonWindow, settings.tbmAfternoonWindow),
     tbmCheckoutWindow: fallbackWindow(department.dayShift.tbmCheckoutWindow, settings.tbmCheckoutWindow),
     checkOutWindow: department.dayShift.checkOutWindow,
     lateCheckInWindow: department.lateShift.checkInWindow,
+    lateLunchOutWindow: fallbackWindow(department.lateShift.lunchOutWindow, settings.lateShift.lunchOutWindow ?? department.lateShift.checkInWindow),
+    lateLunchInWindow: fallbackWindow(department.lateShift.lunchInWindow, settings.lateShift.lunchInWindow ?? department.lateShift.checkOutWindow),
     lateCheckOutWindow: department.lateShift.checkOutWindow,
   };
 }
@@ -168,10 +188,14 @@ function patchDepartmentWindow(
 
   if (key === "checkInWindow") next.dayShift.checkInWindow[field] = value;
   if (key === "tbmWindow") next.dayShift.tbmMorningWindow = { ...fallbackWindow(next.dayShift.tbmMorningWindow, next.dayShift.checkInWindow), [field]: value };
+  if (key === "lunchOutWindow") next.dayShift.lunchOutWindow = { ...fallbackWindow(next.dayShift.lunchOutWindow, fallbackSettings.dayShift.lunchOutWindow ?? next.dayShift.checkInWindow), [field]: value };
+  if (key === "lunchInWindow") next.dayShift.lunchInWindow = { ...fallbackWindow(next.dayShift.lunchInWindow, fallbackSettings.dayShift.lunchInWindow ?? next.dayShift.checkOutWindow), [field]: value };
   if (key === "tbmAfternoonWindow") next.dayShift.tbmAfternoonWindow = { ...fallbackWindow(next.dayShift.tbmAfternoonWindow, fallbackSettings.tbmAfternoonWindow), [field]: value };
   if (key === "tbmCheckoutWindow") next.dayShift.tbmCheckoutWindow = { ...fallbackWindow(next.dayShift.tbmCheckoutWindow, fallbackSettings.tbmCheckoutWindow), [field]: value };
   if (key === "checkOutWindow") next.dayShift.checkOutWindow[field] = value;
   if (key === "lateCheckInWindow") next.lateShift.checkInWindow[field] = value;
+  if (key === "lateLunchOutWindow") next.lateShift.lunchOutWindow = { ...fallbackWindow(next.lateShift.lunchOutWindow, fallbackSettings.lateShift.lunchOutWindow ?? next.lateShift.checkInWindow), [field]: value };
+  if (key === "lateLunchInWindow") next.lateShift.lunchInWindow = { ...fallbackWindow(next.lateShift.lunchInWindow, fallbackSettings.lateShift.lunchInWindow ?? next.lateShift.checkOutWindow), [field]: value };
   if (key === "lateCheckOutWindow") next.lateShift.checkOutWindow[field] = value;
 
   return next;
@@ -185,22 +209,24 @@ function patchWeekendWindow(
   fallbackSettings: AppSettings,
 ): DepartmentAttendanceSettings {
   const baseShift = department.weekendShift ?? fallbackSettings.weekendShift ?? department.dayShift;
+  const lunchOutFallback = department.dayShift.lunchOutWindow ?? fallbackSettings.dayShift.lunchOutWindow ?? department.dayShift.checkInWindow;
+  const lunchInFallback = department.dayShift.lunchInWindow ?? fallbackSettings.dayShift.lunchInWindow ?? lunchOutFallback;
   const weekendShift: ShiftAttendanceSettings = {
     ...baseShift,
     checkInWindow: cloneWindow(baseShift.checkInWindow),
     tbmMorningWindow: null,
-    lunchOutWindow: null,
-    lunchInWindow: null,
+    lunchOutWindow: baseShift.lunchOutWindow ? cloneWindow(baseShift.lunchOutWindow) : cloneWindow(lunchOutFallback),
+    lunchInWindow: baseShift.lunchInWindow ? cloneWindow(baseShift.lunchInWindow) : cloneWindow(lunchInFallback),
     tbmAfternoonWindow: null,
     tbmCheckoutWindow: null,
     checkOutWindow: cloneWindow(baseShift.checkOutWindow),
     earlyCheckOutWindow: null,
   };
 
-  weekendShift[key] = {
-    ...weekendShift[key],
-    [field]: value,
-  };
+  if (key === "checkInWindow") weekendShift.checkInWindow[field] = value;
+  if (key === "lunchOutWindow") weekendShift.lunchOutWindow = { ...fallbackWindow(weekendShift.lunchOutWindow, lunchOutFallback), [field]: value };
+  if (key === "lunchInWindow") weekendShift.lunchInWindow = { ...fallbackWindow(weekendShift.lunchInWindow, lunchInFallback), [field]: value };
+  if (key === "checkOutWindow") weekendShift.checkOutWindow[field] = value;
 
   return {
     ...department,
@@ -210,6 +236,7 @@ function patchWeekendWindow(
 
 interface WeekendTimeSettingsPickerProps {
   settings: ShiftAttendanceSettings;
+  fallbackSettings: Record<SettingsKey, TimeWindow>;
   onChangeWindow: (key: WeekendSettingsKey, field: "start" | "end", value: string) => void;
   disabled?: boolean;
 }
@@ -240,14 +267,20 @@ function WeekdayTimeSettingsPicker({ settings, onChangeWindow, disabled }: Weekd
   );
 }
 
-function WeekendTimeSettingsPicker({ settings, onChangeWindow, disabled }: WeekendTimeSettingsPickerProps) {
+function WeekendTimeSettingsPicker({ settings, fallbackSettings, onChangeWindow, disabled }: WeekendTimeSettingsPickerProps) {
+  const lunchOutWindow = fallbackWindow(settings.lunchOutWindow, fallbackSettings.lunchOutWindow);
+  const lunchInWindow = fallbackWindow(settings.lunchInWindow, fallbackSettings.lunchInWindow);
   const pickerSettings: Record<SettingsKey, TimeWindow> = {
     checkInWindow: settings.checkInWindow,
     tbmWindow: settings.checkInWindow,
+    lunchOutWindow,
+    lunchInWindow,
     tbmAfternoonWindow: settings.checkInWindow,
     tbmCheckoutWindow: settings.checkOutWindow,
     checkOutWindow: settings.checkOutWindow,
     lateCheckInWindow: settings.checkInWindow,
+    lateLunchOutWindow: lunchOutWindow,
+    lateLunchInWindow: lunchInWindow,
     lateCheckOutWindow: settings.checkOutWindow,
   };
 
@@ -260,7 +293,7 @@ function WeekendTimeSettingsPicker({ settings, onChangeWindow, disabled }: Weeke
         settings={pickerSettings}
         segments={WEEKEND_TIME_SEGMENTS}
         onChangeWindow={(key, field, value) => {
-          if (key === "checkInWindow" || key === "checkOutWindow") {
+          if (key === "checkInWindow" || key === "lunchOutWindow" || key === "lunchInWindow" || key === "checkOutWindow") {
             onChangeWindow(key, field, value);
           }
         }}
@@ -335,6 +368,15 @@ export function AdminSettingsPanel({
             : department,
         ),
       }));
+      return;
+    }
+
+    if (
+      key === "lunchOutWindow" ||
+      key === "lunchInWindow" ||
+      key === "lateLunchOutWindow" ||
+      key === "lateLunchInWindow"
+    ) {
       return;
     }
 
@@ -488,6 +530,7 @@ export function AdminSettingsPanel({
         ) : selectedDepartment ? (
           <WeekendTimeSettingsPicker
             settings={weekendSettings}
+            fallbackSettings={pickerSettings}
             onChangeWindow={updateWeekendTimeWindow}
             disabled={!isEditing || !enabled || !canEdit || pending}
           />

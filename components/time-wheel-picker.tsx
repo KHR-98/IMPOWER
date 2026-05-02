@@ -129,7 +129,18 @@ export function TimeWheelPicker({ label, value, onChange, disabled }: TimeWheelP
 }
 
 /* ── Combined Time Settings Picker ────────────── */
-export type SettingsKey = "checkInWindow" | "tbmWindow" | "tbmAfternoonWindow" | "tbmCheckoutWindow" | "checkOutWindow" | "lateCheckInWindow" | "lateCheckOutWindow";
+export type SettingsKey =
+  | "checkInWindow"
+  | "tbmWindow"
+  | "lunchOutWindow"
+  | "lunchInWindow"
+  | "tbmAfternoonWindow"
+  | "tbmCheckoutWindow"
+  | "checkOutWindow"
+  | "lateCheckInWindow"
+  | "lateLunchOutWindow"
+  | "lateLunchInWindow"
+  | "lateCheckOutWindow";
 
 export interface TimeSettingsSegment {
   label: string;
