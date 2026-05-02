@@ -31,6 +31,8 @@ import type {
   RosterSyncPreview,
   RosterSyncResult,
   SessionUser,
+  ShiftAttendanceSettings,
+  ShiftType,
   SheetUserImportPreview,
   UserTodayView,
   UserRole,
@@ -58,6 +60,17 @@ const EVENT_SUCCESS_LABELS: Record<AttendanceEventCode, string> = {
   tbm_checkout: "TBM",
   check_out: "퇴근",
 };
+
+const ATTENDANCE_WINDOW_ACTIONS = new Set<AttendanceEventCode>([
+  "check_in",
+  "tbm_morning",
+  "lunch_register",
+  "lunch_out",
+  "lunch_in",
+  "tbm_afternoon",
+  "tbm_checkout",
+  "check_out",
+]);
 
 const defaultSettings: AppSettings = buildOperationalSettings(100);
 
@@ -133,6 +146,10 @@ function mapAttendanceRecord(row: Record<string, unknown>): AttendanceRecord {
   };
 }
 
+function parseRosterShiftType(value: unknown): ShiftType {
+  return value === "late" || value === "weekend" ? value : "day";
+}
+
 function mapRosterEntry(row: Record<string, unknown>, displayName: string): RosterEntry {
   const scheduleReasonCode = parseRosterReasonCodeFromSourceKey(row.source_row_key ? String(row.source_row_key) : null);
 
@@ -142,7 +159,7 @@ function mapRosterEntry(row: Record<string, unknown>, displayName: string): Rost
     username: String(row.username),
     displayName,
     isScheduled: Boolean(row.is_scheduled),
-    shiftType: row.shift_type === "late" ? "late" : "day",
+    shiftType: parseRosterShiftType(row.shift_type),
     allowLunchOut: Boolean(row.allow_lunch_out),
     scheduleReasonCode,
     scheduleReason: scheduleReasonCode ? getRosterReasonMessage(scheduleReasonCode) : null,
@@ -164,6 +181,101 @@ function mapDepartment(row: Record<string, unknown>): Department {
     name: String(row.name),
     isActive: Boolean(row.is_active),
   };
+}
+
+function isAttendanceWindowAction(value: unknown): value is AttendanceEventCode {
+  return typeof value === "string" && ATTENDANCE_WINDOW_ACTIONS.has(value as AttendanceEventCode);
+}
+
+function normalizeTimeValue(value: unknown, fallback: string): string {
+  const text = typeof value === "string" ? value.trim() : String(value ?? "").trim();
+  const match = /^(\d{1,2}):([0-5]\d)/.exec(text);
+
+  if (!match) {
+    return fallback;
+  }
+
+  const hour = Math.max(0, Math.min(23, Number(match[1]) || 0));
+  return `${String(hour).padStart(2, "0")}:${match[2]}`;
+}
+
+function getMutableShiftSettings(
+  departmentSettings: DepartmentAttendanceSettings,
+  shiftType: ShiftType,
+): ShiftAttendanceSettings {
+  if (shiftType === "late") {
+    return departmentSettings.lateShift;
+  }
+
+  if (shiftType === "weekend") {
+    departmentSettings.weekendShift = cloneShiftSettings(departmentSettings.weekendShift ?? departmentSettings.dayShift);
+    return departmentSettings.weekendShift;
+  }
+
+  return departmentSettings.dayShift;
+}
+
+function patchShiftWindow(
+  shiftSettings: ShiftAttendanceSettings,
+  actionType: AttendanceEventCode,
+  window: { start: string; end: string },
+) {
+  switch (actionType) {
+    case "check_in":
+      shiftSettings.checkInWindow = window;
+      break;
+    case "tbm_morning":
+      shiftSettings.tbmMorningWindow = window;
+      break;
+    case "lunch_register":
+    case "lunch_out":
+      shiftSettings.lunchOutWindow = window;
+      break;
+    case "lunch_in":
+      shiftSettings.lunchInWindow = window;
+      break;
+    case "tbm_afternoon":
+      shiftSettings.tbmAfternoonWindow = window;
+      break;
+    case "tbm_checkout":
+      shiftSettings.tbmCheckoutWindow = window;
+      break;
+    case "check_out":
+      shiftSettings.checkOutWindow = window;
+      break;
+  }
+}
+
+function applyDepartmentAttendanceWindowRows(
+  departmentSettings: DepartmentAttendanceSettings[],
+  rows: Record<string, unknown>[],
+): DepartmentAttendanceSettings[] {
+  const departmentsById = new Map(departmentSettings.map((department) => [department.id, department]));
+
+  for (const row of rows) {
+    const departmentId = nullableString(row.department_id);
+    const shiftType = parseRosterShiftType(row.shift_type);
+    const actionType = row.action_type;
+
+    if (!departmentId || !isAttendanceWindowAction(actionType) || row.is_enabled === false) {
+      continue;
+    }
+
+    const department = departmentsById.get(departmentId);
+
+    if (!department) {
+      continue;
+    }
+
+    const window = {
+      start: normalizeTimeValue(row.window_start, "00:00"),
+      end: normalizeTimeValue(row.window_end, "23:59"),
+    };
+
+    patchShiftWindow(getMutableShiftSettings(department, shiftType), actionType, window);
+  }
+
+  return departmentSettings;
 }
 
 function mergeDepartmentShiftSettings(
@@ -205,6 +317,17 @@ function mergeDepartmentShiftSettings(
     start: String(row.late_check_out_start ?? departmentSettings.lateShift.checkOutWindow.start),
     end: String(row.late_check_out_end ?? departmentSettings.lateShift.checkOutWindow.end),
   };
+  departmentSettings.weekendShift = {
+    ...cloneShiftSettings(departmentSettings.weekendShift ?? departmentSettings.dayShift),
+    checkInWindow: { ...departmentSettings.dayShift.checkInWindow },
+    tbmMorningWindow: null,
+    lunchOutWindow: null,
+    lunchInWindow: null,
+    tbmAfternoonWindow: null,
+    tbmCheckoutWindow: null,
+    checkOutWindow: { ...departmentSettings.dayShift.checkOutWindow },
+    earlyCheckOutWindow: null,
+  };
 
   return departmentSettings;
 }
@@ -231,6 +354,7 @@ function applyDepartmentSettings(baseSettings: AppSettings, departmentId: string
     lateCheckOutWindow: { ...departmentSettings.lateShift.checkOutWindow },
     dayShift: cloneShiftSettings(departmentSettings.dayShift),
     lateShift: cloneShiftSettings(departmentSettings.lateShift),
+    weekendShift: cloneShiftSettings(departmentSettings.weekendShift ?? baseSettings.weekendShift ?? departmentSettings.dayShift),
     departmentSettings: baseSettings.departmentSettings,
   };
 }
@@ -1063,6 +1187,28 @@ export async function getSupabaseZones(): Promise<Zone[]> {
   return (data ?? []).map((row) => mapZone(row));
 }
 
+async function getSupabaseDepartmentAttendanceWindowRows(departmentIds: string[]): Promise<Record<string, unknown>[]> {
+  if (departmentIds.length === 0) {
+    return [];
+  }
+
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from("department_attendance_windows")
+    .select("department_id, shift_type, action_type, window_start, window_end, is_enabled")
+    .in("department_id", departmentIds);
+
+  if (error) {
+    if (isSupabaseSchemaMissingError(error)) {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return (data ?? []) as Record<string, unknown>[];
+}
+
 export async function getSupabaseSettings(): Promise<AppSettings> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
@@ -1076,41 +1222,39 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
     throw error;
   }
 
-  if (!data) {
-    return defaultSettings;
+  const settings = buildOperationalSettings(Number(data?.max_gps_accuracy_m ?? defaultSettings.maxGpsAccuracyM));
+
+  if (data) {
+    settings.checkInWindow = {
+      start: String(data.check_in_start ?? settings.checkInWindow.start),
+      end: String(data.check_in_end ?? settings.checkInWindow.end),
+    };
+    settings.tbmWindow = {
+      start: String(data.tbm_start ?? settings.tbmWindow.start),
+      end: String(data.tbm_end ?? settings.tbmWindow.end),
+    };
+    settings.tbmAfternoonWindow = {
+      start: String(data.tbm_afternoon_start ?? settings.tbmAfternoonWindow.start),
+      end: String(data.tbm_afternoon_end ?? settings.tbmAfternoonWindow.end),
+    };
+    settings.tbmCheckoutWindow = {
+      start: String(data.tbm_checkout_start ?? settings.tbmCheckoutWindow.start),
+      end: String(data.tbm_checkout_end ?? settings.tbmCheckoutWindow.end),
+    };
+    settings.checkOutWindow = {
+      start: String(data.check_out_start ?? settings.checkOutWindow.start),
+      end: String(data.check_out_end ?? settings.checkOutWindow.end),
+    };
+
+    settings.lateCheckInWindow = {
+      start: String(data.late_check_in_start ?? settings.lateCheckInWindow.start),
+      end: String(data.late_check_in_end ?? settings.lateCheckInWindow.end),
+    };
+    settings.lateCheckOutWindow = {
+      start: String(data.late_check_out_start ?? settings.lateCheckOutWindow.start),
+      end: String(data.late_check_out_end ?? settings.lateCheckOutWindow.end),
+    };
   }
-
-  const settings = buildOperationalSettings(Number(data.max_gps_accuracy_m ?? defaultSettings.maxGpsAccuracyM));
-
-  settings.checkInWindow = {
-    start: String(data.check_in_start ?? settings.checkInWindow.start),
-    end: String(data.check_in_end ?? settings.checkInWindow.end),
-  };
-  settings.tbmWindow = {
-    start: String(data.tbm_start ?? settings.tbmWindow.start),
-    end: String(data.tbm_end ?? settings.tbmWindow.end),
-  };
-  settings.tbmAfternoonWindow = {
-    start: String(data.tbm_afternoon_start ?? settings.tbmAfternoonWindow.start),
-    end: String(data.tbm_afternoon_end ?? settings.tbmAfternoonWindow.end),
-  };
-  settings.tbmCheckoutWindow = {
-    start: String(data.tbm_checkout_start ?? settings.tbmCheckoutWindow.start),
-    end: String(data.tbm_checkout_end ?? settings.tbmCheckoutWindow.end),
-  };
-  settings.checkOutWindow = {
-    start: String(data.check_out_start ?? settings.checkOutWindow.start),
-    end: String(data.check_out_end ?? settings.checkOutWindow.end),
-  };
-
-  settings.lateCheckInWindow = {
-    start: String(data.late_check_in_start ?? settings.lateCheckInWindow.start),
-    end: String(data.late_check_in_end ?? settings.lateCheckInWindow.end),
-  };
-  settings.lateCheckOutWindow = {
-    start: String(data.late_check_out_start ?? settings.lateCheckOutWindow.start),
-    end: String(data.late_check_out_end ?? settings.lateCheckOutWindow.end),
-  };
 
   settings.dayShift.checkInWindow = { ...settings.checkInWindow };
   settings.dayShift.tbmMorningWindow = { ...settings.tbmWindow };
@@ -1120,6 +1264,17 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
 
   settings.lateShift.checkInWindow = { ...settings.lateCheckInWindow };
   settings.lateShift.checkOutWindow = { ...settings.lateCheckOutWindow };
+  settings.weekendShift = {
+    ...cloneShiftSettings(settings.weekendShift ?? settings.dayShift),
+    checkInWindow: { ...settings.checkInWindow },
+    tbmMorningWindow: null,
+    lunchOutWindow: null,
+    lunchInWindow: null,
+    tbmAfternoonWindow: null,
+    tbmCheckoutWindow: null,
+    checkOutWindow: { ...settings.checkOutWindow },
+    earlyCheckOutWindow: null,
+  };
 
   const { data: deptRows } = await client
     .from("departments")
@@ -1130,18 +1285,26 @@ export async function getSupabaseSettings(): Promise<AppSettings> {
   const departments: Department[] = (deptRows ?? []).map(mapDepartment);
 
   if (departments.length > 0) {
-    const { data: deptSettingsRows } = await client
-      .from("department_settings")
-      .select("*")
-      .in("department_id", departments.map((d) => d.id));
+    const departmentIds = departments.map((d) => d.id);
+    const [{ data: deptSettingsRows, error: deptSettingsError }, attendanceWindowRows] = await Promise.all([
+      client
+        .from("department_settings")
+        .select("*")
+        .in("department_id", departmentIds),
+      getSupabaseDepartmentAttendanceWindowRows(departmentIds),
+    ]);
+
+    if (deptSettingsError) {
+      throw deptSettingsError;
+    }
 
     const deptSettingsMap = new Map(
       (deptSettingsRows ?? []).map((row) => [String(row.department_id), row as Record<string, unknown>]),
     );
 
-    settings.departmentSettings = departments.map((dept) =>
+    settings.departmentSettings = applyDepartmentAttendanceWindowRows(departments.map((dept) =>
       mergeDepartmentShiftSettings(deptSettingsMap.get(dept.id) ?? null, dept, settings),
-    );
+    ), attendanceWindowRows);
   }
 
   return settings;
@@ -1274,7 +1437,7 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
       shiftType,
       rosterEntry,
       record,
-      settings,
+      settings: effectiveSettings,
     }),
   };
 }
@@ -1304,7 +1467,7 @@ export async function getSupabaseDashboardView(departmentId?: string | null): Pr
       username: user.username,
       displayName: user.display_name,
       isScheduled: rosterRow?.is_scheduled ?? false,
-      shiftType: rosterRow?.shift_type === "late" ? "late" : "day",
+      shiftType: parseRosterShiftType(rosterRow?.shift_type),
       allowLunchOut: Boolean(rosterRow?.allow_lunch_out),
       scheduleReasonCode,
       scheduleReason: scheduleReasonCode ? getRosterReasonMessage(scheduleReasonCode) : null,
@@ -1460,6 +1623,7 @@ export async function performSupabaseAttendanceAction(input: {
         scheduleReason: getRosterReasonMessage("not_synced"),
       };
   const mappedRecord = currentRecordRow ? mapAttendanceRecord(currentRecordRow) : null;
+  const effectiveSettings = applyDepartmentSettings(settings, sessionUser.departmentId);
 
   const validation = validateAttendanceMutation({
     action: input.action,
@@ -1469,7 +1633,7 @@ export async function performSupabaseAttendanceAction(input: {
     rosterEntry,
     record: mappedRecord,
     zones,
-    settings,
+    settings: effectiveSettings,
   });
 
   if (!validation.ok || !validation.zoneId || !validation.eventCode) {
@@ -1501,7 +1665,7 @@ export async function performSupabaseAttendanceAction(input: {
       shiftType: rosterEntry.shiftType,
       rosterEntry,
       record: result.record,
-      settings,
+      settings: effectiveSettings,
     });
   }
 
@@ -1680,6 +1844,50 @@ export async function correctSupabaseAttendanceRecord(
     message: "기록을 정정하고 변경 이력을 저장했습니다.",
   };
 }
+async function upsertSupabaseWeekendAttendanceWindows(
+  departmentSettings: DepartmentAttendanceSettings[],
+): Promise<void> {
+  const payload = departmentSettings.flatMap((department) => {
+    const weekendShift = department.weekendShift;
+
+    if (!weekendShift) {
+      return [];
+    }
+
+    return [
+      {
+        department_id: department.id,
+        shift_type: "weekend",
+        action_type: "check_in",
+        window_start: weekendShift.checkInWindow.start,
+        window_end: weekendShift.checkInWindow.end,
+        is_enabled: true,
+      },
+      {
+        department_id: department.id,
+        shift_type: "weekend",
+        action_type: "check_out",
+        window_start: weekendShift.checkOutWindow.start,
+        window_end: weekendShift.checkOutWindow.end,
+        is_enabled: true,
+      },
+    ];
+  });
+
+  if (payload.length === 0) {
+    return;
+  }
+
+  const client = getSupabaseAdminClient();
+  const { error } = await client.from("department_attendance_windows").upsert(payload, {
+    onConflict: "department_id,shift_type,action_type",
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function saveSupabaseAdminConfiguration(
   input: { settings: AppSettings; zones: Zone[] },
   actorRole: "master" | "admin" | "sub_admin" | "user",
@@ -1719,6 +1927,8 @@ export async function saveSupabaseAdminConfiguration(
     if (error) {
       throw error;
     }
+
+    await upsertSupabaseWeekendAttendanceWindows([deptSetting]);
 
     return { ok: true, message: "부서 시간 설정을 저장했습니다." };
   }
@@ -1796,6 +2006,8 @@ export async function saveSupabaseAdminConfiguration(
       throw error;
     }
   }
+
+  await upsertSupabaseWeekendAttendanceWindows(input.settings.departmentSettings);
 
   const zonePayload = input.zones.map((zone) => ({
     id: zoneIdPattern.test(zone.id) ? zone.id : randomUUID(),

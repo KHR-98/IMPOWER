@@ -12,7 +12,7 @@ import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRun
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
-import type { RosterReasonCode } from "@/lib/types";
+import type { RosterReasonCode, ShiftType } from "@/lib/types";
 
 type AdminSectionKey = "overview" | "users" | "accounts" | "system";
 
@@ -99,7 +99,7 @@ export default async function AdminPage({
   const periodTableLabels = currentPeriodLabels;
   const periodTableRows = currentPeriodRows;
   const currentPeriodGridTemplate = `1.15fr repeat(${Math.max(periodTableLabels.length, 1)}, minmax(0, 1fr))`;
-  const buildAllPeriodsRow = (u: { username: string; displayName: string; shiftType: "day" | "late" }, record: typeof dashboard.rows[number] | undefined): AllPeriodsRow => ({
+  const buildAllPeriodsRow = (u: { username: string; displayName: string; shiftType: ShiftType }, record: typeof dashboard.rows[number] | undefined): AllPeriodsRow => ({
     username: u.username,
     displayName: u.displayName,
     shiftType: u.shiftType,

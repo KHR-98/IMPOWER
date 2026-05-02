@@ -31,6 +31,7 @@ const departmentSettingsSchema = z.object({
   isActive: z.boolean(),
   dayShift: shiftSettingsSchema,
   lateShift: shiftSettingsSchema,
+  weekendShift: shiftSettingsSchema.optional(),
 });
 
 const zoneSchema = z.object({
@@ -77,7 +78,16 @@ const adminSettingsSchema = z
       [`${department.name} 늦조 퇴근`, department.lateShift.checkOutWindow],
     ] as const);
 
-    for (const [label, window] of [...windows, ...departmentWindows]) {
+    const weekendDepartmentWindows = value.settings.departmentSettings.flatMap((department) =>
+      department.weekendShift
+        ? ([
+            [`${department.name} 주말 출근`, department.weekendShift.checkInWindow],
+            [`${department.name} 주말 퇴근`, department.weekendShift.checkOutWindow],
+          ] as const)
+        : [],
+    );
+
+    for (const [label, window] of [...windows, ...departmentWindows, ...weekendDepartmentWindows]) {
       if (!window) {
         continue;
       }

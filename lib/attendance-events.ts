@@ -31,10 +31,22 @@ const SHIFT_EVENT_DEFINITIONS: Record<ShiftType, EventDefinition[]> = {
     { code: "lunch_in", label: "점심 입문" },
     { code: "check_out", label: "퇴근" },
   ],
+  weekend: [
+    { code: "check_in", label: "출근" },
+    { code: "check_out", label: "퇴근" },
+  ],
 };
 
 export function getShiftLabel(shiftType: ShiftType): string {
-  return shiftType === "late" ? "늦조" : "주간조";
+  if (shiftType === "late") {
+    return "늦조";
+  }
+
+  if (shiftType === "weekend") {
+    return "주말근무";
+  }
+
+  return "주간조";
 }
 
 export function getShiftEventDefinitions(shiftType: ShiftType): EventDefinition[] {

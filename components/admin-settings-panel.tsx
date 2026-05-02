@@ -4,8 +4,8 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { KakaoZoneMap } from "@/components/kakao-zone-map";
-import { CombinedTimeSettingsPicker, type SettingsKey } from "@/components/time-wheel-picker";
-import type { AppSettings, DepartmentAttendanceSettings, TimeWindow, Zone, ZoneType } from "@/lib/types";
+import { CombinedTimeSettingsPicker, TimeWheelPicker, type SettingsKey } from "@/components/time-wheel-picker";
+import type { AppSettings, DepartmentAttendanceSettings, ShiftAttendanceSettings, TimeWindow, Zone, ZoneType } from "@/lib/types";
 
 const DEFAULT_ZONE_CENTER = {
   latitude: 37.033164,
@@ -25,6 +25,9 @@ interface AdminSettingsPanelProps {
   enabled: boolean;
   actorDepartmentId?: string | null;
 }
+
+type TimeSettingsMode = "weekday" | "weekend";
+type WeekendSettingsKey = "checkInWindow" | "checkOutWindow";
 
 function createZoneDraft(zones: Zone[]): Zone {
   const fallbackZone = zones.find((zone) => !isLegacyPlaceholderZone(zone)) ?? zones[0];
@@ -46,6 +49,13 @@ function cloneWindow(window: TimeWindow): TimeWindow {
 
 function fallbackWindow(window: TimeWindow | null, fallback: TimeWindow): TimeWindow {
   return window ? cloneWindow(window) : cloneWindow(fallback);
+}
+
+function getWeekendShiftSettings(
+  settings: AppSettings,
+  department: DepartmentAttendanceSettings | null,
+): ShiftAttendanceSettings {
+  return department?.weekendShift ?? settings.weekendShift ?? department?.dayShift ?? settings.dayShift;
 }
 
 function getDepartmentPickerSettings(
@@ -119,12 +129,102 @@ function patchDepartmentWindow(
   return next;
 }
 
+function patchWeekendWindow(
+  department: DepartmentAttendanceSettings,
+  key: WeekendSettingsKey,
+  field: "start" | "end",
+  value: string,
+  fallbackSettings: AppSettings,
+): DepartmentAttendanceSettings {
+  const baseShift = department.weekendShift ?? fallbackSettings.weekendShift ?? department.dayShift;
+  const weekendShift: ShiftAttendanceSettings = {
+    ...baseShift,
+    checkInWindow: cloneWindow(baseShift.checkInWindow),
+    tbmMorningWindow: null,
+    lunchOutWindow: null,
+    lunchInWindow: null,
+    tbmAfternoonWindow: null,
+    tbmCheckoutWindow: null,
+    checkOutWindow: cloneWindow(baseShift.checkOutWindow),
+    earlyCheckOutWindow: null,
+  };
+
+  weekendShift[key] = {
+    ...weekendShift[key],
+    [field]: value,
+  };
+
+  return {
+    ...department,
+    weekendShift,
+  };
+}
+
+interface WeekendTimeSettingsPickerProps {
+  settings: ShiftAttendanceSettings;
+  onChangeWindow: (key: WeekendSettingsKey, field: "start" | "end", value: string) => void;
+  disabled?: boolean;
+}
+
+function WeekendTimeSettingsPicker({ settings, onChangeWindow, disabled }: WeekendTimeSettingsPickerProps) {
+  return (
+    <div className="settings-grid" style={{ width: "100%" }}>
+      <div className="stack" style={{ gap: 12 }}>
+        <div className="inline-row" style={{ gap: 8 }}>
+          <span className="badge">주말 출근</span>
+          <span className="section-subtitle">
+            {settings.checkInWindow.start} - {settings.checkInWindow.end}
+          </span>
+        </div>
+        <div className="inline-row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <TimeWheelPicker
+            label="출근 시작"
+            value={settings.checkInWindow.start}
+            disabled={disabled}
+            onChange={(nextValue) => onChangeWindow("checkInWindow", "start", nextValue)}
+          />
+          <TimeWheelPicker
+            label="출근 종료"
+            value={settings.checkInWindow.end}
+            disabled={disabled}
+            onChange={(nextValue) => onChangeWindow("checkInWindow", "end", nextValue)}
+          />
+        </div>
+      </div>
+
+      <div className="stack" style={{ gap: 12 }}>
+        <div className="inline-row" style={{ gap: 8 }}>
+          <span className="badge">주말 퇴근</span>
+          <span className="section-subtitle">
+            {settings.checkOutWindow.start} - {settings.checkOutWindow.end}
+          </span>
+        </div>
+        <div className="inline-row" style={{ gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+          <TimeWheelPicker
+            label="퇴근 시작"
+            value={settings.checkOutWindow.start}
+            disabled={disabled}
+            onChange={(nextValue) => onChangeWindow("checkOutWindow", "start", nextValue)}
+          />
+          <TimeWheelPicker
+            label="퇴근 종료"
+            value={settings.checkOutWindow.end}
+            disabled={disabled}
+            onChange={(nextValue) => onChangeWindow("checkOutWindow", "end", nextValue)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminSettingsPanel({ initialSettings, initialZones, enabled, actorDepartmentId }: AdminSettingsPanelProps) {
   const router = useRouter();
   // undefined = master(전체), string = 부서 admin, null = 부서 미지정 admin
   const isDeptAdmin = actorDepartmentId !== undefined;
   const [isEditing, setIsEditing] = useState(false);
   const [isMapEditing, setIsMapEditing] = useState(false);
+  const [timeMode, setTimeMode] = useState<TimeSettingsMode>("weekday");
   const [settings, setSettings] = useState<AppSettings>(initialSettings);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(
     actorDepartmentId !== undefined
@@ -162,6 +262,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
 
   const selectedDepartment = settings.departmentSettings.find((department) => department.id === selectedDepartmentId) ?? null;
   const pickerSettings = getDepartmentPickerSettings(settings, selectedDepartment);
+  const weekendSettings = getWeekendShiftSettings(settings, selectedDepartment);
 
   function updateTimeWindow(key: SettingsKey, field: "start" | "end", value: string) {
     if (selectedDepartment) {
@@ -182,6 +283,21 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
         ...current[key],
         [field]: value,
       },
+    }));
+  }
+
+  function updateWeekendTimeWindow(key: WeekendSettingsKey, field: "start" | "end", value: string) {
+    if (!selectedDepartment) {
+      return;
+    }
+
+    setSettings((current) => ({
+      ...current,
+      departmentSettings: current.departmentSettings.map((department) =>
+        department.id === selectedDepartment.id
+          ? patchWeekendWindow(department, key, field, value, current)
+          : department,
+      ),
     }));
   }
 
@@ -259,6 +375,25 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
       </div>
 
       <div className="wheel-settings-wrap">
+        <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className={timeMode === "weekday" ? "button" : "button-subtle"}
+            disabled={!enabled || pending}
+            onClick={() => setTimeMode("weekday")}
+          >
+            주간
+          </button>
+          <button
+            type="button"
+            className={timeMode === "weekend" ? "button" : "button-subtle"}
+            disabled={!enabled || pending || settings.departmentSettings.length === 0}
+            onClick={() => setTimeMode("weekend")}
+          >
+            주말
+          </button>
+        </div>
+
         {settings.departmentSettings.length > 0 ? (
           <div className="inline-row" style={{ gap: 8, width: "100%", flexWrap: "wrap" }}>
             {settings.departmentSettings
@@ -277,11 +412,21 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
           </div>
         ) : null}
 
-        <CombinedTimeSettingsPicker
-          settings={pickerSettings}
-          onChangeWindow={updateTimeWindow}
-          disabled={!isEditing || !enabled || pending}
-        />
+        {timeMode === "weekday" ? (
+          <CombinedTimeSettingsPicker
+            settings={pickerSettings}
+            onChangeWindow={updateTimeWindow}
+            disabled={!isEditing || !enabled || pending}
+          />
+        ) : selectedDepartment ? (
+          <WeekendTimeSettingsPicker
+            settings={weekendSettings}
+            onChangeWindow={updateWeekendTimeWindow}
+            disabled={!isEditing || !enabled || pending}
+          />
+        ) : (
+          <div className="notice">주말 시간을 수정할 부서를 먼저 선택해주세요.</div>
+        )}
 
         <div className="field" style={{ maxWidth: 240 }}>
           <label htmlFor="max-gps-accuracy">GPS 허용 오차(m)</label>

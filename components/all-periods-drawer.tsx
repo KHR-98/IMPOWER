@@ -1,16 +1,19 @@
 import Link from "next/link";
 
 import { formatKoreaDateTime } from "@/lib/time";
+import type { ShiftType } from "@/lib/types";
 
 export interface AllPeriodsRow {
   username: string;
   displayName: string;
-  shiftType: "day" | "late";
+  shiftType: ShiftType;
   items: { label: string; done: boolean; occurredAt: string | null }[];
 }
 
 const DAY_COLUMNS = ["출근", "오전 TBM", "오후 TBM", "퇴근 TBM", "퇴근"];
 const LATE_COLUMNS = ["출근", "퇴근"];
+
+const WEEKEND_COLUMNS = ["출근", "퇴근"];
 
 export function AllPeriodsTrigger({
   open,
@@ -37,6 +40,7 @@ export function AllPeriodsTrigger({
 export function AllPeriodsExpanded({ rows, isPreview }: { rows: AllPeriodsRow[]; isPreview?: boolean }) {
   const dayRows = rows.filter((r) => r.shiftType === "day");
   const lateRows = rows.filter((r) => r.shiftType === "late");
+  const weekendRows = rows.filter((r) => r.shiftType === "weekend");
 
   return (
     <div className="all-periods-expanded">
@@ -46,6 +50,7 @@ export function AllPeriodsExpanded({ rows, isPreview }: { rows: AllPeriodsRow[];
         </div>
       )}
       <div className="all-periods-expanded-body">
+        <AllPeriodsGroup label="주말근무" rows={weekendRows} columns={WEEKEND_COLUMNS} />
         <AllPeriodsGroup label="주간조" rows={dayRows} columns={DAY_COLUMNS} />
         <AllPeriodsGroup label="늦조" rows={lateRows} columns={LATE_COLUMNS} />
       </div>

@@ -46,12 +46,25 @@ const EVENT_ZONE_TYPES: Record<AttendanceEventCode, ZoneType> = {
 };
 
 const DAY_TBM_CODES: AttendanceEventCode[] = ["tbm_morning", "tbm_afternoon", "tbm_checkout"];
+const WEEKEND_UNAVAILABLE_CODES: AttendanceEventCode[] = [
+  "tbm_morning",
+  "lunch_register",
+  "lunch_out",
+  "lunch_in",
+  "tbm_afternoon",
+  "tbm_checkout",
+];
 
 function getShiftSettings(
   settings: AppSettings,
   shiftType: RosterEntry["shiftType"],
 ): ShiftAttendanceSettings | null {
-  const shift = shiftType === "late" ? settings.lateShift : settings.dayShift;
+  const shift =
+    shiftType === "late"
+      ? settings.lateShift
+      : shiftType === "weekend"
+        ? (settings.weekendShift ?? settings.dayShift)
+        : settings.dayShift;
 
   if (!shift || typeof shift !== "object") {
     return null;
@@ -211,7 +224,7 @@ export function resolveAttendanceEventCode(
   }
 
   const shiftType = rosterEntry?.shiftType ?? "day";
-  const candidates = shiftType === "late" ? ([] as AttendanceEventCode[]) : DAY_TBM_CODES;
+  const candidates = shiftType === "day" ? DAY_TBM_CODES : ([] as AttendanceEventCode[]);
 
   for (const code of candidates) {
     if (!getRecordPoint(record, code) && isWindowActive(getEventWindow(settings, shiftType, code), now)) {
@@ -239,6 +252,10 @@ export function buildEventAvailability(
 
   if (rosterEntry.shiftType === "late" && (code === "tbm_morning" || code === "tbm_afternoon" || code === "tbm_checkout")) {
     return buildUnavailableState(code, "늦조는 TBM 버튼을 사용하지 않습니다.", occurredAt);
+  }
+
+  if (rosterEntry.shiftType === "weekend" && WEEKEND_UNAVAILABLE_CODES.includes(code)) {
+    return buildUnavailableState(code, "주말근무는 출근과 퇴근만 사용할 수 있습니다.", occurredAt);
   }
 
   if (occurredAt) {
