@@ -25,5 +25,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      ...process.env,
+      SESSION_SECRET: process.env.SESSION_SECRET ?? "dev-session-secret-change-me",
+    },
   },
 });

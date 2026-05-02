@@ -29,6 +29,13 @@ const adminUserSchema = z
         message: "비밀번호는 4자 이상이어야 합니다.",
       });
     }
+
+    if (!value.departmentId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "부서를 선택하세요.",
+      });
+    }
   });
 
 const deleteUserSchema = z.object({
@@ -54,7 +61,7 @@ async function requireAdminSession() {
 export async function PUT(request: Request) {
   const auth = await requireAdminSession();
 
-  if (auth.response) {
+  if (auth.response || !auth.session) {
     return auth.response;
   }
 
@@ -68,7 +75,7 @@ export async function PUT(request: Request) {
   const result = await saveAdminUser({
     ...parsed.data,
     departmentId: parsed.data.departmentId,
-  });
+  }, auth.session);
 
   if (!result.ok) {
     return NextResponse.json({ error: result.message }, { status: 400 });
@@ -92,7 +99,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
     }
 
-    const result = await deleteAdminUser(parsed.data.username, auth.session.username);
+    const result = await deleteAdminUser(parsed.data.username, auth.session);
 
     if (!result.ok) {
       return NextResponse.json({ error: result.message }, { status: 400 });

@@ -23,6 +23,7 @@ interface AdminSettingsPanelProps {
   initialSettings: AppSettings;
   initialZones: Zone[];
   enabled: boolean;
+  canEdit?: boolean;
   actorDepartmentId?: string | null;
 }
 
@@ -218,7 +219,13 @@ function WeekendTimeSettingsPicker({ settings, onChangeWindow, disabled }: Weeke
   );
 }
 
-export function AdminSettingsPanel({ initialSettings, initialZones, enabled, actorDepartmentId }: AdminSettingsPanelProps) {
+export function AdminSettingsPanel({
+  initialSettings,
+  initialZones,
+  enabled,
+  canEdit = enabled,
+  actorDepartmentId,
+}: AdminSettingsPanelProps) {
   const router = useRouter();
   // undefined = master(전체), string = 부서 admin, null = 부서 미지정 admin
   const isDeptAdmin = actorDepartmentId !== undefined;
@@ -235,7 +242,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(
-    enabled ? null : "현재 저장소에서는 운영 설정을 수정할 수 없습니다.",
+    enabled ? (canEdit ? null : "운영 설정은 조회만 가능합니다.") : "현재 저장소에서는 운영 설정을 수정할 수 없습니다.",
   );
 
   useEffect(() => {
@@ -367,7 +374,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
         <button
           type="button"
           className={isEditing ? "button-subtle" : "button-subtle"}
-          disabled={!enabled || pending}
+          disabled={!enabled || !canEdit || pending}
           onClick={() => { setIsEditing((v) => !v); setIsMapEditing(false); setMessage(null); }}
         >
           {isEditing ? "취소" : "수정"}
@@ -416,13 +423,13 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
           <CombinedTimeSettingsPicker
             settings={pickerSettings}
             onChangeWindow={updateTimeWindow}
-            disabled={!isEditing || !enabled || pending}
+            disabled={!isEditing || !enabled || !canEdit || pending}
           />
         ) : selectedDepartment ? (
           <WeekendTimeSettingsPicker
             settings={weekendSettings}
             onChangeWindow={updateWeekendTimeWindow}
-            disabled={!isEditing || !enabled || pending}
+            disabled={!isEditing || !enabled || !canEdit || pending}
           />
         ) : (
           <div className="notice">주말 시간을 수정할 부서를 먼저 선택해주세요.</div>
@@ -436,7 +443,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
             min={10}
             max={1000}
             value={settings.maxGpsAccuracyM}
-            disabled={!isEditing || !enabled || pending}
+            disabled={!isEditing || !enabled || !canEdit || pending}
             onChange={(event) => updateMaxGpsAccuracy(event.target.value)}
           />
         </div>
@@ -447,8 +454,8 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
           zones={zones}
           selectedZoneId={selectedZoneId}
           enabled={enabled}
-          isEditing={isMapEditing}
-          onToggleEditing={() => { setIsMapEditing((v) => !v); }}
+          isEditing={isMapEditing && canEdit}
+          onToggleEditing={() => { if (canEdit) setIsMapEditing((v) => !v); }}
           onSelectZone={setSelectedZoneId}
           onPickCoordinates={updateZoneCoordinates}
         />
@@ -461,10 +468,10 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
             <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
           </div>
           <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
-            <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending} onClick={addZone}>
+            <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || !canEdit || pending} onClick={addZone}>
               지점 추가
             </button>
-            <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || pending || !selectedZoneId} onClick={deleteZone}>
+           <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || !canEdit || pending || !selectedZoneId} onClick={deleteZone}>
               지점 삭제
             </button>
           </div>
@@ -505,7 +512,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
                 id={`zone-name-${selectedZone.id}`}
                 type="text"
                 value={selectedZone.name}
-                disabled={!isMapEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || !canEdit || pending}
                 onChange={(event) => updateZone(selectedZone.id, { name: event.target.value })}
               />
             </div>
@@ -514,7 +521,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
               <select
                 id={`zone-type-${selectedZone.id}`}
                 value={selectedZone.type}
-                disabled={!isMapEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || !canEdit || pending}
                 onChange={(event) => updateZone(selectedZone.id, { type: event.target.value as ZoneType })}
               >
                 <option value="entry">출입</option>
@@ -528,7 +535,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
                 type="number"
                 step="0.000001"
                 value={selectedZone.latitude}
-                disabled={!isMapEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || !canEdit || pending}
                 onChange={(event) => updateZone(selectedZone.id, { latitude: Number(event.target.value) })}
               />
             </div>
@@ -539,7 +546,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
                 type="number"
                 step="0.000001"
                 value={selectedZone.longitude}
-                disabled={!isMapEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || !canEdit || pending}
                 onChange={(event) => updateZone(selectedZone.id, { longitude: Number(event.target.value) })}
               />
             </div>
@@ -551,7 +558,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
                 min={10}
                 max={5000}
                 value={selectedZone.radiusM}
-                disabled={!isMapEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || !canEdit || pending}
                 onChange={(event) => updateZone(selectedZone.id, { radiusM: Number(event.target.value) })}
               />
             </div>
@@ -560,7 +567,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
                 id={`zone-active-${selectedZone.id}`}
                 type="checkbox"
                 checked={selectedZone.isActive}
-                disabled={!isMapEditing || !enabled || pending}
+                disabled={!isMapEditing || !enabled || !canEdit || pending}
                 onChange={(event) => updateZone(selectedZone.id, { isActive: event.target.checked })}
               />
               활성 지점으로 사용
@@ -573,7 +580,7 @@ export function AdminSettingsPanel({ initialSettings, initialZones, enabled, act
         <button
           type="button"
           className="button"
-          disabled={(isDeptAdmin ? !isEditing : (!isEditing && !isMapEditing)) || !enabled || pending}
+          disabled={(isDeptAdmin ? !isEditing : (!isEditing && !isMapEditing)) || !enabled || !canEdit || pending}
           onClick={handleSave}
         >
           {pending ? "저장 중..." : "운영 설정 저장"}

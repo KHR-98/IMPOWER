@@ -4,7 +4,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { getRoleLabel } from "@/lib/permissions";
-import type { AdminUserListItem, DepartmentAttendanceSettings, UserRole } from "@/lib/types";
+import type { AdminUserListItem, Department, UserRole } from "@/lib/types";
 
 const ROLE_ORDER: Record<string, number> = { master: 0, admin: 1, sub_admin: 2, user: 3 };
 
@@ -18,11 +18,19 @@ function sortUsers(users: AdminUserListItem[]): AdminUserListItem[] {
 
 interface AdminUserManagementPanelProps {
   initialUsers: AdminUserListItem[];
-  departments: DepartmentAttendanceSettings[];
+  departments: Department[];
   enabled: boolean;
+  actorRole: UserRole;
+  actorDepartmentId: string | null;
 }
 
-export function AdminUserManagementPanel({ initialUsers, departments, enabled }: AdminUserManagementPanelProps) {
+export function AdminUserManagementPanel({
+  initialUsers,
+  departments,
+  enabled,
+  actorRole,
+  actorDepartmentId,
+}: AdminUserManagementPanelProps) {
   const router = useRouter();
   const [openUsername, setOpenUsername] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>("user");
@@ -30,20 +38,44 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [departmentFilterId, setDepartmentFilterId] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState<string | null>(
     enabled ? null : "현재 저장소에서는 사용자 계정을 수정할 수 없습니다.",
   );
 
-  const openUser = openUsername ? (initialUsers.find((u) => u.username === openUsername) ?? null) : null;
+  const isMaster = actorRole === "master";
+  const manageableUsers = isMaster
+    ? initialUsers
+    : initialUsers.filter((user) =>
+        user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"),
+      );
+  const roleOptions: Array<{ value: UserRole; label: string }> = isMaster
+    ? [
+        { value: "user", label: "일반 사용자" },
+        { value: "sub_admin", label: "부관리자" },
+        { value: "admin", label: "관리자" },
+        { value: "master", label: "마스터" },
+      ]
+    : [
+        { value: "user", label: "일반 사용자" },
+        { value: "sub_admin", label: "부관리자" },
+      ];
+  const openUser = openUsername ? (manageableUsers.find((u) => u.username === openUsername) ?? null) : null;
 
   useEffect(() => {
     if (openUser) {
-      setRole(openUser.role);
+      setRole(isMaster ? openUser.role : openUser.role === "sub_admin" ? "sub_admin" : "user");
       setDepartmentId(openUser.departmentId);
       setIsActive(openUser.isActive);
     }
-  }, [openUser]);
+  }, [isMaster, openUser]);
+
+  useEffect(() => {
+    if (departmentFilterId !== "all" && !departments.some((department) => department.id === departmentFilterId)) {
+      setDepartmentFilterId("all");
+    }
+  }, [departmentFilterId, departments]);
 
   async function handleSave(user: AdminUserListItem) {
     setSaving(user.username);
@@ -98,7 +130,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
         return;
       }
 
-      setMessage(data.message ?? "계정을 삭제했습니다.");
+      setMessage(data.message ?? "계정을 비활성화했습니다.");
       setOpenUsername(null);
       startTransition(() => router.refresh());
     } catch (error) {
@@ -108,7 +140,13 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
     }
   }
 
-  const filteredUsers = sortUsers(initialUsers.filter((u) => u.displayName.includes(search.trim())));
+  const filteredUsers = sortUsers(
+    manageableUsers.filter((user) => {
+      const matchesDepartment = !isMaster || departmentFilterId === "all" || user.departmentId === departmentFilterId;
+      const matchesSearch = user.displayName.includes(search.trim());
+      return matchesDepartment && matchesSearch;
+    }),
+  );
 
   return (
     <div className="stack">
@@ -126,9 +164,31 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
         </div>
       </div>
 
-      {initialUsers.length ? (
+      {isMaster ? (
+        <div className="inline-row" style={{ gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className={departmentFilterId === "all" ? "button" : "button-subtle"}
+            onClick={() => setDepartmentFilterId("all")}
+          >
+            전체
+          </button>
+          {departments.map((department) => (
+            <button
+              key={department.id}
+              type="button"
+              className={departmentFilterId === department.id ? "button" : "button-subtle"}
+              onClick={() => setDepartmentFilterId(department.id)}
+            >
+              {department.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {manageableUsers.length ? (
         <div className="mgmt-user-list">
-          {filteredUsers.map((user) => {
+          {filteredUsers.length ? filteredUsers.map((user) => {
             const isOpen = openUsername === user.username;
             const isSaving = saving === user.username;
             const isConfirmingDelete = confirmDelete === user.username;
@@ -160,10 +220,11 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                         onChange={(e) => setRole(e.target.value as UserRole)}
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
-                        <option value="user">일반 사용자</option>
-                        <option value="sub_admin">부관리자</option>
-                        <option value="admin">관리자</option>
-                        <option value="master">마스터</option>
+                        {roleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                       <select
                         value={departmentId ?? departments[0]?.id ?? ""}
@@ -201,7 +262,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
 
                       {isConfirmingDelete ? (
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: "0.82rem", color: "#e53e3e" }}>정말 삭제할까요?</span>
+                          <span style={{ fontSize: "0.82rem", color: "#e53e3e" }}>정말 비활성화할까요?</span>
                           <button
                             type="button"
                             className="button-subtle"
@@ -209,7 +270,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                             onClick={() => handleDelete(user.username)}
                             style={{ whiteSpace: "nowrap", color: "#e53e3e", borderColor: "#e53e3e" }}
                           >
-                            삭제 확인
+                            비활성화 확인
                           </button>
                           <button
                             type="button"
@@ -229,7 +290,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                           onClick={() => setConfirmDelete(user.username)}
                           style={{ whiteSpace: "nowrap", fontSize: "0.82rem", color: "#e53e3e", borderColor: "#e53e3e" }}
                         >
-                          계정 삭제
+                          계정 비활성화
                         </button>
                       )}
                     </div>
@@ -237,7 +298,7 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                 )}
               </div>
             );
-          })}
+          }) : <div className="notice small">조건에 맞는 계정이 없습니다.</div>}
         </div>
       ) : (
         <div className="notice small">등록된 계정이 없습니다.</div>

@@ -5,6 +5,7 @@ import { findUserByKakaoId } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
 import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
+import { isAdminRole } from "@/lib/permissions";
 
 const KAKAO_PENDING_COOKIE = "kakao_pending";
 
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
 
   if (existingUser) {
     await createSession(existingUser);
-    redirect(existingUser.role === "admin" ? "/admin" : "/dashboard");
+    redirect(isAdminRole(existingUser.role) ? "/admin" : "/dashboard");
   }
 
   const pendingToken = await encodeKakaoPendingToken({ kakaoId, kakaoNickname });

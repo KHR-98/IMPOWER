@@ -1,15 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const adminUsername = process.env.PLAYWRIGHT_ADMIN_USERNAME ?? "admin";
-const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD ?? "demo1234";
-
-async function login(page: import("@playwright/test").Page, username: string, password: string) {
-  await page.goto("/login");
-  await page.getByLabel("아이디").fill(username);
-  await page.getByLabel("비밀번호").fill(password);
-  await page.getByRole("button", { name: "로그인" }).click();
-}
-
 test.describe("auth and admin smoke", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("**/dashboard", async (route) => {
@@ -21,7 +11,7 @@ test.describe("auth and admin smoke", () => {
     await page.goto("/admin");
 
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.getByRole("button", { name: "로그인" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "카카오로 로그인" })).toBeVisible();
   });
 
   test("clears invalid session cookie when visiting admin", async ({ context, page, baseURL }) => {
@@ -47,8 +37,23 @@ test.describe("auth and admin smoke", () => {
     expect(cookies.find((cookie) => cookie.name === "attendance_session")).toBeFalsy();
   });
 
-  test("allows admin login into the admin dashboard", async ({ page }) => {
-    await login(page, adminUsername, adminPassword);
+  test("allows signed master session into the admin dashboard", async ({ context, page, baseURL }) => {
+    if (!baseURL) {
+      throw new Error("Playwright baseURL is required for cookie setup.");
+    }
+
+    await context.addCookies([
+      {
+        name: "attendance_session",
+        value:
+          "eyJ1c2VybmFtZSI6ImFkbWluIiwiZGlzcGxheU5hbWUiOiLtmITsnqXqtIDrpqzsnpAiLCJyb2xlIjoibWFzdGVyIiwiZGVwYXJ0bWVudElkIjpudWxsLCJkZXBhcnRtZW50Q29kZSI6bnVsbCwiZGVwYXJ0bWVudE5hbWUiOm51bGwsImlzc3VlZEF0IjoiMjA5OS0wMS0wMVQwMDowMDowMC4wMDBaIn0.ko3LGUUI_YSikz8szxZ5BAke8QA7DCiWYACmQBHYX50",
+        url: baseURL,
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+    await page.goto("/admin");
 
     await expect(page).toHaveURL(/\/admin(?:\?.*)?$/);
     await expect(page.getByText("관리자 대시보드")).toBeVisible();

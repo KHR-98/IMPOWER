@@ -12,7 +12,7 @@ import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRun
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
-import type { RosterReasonCode, ShiftType } from "@/lib/types";
+import type { RosterReasonCode, ShiftType, UserRole } from "@/lib/types";
 
 type AdminSectionKey = "overview" | "users" | "accounts" | "system";
 
@@ -23,9 +23,20 @@ const ADMIN_SECTION_OPTIONS: Array<{ key: AdminSectionKey; label: string }> = [
   { key: "system", label: "시스템 설정" },
 ];
 
-function normalizeAdminSection(section: string | undefined): AdminSectionKey {
-  if (section === "users" || section === "accounts" || section === "system") {
-    return section;
+function getAdminSectionOptions(role: UserRole): Array<{ key: AdminSectionKey; label: string }> {
+  if (role === "sub_admin") {
+    return ADMIN_SECTION_OPTIONS.filter((option) => option.key === "overview" || option.key === "system");
+  }
+
+  return ADMIN_SECTION_OPTIONS;
+}
+
+function normalizeAdminSection(
+  section: string | undefined,
+  availableSections: Array<{ key: AdminSectionKey; label: string }>,
+): AdminSectionKey {
+  if (availableSections.some((option) => option.key === section)) {
+    return section as AdminSectionKey;
   }
 
   return "overview";
@@ -61,14 +72,15 @@ export default async function AdminPage({
 }) {
   const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const canUseManagementSections = session.role !== "sub_admin";
-  const selectedSection = canUseManagementSections ? normalizeAdminSection(resolvedSearchParams?.section) : "overview";
+  const availableSections = getAdminSectionOptions(session.role);
+  const selectedSection = normalizeAdminSection(resolvedSearchParams?.section, availableSections);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
-  const filterDeptId = undefined;
+  const filterDeptId = session.role === "master" ? undefined : session.departmentId ?? null;
+  const canUseAccountManagement = session.role === "master" || session.role === "admin";
   const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(filterDeptId),
     getRuntimeInfo(),
-    canUseManagementSections ? getAdminUserList(filterDeptId) : Promise.resolve([]),
+    canUseAccountManagement ? getAdminUserList(filterDeptId) : Promise.resolve([]),
     selectedSection === "overview" ? getUserTodayView(session.username) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
@@ -144,6 +156,22 @@ export default async function AdminPage({
       : periodLabel.includes("주간조")
       ? "주간조 출결표"
       : `${periodLabel} 출결표`;
+  const accountDepartments = dashboard.settings.departmentSettings.map((department) => ({
+    id: department.id,
+    code: department.code,
+    name: department.name,
+    isActive: department.isActive,
+  }));
+  const scopedSettings =
+    session.role === "master"
+      ? dashboard.settings
+      : {
+          ...dashboard.settings,
+          departmentSettings: dashboard.settings.departmentSettings.filter(
+            (department) => department.id === session.departmentId,
+          ),
+        };
+  const adminDataMutationEnabled = runtime.dataSource === "supabase" || runtime.dataSource === "demo";
 
   return (
     <main className="stack admin-console">
@@ -154,9 +182,9 @@ export default async function AdminPage({
           <span className="brand-kicker">Admin Console</span>
         </div>
 
-        {canUseManagementSections ? (
+        {availableSections.length > 1 ? (
           <nav className="admin-section-nav admin-section-nav-top" aria-label="관리자 화면 구역 전환">
-            {ADMIN_SECTION_OPTIONS.map((option) => (
+            {availableSections.map((option) => (
               <Link
                 key={option.key}
                 href={option.key === "overview" ? "/admin" : `/admin?section=${option.key}`}
@@ -293,8 +321,10 @@ export default async function AdminPage({
           <article className="glass-panel stack admin-management-panel">
             <AdminUserManagementPanel
               initialUsers={adminUsers}
-              departments={dashboard.settings.departmentSettings}
-              enabled={runtime.dataSource === "supabase"}
+              departments={accountDepartments}
+              enabled={adminDataMutationEnabled}
+              actorRole={session.role}
+              actorDepartmentId={session.departmentId}
             />
           </article>
         </section>
@@ -310,8 +340,9 @@ export default async function AdminPage({
               </div>
             </div>
             <AdminSettingsPanel
-              enabled={runtime.dataSource === "supabase"}
-              initialSettings={dashboard.settings}
+              enabled={adminDataMutationEnabled}
+              canEdit={session.role !== "sub_admin" && (session.role === "master" || Boolean(session.departmentId))}
+              initialSettings={scopedSettings}
               initialZones={dashboard.zones}
               actorDepartmentId={filterDeptId}
             />

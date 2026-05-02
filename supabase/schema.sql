@@ -1,15 +1,26 @@
 create extension if not exists pgcrypto;
 
+create table if not exists departments (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  name text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   username text not null unique,
   display_name text not null,
   password_hash text,
   kakao_id text unique,
-  role text not null check (role in ('user', 'admin', 'sub_admin')),
+  role text not null check (role in ('user', 'sub_admin', 'admin', 'master')),
+  department_id uuid not null references departments(id),
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+create index if not exists users_department_id_idx on users(department_id);
 
 create table if not exists zones (
   id uuid primary key default gen_random_uuid(),
@@ -27,12 +38,15 @@ create table if not exists roster_entries (
   work_date date not null,
   username text not null references users(username),
   is_scheduled boolean not null,
-  shift_type text not null default 'day' check (shift_type in ('day', 'late')),
+  shift_type text not null default 'day' check (shift_type in ('day', 'late', 'weekend')),
   allow_lunch_out boolean not null default false,
   source_row_key text,
   synced_at timestamptz not null default now(),
   unique (work_date, username)
 );
+
+create index if not exists idx_roster_entries_work_date_username
+  on roster_entries (work_date, username);
 
 create table if not exists attendance_records (
   id uuid primary key default gen_random_uuid(),
@@ -44,6 +58,8 @@ create table if not exists attendance_records (
   check_in_lng double precision,
   check_in_accuracy_m double precision,
   check_in_zone_id uuid references zones(id),
+  check_in_mdm_verified boolean,
+  check_in_camera_test text,
   tbm_at timestamptz,
   tbm_lat double precision,
   tbm_lng double precision,
@@ -59,6 +75,8 @@ create table if not exists attendance_records (
   lunch_register_lng double precision,
   lunch_register_accuracy_m double precision,
   lunch_register_zone_id uuid references zones(id),
+  lunch_register_mdm_verified boolean,
+  lunch_register_camera_test text,
   lunch_out_at timestamptz,
   lunch_out_lat double precision,
   lunch_out_lng double precision,
@@ -69,6 +87,8 @@ create table if not exists attendance_records (
   lunch_in_lng double precision,
   lunch_in_accuracy_m double precision,
   lunch_in_zone_id uuid references zones(id),
+  lunch_in_mdm_verified boolean,
+  lunch_in_camera_test text,
   tbm_afternoon_at timestamptz,
   tbm_afternoon_lat double precision,
   tbm_afternoon_lng double precision,
@@ -84,11 +104,16 @@ create table if not exists attendance_records (
   check_out_lng double precision,
   check_out_accuracy_m double precision,
   check_out_zone_id uuid references zones(id),
+  check_out_mdm_verified boolean,
+  check_out_camera_test text,
   corrected_by_admin boolean not null default false,
   correction_note text,
   updated_at timestamptz not null default now(),
   unique (work_date, username)
 );
+
+create index if not exists idx_attendance_records_work_date_username
+  on attendance_records (work_date, username);
 
 create table if not exists audit_logs (
   id uuid primary key default gen_random_uuid(),
@@ -123,3 +148,53 @@ create table if not exists app_settings (
   created_at timestamptz not null default now()
 );
 
+create table if not exists department_settings (
+  id uuid primary key default gen_random_uuid(),
+  department_id uuid not null unique references departments(id) on delete cascade,
+  day_check_in_start text not null default '06:00',
+  day_check_in_end text not null default '08:30',
+  day_tbm_start text not null default '06:00',
+  day_tbm_end text not null default '08:30',
+  day_tbm_afternoon_start text not null default '13:35',
+  day_tbm_afternoon_end text not null default '13:45',
+  day_tbm_checkout_start text not null default '16:30',
+  day_tbm_checkout_end text not null default '16:45',
+  day_check_out_start text not null default '16:30',
+  day_check_out_end text not null default '18:00',
+  late_check_in_start text not null default '09:00',
+  late_check_in_end text not null default '11:00',
+  late_check_out_start text not null default '19:30',
+  late_check_out_end text not null default '21:00',
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists department_attendance_windows (
+  id uuid primary key default gen_random_uuid(),
+  department_id uuid not null references departments(id) on delete cascade,
+  shift_type text not null check (shift_type in ('day', 'late', 'weekend')),
+  action_type text not null check (
+    action_type in (
+      'check_in',
+      'tbm_morning',
+      'lunch_register',
+      'lunch_out',
+      'lunch_in',
+      'tbm_afternoon',
+      'tbm_checkout',
+      'check_out'
+    )
+  ),
+  window_start text not null,
+  window_end text not null,
+  is_enabled boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (department_id, shift_type, action_type)
+);
+
+create index if not exists department_attendance_windows_department_id_idx
+  on department_attendance_windows(department_id);
+
+create index if not exists department_attendance_windows_shift_type_idx
+  on department_attendance_windows(shift_type);

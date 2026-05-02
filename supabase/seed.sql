@@ -7,18 +7,113 @@ on conflict (code) do update set
   name = excluded.name,
   is_active = excluded.is_active;
 
-insert into users (username, display_name, password_hash, role, is_active)
-values
-  ('admin', '현장관리자', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'admin', true),
-  ('kim', '김민수', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
-  ('park', '박지훈', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
-  ('choi', '최유진', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
-  ('lee', '이서준', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true)
+with default_department as (
+  select id from departments where code = 'memory_pcs'
+)
+insert into users (username, display_name, password_hash, role, department_id, is_active)
+select username, display_name, password_hash, role, default_department.id, is_active
+from default_department
+cross join (
+  values
+    ('admin', '현장관리자', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'admin', true),
+    ('kim', '김민수', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
+    ('park', '박지훈', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
+    ('choi', '최유진', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true),
+    ('lee', '이서준', '$2b$10$pbXhDCtBiC3R6XScP153k.tnnM36/fEdDgkuceuxP.LhIzb3AKVHW', 'user', true)
+) as seed_users(username, display_name, password_hash, role, is_active)
 on conflict (username) do nothing;
 
 update users
 set department_id = (select id from departments where code = 'memory_pcs')
 where department_id is null;
+
+insert into department_settings (
+  department_id,
+  day_check_in_start,
+  day_check_in_end,
+  day_tbm_start,
+  day_tbm_end,
+  day_tbm_afternoon_start,
+  day_tbm_afternoon_end,
+  day_tbm_checkout_start,
+  day_tbm_checkout_end,
+  day_check_out_start,
+  day_check_out_end,
+  late_check_in_start,
+  late_check_in_end,
+  late_check_out_start,
+  late_check_out_end
+)
+select
+  id,
+  '06:00',
+  '08:30',
+  '06:00',
+  '08:30',
+  '13:35',
+  '13:45',
+  '16:30',
+  '16:45',
+  '16:30',
+  '18:00',
+  '09:00',
+  '11:00',
+  '19:30',
+  '21:00'
+from departments
+on conflict (department_id) do nothing;
+
+insert into department_attendance_windows (
+  department_id,
+  shift_type,
+  action_type,
+  window_start,
+  window_end,
+  is_enabled,
+  sort_order
+)
+select
+  department_id,
+  shift_type,
+  action_type,
+  window_start,
+  window_end,
+  true,
+  sort_order
+from (
+  select department_id, 'day'::text as shift_type, 'check_in'::text as action_type, day_check_in_start as window_start, day_check_in_end as window_end, 10 as sort_order
+  from department_settings
+  union all
+  select department_id, 'day', 'tbm_morning', day_tbm_start, day_tbm_end, 20
+  from department_settings
+  union all
+  select department_id, 'day', 'tbm_afternoon', day_tbm_afternoon_start, day_tbm_afternoon_end, 30
+  from department_settings
+  union all
+  select department_id, 'day', 'tbm_checkout', day_tbm_checkout_start, day_tbm_checkout_end, 40
+  from department_settings
+  union all
+  select department_id, 'day', 'check_out', day_check_out_start, day_check_out_end, 50
+  from department_settings
+  union all
+  select department_id, 'late', 'check_in', late_check_in_start, late_check_in_end, 10
+  from department_settings
+  union all
+  select department_id, 'late', 'check_out', late_check_out_start, late_check_out_end, 20
+  from department_settings
+  union all
+  select department_id, 'weekend', 'check_in', day_check_in_start, day_check_in_end, 10
+  from department_settings
+  union all
+  select department_id, 'weekend', 'check_out', day_check_out_start, day_check_out_end, 20
+  from department_settings
+) as copied_windows
+on conflict (department_id, shift_type, action_type) do update set
+  window_start = excluded.window_start,
+  window_end = excluded.window_end,
+  is_enabled = excluded.is_enabled,
+  sort_order = excluded.sort_order,
+  updated_at = now();
 
 insert into zones (name, type, latitude, longitude, radius_m, is_active)
 values
