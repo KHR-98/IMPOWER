@@ -342,12 +342,12 @@ create or replace view department_settings as select * from config_department_se
 create or replace view department_attendance_windows as select * from config_attendance_windows;
 
 create or replace view "부서" as select * from org_departments;
-create or replace view "사용자_계정" as select * from account_users;
-create or replace view "GPS_인증구역" as select * from geo_zones;
-create or replace view "근무편성" as select * from work_rosters;
-create or replace view "출퇴근_일자별기록" as select * from attendance_daily_records;
-create or replace view "출퇴근_이벤트" as select * from attendance_events;
-create or replace view "출퇴근_정정로그" as select * from audit_attendance_logs;
-create or replace view "전체_운영설정" as select * from config_global_settings;
-create or replace view "부서별_시간설정" as select * from config_department_settings;
-create or replace view "부서별_허용시간창" as select * from config_attendance_windows;
+create or replace view "계정" as select * from account_users;
+create or replace view "출결구역" as select * from geo_zones;
+create or replace view "출결대상자" as select * from work_rosters;
+create or replace view "출결 일자정리표" as select * from attendance_daily_records;
+create or replace view "출결버튼클릭시간" as select * from attendance_events;
+create or replace view "출결 정정기록" as select * from audit_attendance_logs;
+create or replace view "전체 데이터 설정" as select * from config_global_settings;
+create or replace view "부서별 근무시간" as select * from config_department_settings;
+create or replace view "부서별 버튼활성화시간" as select * from config_attendance_windows;
