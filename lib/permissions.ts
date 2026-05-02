@@ -13,10 +13,10 @@ export function getRoleLabel(role: UserRole): string {
     case "master":
       return "마스터";
     case "admin":
-      return "팀장";
+      return "관리자";
     case "sub_admin":
-      return "조장";
+      return "부서장";
     default:
-      return "대원";
+      return "일반";
   }
 }
