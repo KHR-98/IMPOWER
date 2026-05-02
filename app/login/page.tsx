@@ -19,9 +19,10 @@ const KAKAO_ERROR_MESSAGES: Record<string, string> = {
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const session = await getSession();
+  const isDevelopment = process.env.NODE_ENV === "development";
 
   if (session) {
-    redirect(session.role === "admin" ? "/admin" : "/dashboard");
+    redirect(session.role === "admin" || session.role === "sub_admin" || session.role === "master" ? "/admin" : "/dashboard");
   }
 
   const { error: errorCode } = await searchParams;
@@ -41,7 +42,21 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </div>
           ) : null}
           <p className="login-guide">카카오 계정으로 간편하게 로그인하세요</p>
-          <LoginForm />
+          {isDevelopment ? (
+            <div className="form-stack login-form-stack">
+              <a href="/api/dev/login?role=admin" className="button login-submit-button">
+                관리자 화면 열기
+              </a>
+              <a href="/api/dev/login?role=sub_admin" className="button-subtle login-secondary-button">
+                부관리자 화면 열기
+              </a>
+              <a href="/api/dev/login?role=user" className="button-subtle login-secondary-button">
+                사용자 화면 열기
+              </a>
+            </div>
+          ) : (
+            <LoginForm />
+          )}
         </div>
       </section>
     </main>

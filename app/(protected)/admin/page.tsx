@@ -8,7 +8,7 @@ import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
-import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
+import { getAdminUserList, getDashboardView, getRuntimeInfo } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
@@ -65,12 +65,10 @@ export default async function AdminPage({
   const selectedSection = canUseManagementSections ? normalizeAdminSection(resolvedSearchParams?.section) : "overview";
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const filterDeptId = undefined;
-  const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
+  const [dashboard, runtime, adminUsers] = await Promise.all([
     getDashboardView(filterDeptId),
     getRuntimeInfo(),
     canUseManagementSections ? getAdminUserList(filterDeptId) : Promise.resolve([]),
-    selectedSection === "overview" ? getUserTodayView(session.username) : Promise.resolve(null),
-    selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
   const currentPeriodRows = buildCurrentPeriodOperatorRows({
     rows: dashboard.rows,

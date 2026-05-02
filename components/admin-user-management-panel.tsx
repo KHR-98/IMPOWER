@@ -160,9 +160,9 @@ export function AdminUserManagementPanel({ initialUsers, departments, enabled }:
                         onChange={(e) => setRole(e.target.value as UserRole)}
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
-                        <option value="user">일반 사용자</option>
-                        <option value="sub_admin">부관리자</option>
-                        <option value="admin">관리자</option>
+                        <option value="user">대원</option>
+                        <option value="sub_admin">조장</option>
+                        <option value="admin">팀장</option>
                         <option value="master">마스터</option>
                       </select>
                       <select
