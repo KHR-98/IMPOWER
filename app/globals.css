@@ -1483,6 +1483,74 @@ html.kakao-auth-leaving .login-shell {
   border-top: 0;
 }
 
+.invite-link-panel {
+  gap: 14px;
+}
+
+.invite-link-initial-box {
+  display: grid;
+  gap: 10px;
+}
+
+.invite-link-initial-action {
+  display: flex;
+}
+
+.invite-link-create-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.invite-link-field,
+.invite-link-count-field {
+  margin: 0;
+}
+
+.invite-link-fixed-department {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0 16px;
+}
+
+.invite-link-generated-box {
+  display: grid;
+  gap: 10px;
+}
+
+.invite-link-generated-list {
+  display: grid;
+  gap: 8px;
+}
+
+.invite-link-generated-row,
+.invite-link-row-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.invite-link-generated-meta {
+  min-width: 0;
+  line-height: 1.45;
+}
+
+.invite-link-row-options {
+  padding: 10px 14px;
+}
+
+.invite-link-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 780px) {
   .shell {
     padding: 16px 14px 44px;
@@ -1758,6 +1826,63 @@ html.kakao-auth-leaving .login-shell {
 
   .admin-management-panel .inline-row .status-pill {
     align-self: flex-start;
+  }
+
+  .invite-link-panel {
+    gap: 12px;
+  }
+
+  .invite-link-panel .panel-header {
+    margin-bottom: 2px;
+  }
+
+  .invite-link-initial-action,
+  .invite-link-create-form,
+  .invite-link-generated-row,
+  .invite-link-row-options,
+  .invite-link-row-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .invite-link-create-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .invite-link-count-field {
+    width: 100%;
+  }
+
+  .invite-link-panel .button,
+  .invite-link-panel .button-subtle {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .invite-link-generated-row {
+    display: flex;
+    padding-top: 2px;
+  }
+
+  .invite-link-row-options {
+    padding: 10px 12px 12px;
+  }
+
+  .invite-link-row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .account-department-filter-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-department-filter-button {
+    min-height: 48px;
+    padding-inline: 10px;
   }
 }
 

@@ -1,11 +1,13 @@
 import "server-only";
 
 import { compareSync, hashSync } from "bcryptjs";
+import { randomUUID } from "node:crypto";
 
 import { buildEventStates } from "@/lib/attendance-events";
 import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period";
 import { buildDepartmentAttendanceSettings, buildOperationalSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
+import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
 import { getRosterReasonMessage } from "@/lib/roster-reasons";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
 import type {
@@ -17,6 +19,9 @@ import type {
   AttendanceMutationResult,
   AttendanceRecord,
   Department,
+  InviteLinkListItem,
+  InviteLinkType,
+  InviteRegistrationContext,
   RosterEntry,
   SessionUser,
   UserAccount,
@@ -27,6 +32,14 @@ import type {
 
 const demoPasswordHash = hashSync("demo1234", 10);
 const demoCreatedAt = "2026-05-02T00:00:00.000Z";
+const INITIAL_INVITE_LINK_LIMITS: Record<string, number> = {
+  memory: 70,
+  memory_pcs: 50,
+  foundry_pcs: 15,
+};
+const INITIAL_INVITE_LINK_DURATION_HOURS = 72;
+const STANDARD_INVITE_LINK_DURATION_HOURS = 24;
+const STANDARD_INVITE_LINK_MAX_USES = 5;
 
 const departments: Department[] = [
   {
@@ -55,6 +68,64 @@ function getDepartment(departmentId: string | null): Department | null {
   }
 
   return departments.find((department) => department.id === departmentId) ?? null;
+}
+
+function buildExpiresAt(hours: number): string {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
+function isInviteLinkUsable(link: DemoInviteLink): boolean {
+  return link.isActive && Date.parse(link.expiresAt) > Date.now() && link.usedCount < link.maxUses;
+}
+
+function mapInviteLink(link: DemoInviteLink): InviteLinkListItem {
+  const department = getDepartment(link.departmentId);
+
+  return {
+    id: link.id,
+    label: link.label,
+    departmentId: link.departmentId,
+    departmentCode: department?.code ?? null,
+    departmentName: department?.name ?? null,
+    maxUses: link.maxUses,
+    usedCount: link.usedCount,
+    expiresAt: link.expiresAt,
+    isActive: link.isActive,
+    linkType: link.linkType,
+    createdBy: link.createdBy,
+    createdAt: link.createdAt,
+    lastUsedAt: link.lastUsedAt,
+    token: isInviteLinkUsable(link) ? decryptInviteToken(link.tokenEncrypted) : null,
+  };
+}
+
+function createDemoInviteLinkRecord(input: {
+  department: Department;
+  label: string;
+  maxUses: number;
+  expiresAt: string;
+  linkType: InviteLinkType;
+  createdBy: string;
+}): InviteLinkListItem {
+  const token = generateInviteToken(input.department.code);
+  const link: DemoInviteLink = {
+    id: `invite-${randomUUID()}`,
+    tokenHash: hashInviteToken(token),
+    tokenEncrypted: encryptInviteToken(token),
+    label: input.label,
+    departmentId: input.department.id,
+    maxUses: input.maxUses,
+    usedCount: 0,
+    expiresAt: input.expiresAt,
+    isActive: true,
+    linkType: input.linkType,
+    createdBy: input.createdBy,
+    createdAt: new Date().toISOString(),
+    lastUsedAt: null,
+  };
+
+  inviteLinks.unshift(link);
+  return { ...mapInviteLink(link), token };
 }
 
 function buildUser(
@@ -92,6 +163,24 @@ const users: UserAccount[] = [
   buildUser("user-han", "han", "한지아", "sub_admin", "dept-foundry-pcs"),
   buildUser("user-yoon", "yoon", "윤도현", "user", "dept-memory", false),
 ];
+
+interface DemoInviteLink {
+  id: string;
+  tokenHash: string;
+  tokenEncrypted: string;
+  label: string;
+  departmentId: string;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: string;
+  isActive: boolean;
+  linkType: InviteLinkType;
+  createdBy: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
+const inviteLinks: DemoInviteLink[] = [];
 
 let zones: Zone[] = [
   {
@@ -425,6 +514,156 @@ export function getAdminUsers(departmentId?: string | null): AdminUserListItem[]
       return departmentId ? user.departmentId === departmentId : false;
     })
     .map(mapAdminUser);
+}
+
+export function getInviteRegistrationContext(token: string): InviteRegistrationContext | null {
+  const link = inviteLinks.find((entry) => entry.tokenHash === hashInviteToken(token));
+
+  if (!link || !isInviteLinkUsable(link)) {
+    return null;
+  }
+
+  const department = getDepartment(link.departmentId);
+  if (!department?.isActive) {
+    return null;
+  }
+
+  return {
+    departmentId: department.id,
+    departmentCode: department.code,
+    departmentName: department.name,
+    maxUses: link.maxUses,
+    usedCount: link.usedCount,
+    expiresAt: link.expiresAt,
+  };
+}
+
+export function getInviteLinks(actor: SessionUser): InviteLinkListItem[] {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return [];
+  }
+
+  return inviteLinks
+    .filter((link) => actor.role === "master" || link.departmentId === actor.departmentId)
+    .slice(0, 50)
+    .map(mapInviteLink);
+}
+
+export function createInitialInviteLinks(actor: SessionUser): { ok: boolean; message: string; links: InviteLinkListItem[] } {
+  if (actor.role !== "master") {
+    return { ok: false, message: "초기 가입 링크는 마스터만 생성할 수 있습니다.", links: [] };
+  }
+
+  const expiresAt = buildExpiresAt(INITIAL_INVITE_LINK_DURATION_HOURS);
+  const links: InviteLinkListItem[] = [];
+
+  for (const [code, maxUses] of Object.entries(INITIAL_INVITE_LINK_LIMITS)) {
+    const department = departments.find((entry) => entry.code === code && entry.isActive);
+    if (!department) {
+      return { ok: false, message: `초기 링크를 만들 부서를 찾을 수 없습니다: ${code}`, links: [] };
+    }
+
+    for (const link of inviteLinks) {
+      if (link.departmentId === department.id && link.linkType === "initial" && link.isActive) {
+        link.isActive = false;
+      }
+    }
+
+    links.push(createDemoInviteLinkRecord({
+      department,
+      label: `초기 가입 - ${department.name}`,
+      maxUses,
+      expiresAt,
+      linkType: "initial",
+      createdBy: actor.username,
+    }));
+  }
+
+  return { ok: true, message: "초기 가입 링크를 생성했습니다.", links };
+}
+
+export function createInviteLink(
+  input: { departmentId: string | null; maxUses: number },
+  actor: SessionUser,
+): { ok: boolean; message: string; links: InviteLinkListItem[] } {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return { ok: false, message: "초대링크 생성 권한이 없습니다.", links: [] };
+  }
+
+  const departmentId = actor.role === "admin" ? actor.departmentId : input.departmentId;
+
+  if (!departmentId) {
+    return { ok: false, message: "부서를 선택하세요.", links: [] };
+  }
+
+  if (input.maxUses < 1 || input.maxUses > STANDARD_INVITE_LINK_MAX_USES) {
+    return { ok: false, message: `신규 가입 링크는 최대 ${STANDARD_INVITE_LINK_MAX_USES}명까지 사용할 수 있습니다.`, links: [] };
+  }
+
+  const department = getDepartment(departmentId);
+  if (!department?.isActive) {
+    return { ok: false, message: "선택한 부서를 찾을 수 없습니다.", links: [] };
+  }
+
+  const link = createDemoInviteLinkRecord({
+    department,
+    label: `신규 가입 - ${department.name}`,
+    maxUses: input.maxUses,
+    expiresAt: buildExpiresAt(STANDARD_INVITE_LINK_DURATION_HOURS),
+    linkType: "standard",
+    createdBy: actor.username,
+  });
+
+  return { ok: true, message: "신규 가입 링크를 생성했습니다.", links: [link] };
+}
+
+export function deactivateInviteLink(id: string, actor: SessionUser): { ok: boolean; message: string } {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return { ok: false, message: "초대링크 관리 권한이 없습니다." };
+  }
+
+  const link = inviteLinks.find((entry) => entry.id === id && (actor.role === "master" || entry.departmentId === actor.departmentId));
+  if (!link) {
+    return { ok: false, message: "초대링크를 찾을 수 없습니다." };
+  }
+
+  link.isActive = false;
+  return { ok: true, message: "초대링크를 폐기했습니다." };
+}
+
+export function registerKakaoUserWithInvite(kakaoId: string, displayName: string, inviteToken: string): SessionUser {
+  const link = inviteLinks.find((entry) => entry.tokenHash === hashInviteToken(inviteToken));
+
+  if (!link || !isInviteLinkUsable(link)) {
+    throw new Error("초대링크가 유효하지 않거나 만료되었습니다.");
+  }
+
+  const department = getDepartment(link.departmentId);
+  if (!department?.isActive) {
+    throw new Error("초대링크의 부서를 찾을 수 없습니다.");
+  }
+
+  if (users.some((user) => user.username === `kakao_${kakaoId}`)) {
+    throw new Error("이미 등록된 카카오 계정입니다.");
+  }
+
+  link.usedCount += 1;
+  link.lastUsedAt = new Date().toISOString();
+  if (link.usedCount >= link.maxUses) {
+    link.isActive = false;
+  }
+
+  const user = buildUser(`user-kakao-${kakaoId}`, `kakao_${kakaoId}`, displayName, "user", department.id);
+  users.push(user);
+
+  return {
+    username: user.username,
+    displayName: user.displayName,
+    role: user.role,
+    departmentId: user.departmentId,
+    departmentCode: user.departmentCode,
+    departmentName: user.departmentName,
+  };
 }
 
 export function saveAdminUser(

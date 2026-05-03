@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Space_Grotesk } from "next/font/google";
 
+import { getInviteRegistrationContext } from "@/lib/app-data";
+import { INVITE_LINK_COOKIE } from "@/lib/invite-link-cookie";
 import { verifyKakaoPendingToken } from "@/lib/kakao-token";
 import { KakaoRegisterForm } from "@/components/kakao-register-form";
 
@@ -22,6 +24,13 @@ export default async function KakaoRegisterPage() {
     redirect("/login");
   }
 
+  const inviteToken = store.get(INVITE_LINK_COOKIE)?.value;
+  const inviteContext = inviteToken ? await getInviteRegistrationContext(inviteToken) : null;
+
+  if (!inviteContext) {
+    redirect("/login?error=invite_required");
+  }
+
   return (
     <main className="login-shell">
       <section className="login-card">
@@ -36,7 +45,7 @@ export default async function KakaoRegisterPage() {
             카카오 닉네임: <strong>{pending.kakaoNickname || "없음"}</strong>
             </p>
             <p style={{ marginTop: 2, fontSize: "0.875rem", color: "var(--muted)" }}>
-            출결 시스템에 표시될 실명을 입력해주세요. 최초 1회만 입력합니다.
+            {inviteContext.departmentName} 소속으로 등록됩니다. 출결 시스템에 표시될 실명을 입력해주세요.
             </p>
           </div>
           <KakaoRegisterForm />

@@ -321,6 +321,34 @@ export interface AdminUserMutationInput {
   password: string | null;
 }
 
+export type InviteLinkType = "initial" | "standard";
+
+export interface InviteLinkListItem {
+  id: string;
+  label: string;
+  departmentId: string;
+  departmentCode: string | null;
+  departmentName: string | null;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: string;
+  isActive: boolean;
+  linkType: InviteLinkType;
+  createdBy: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  token: string | null;
+}
+
+export interface InviteRegistrationContext {
+  departmentId: string;
+  departmentCode: string | null;
+  departmentName: string;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: string;
+}
+
 export interface SheetUserImportPreview {
   sourceMode: "legacy_gas" | "simple_table" | "monthly_matrix";
   sourceLabel: string;

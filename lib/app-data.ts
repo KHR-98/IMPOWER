@@ -3,16 +3,22 @@ import "server-only";
 import {
   authenticateDemoUser,
   changeDemoPassword,
+  createInviteLink as createDemoInviteLink,
+  createInitialInviteLinks as createDemoInitialInviteLinks,
   deleteAdminUser as deleteDemoAdminUser,
+  deactivateInviteLink as deactivateDemoInviteLink,
   getDashboardView as getDemoDashboardView,
   getAdminUsers as getDemoAdminUsers,
   getDepartments as getDemoDepartments,
   getDemoCredentials,
   getDevCoordinates,
+  getInviteLinks as getDemoInviteLinks,
+  getInviteRegistrationContext as getDemoInviteRegistrationContext,
   getSessionUser as getDemoSessionUser,
   getUserTodayView as getDemoUserTodayView,
   getZones as getDemoZones,
   performAttendanceAction as performDemoAttendanceAction,
+  registerKakaoUserWithInvite as registerDemoKakaoUserWithInvite,
   saveAdminConfiguration as saveDemoAdminConfiguration,
   saveAdminUser as saveDemoAdminUser,
 } from "@/lib/demo-store";
@@ -22,10 +28,15 @@ import { getKoreaDateKey } from "@/lib/time";
 import {
   authenticateSupabaseUser,
   changeSupabasePassword,
+  createSupabaseInitialInviteLinks,
+  createSupabaseStandardInviteLink,
   correctSupabaseAttendanceRecord,
   createKakaoUser,
   deleteSupabaseAdminUser,
+  deactivateSupabaseInviteLink,
   getSessionUserByKakaoId,
+  getSupabaseInviteLinks,
+  getSupabaseInviteRegistrationContext,
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
   getSupabaseDepartments,
@@ -55,6 +66,8 @@ import type {
   DashboardView,
   DataSourceKind,
   Department,
+  InviteLinkListItem,
+  InviteRegistrationContext,
   RosterSyncResult,
   RuntimeInfo,
   SessionUser,
@@ -119,11 +132,17 @@ export async function findUserByKakaoId(kakaoId: string): Promise<SessionUser | 
   return getSessionUserByKakaoId(kakaoId);
 }
 
-export async function registerKakaoUser(kakaoId: string, displayName: string, departmentCode: string): Promise<SessionUser> {
+export async function registerKakaoUser(kakaoId: string, displayName: string, inviteToken: string): Promise<SessionUser> {
   if (resolveDataSource().dataSource !== "supabase") {
-    throw new Error("카카오 회원가입은 Supabase 모드에서만 지원됩니다.");
+    return registerDemoKakaoUserWithInvite(kakaoId, displayName, inviteToken);
   }
-  return createKakaoUser(kakaoId, displayName, departmentCode);
+  return createKakaoUser(kakaoId, displayName, inviteToken);
+}
+
+export async function getInviteRegistrationContext(inviteToken: string): Promise<InviteRegistrationContext | null> {
+  return resolveDataSource().dataSource === "supabase"
+    ? getSupabaseInviteRegistrationContext(inviteToken)
+    : getDemoInviteRegistrationContext(inviteToken);
 }
 
 export async function getUserTodayView(username: string, sessionUser?: SessionUser): Promise<UserTodayView> {
@@ -148,6 +167,31 @@ export async function getZones(): Promise<Zone[]> {
 
 export async function getAdminUserList(departmentId?: string | null): Promise<AdminUserListItem[]> {
   return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers(departmentId) : getDemoAdminUsers(departmentId);
+}
+
+export async function getInviteLinkList(actor: SessionUser): Promise<InviteLinkListItem[]> {
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseInviteLinks(actor) : getDemoInviteLinks(actor);
+}
+
+export async function createInitialInviteLinks(actor: SessionUser): Promise<{ ok: boolean; message: string; links: InviteLinkListItem[] }> {
+  return resolveDataSource().dataSource === "supabase"
+    ? createSupabaseInitialInviteLinks(actor)
+    : createDemoInitialInviteLinks(actor);
+}
+
+export async function createInviteLink(
+  input: { departmentId: string | null; maxUses: number },
+  actor: SessionUser,
+): Promise<{ ok: boolean; message: string; links: InviteLinkListItem[] }> {
+  return resolveDataSource().dataSource === "supabase"
+    ? createSupabaseStandardInviteLink(input, actor)
+    : createDemoInviteLink(input, actor);
+}
+
+export async function deactivateInviteLink(id: string, actor: SessionUser): Promise<{ ok: boolean; message: string }> {
+  return resolveDataSource().dataSource === "supabase"
+    ? deactivateSupabaseInviteLink(id, actor)
+    : deactivateDemoInviteLink(id, actor);
 }
 
 export async function performAttendanceAction(input: {

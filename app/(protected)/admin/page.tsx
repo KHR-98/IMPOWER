@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-correction-panel";
+import { AdminInviteLinkPanel } from "@/components/admin-invite-link-panel";
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-drawer";
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
@@ -8,7 +9,7 @@ import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
-import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
+import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
@@ -77,10 +78,11 @@ export default async function AdminPage({
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
   const filterDeptId = session.role === "master" ? undefined : session.departmentId ?? null;
   const canUseAccountManagement = session.role === "master" || session.role === "admin";
-  const [dashboard, runtime, adminUsers, adminTodayView, devCoordinates] = await Promise.all([
+  const [dashboard, runtime, adminUsers, inviteLinks, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(filterDeptId),
     getRuntimeInfo(),
     canUseAccountManagement ? getAdminUserList(filterDeptId) : Promise.resolve([]),
+    canUseAccountManagement ? getInviteLinkList(session) : Promise.resolve([]),
     selectedSection === "overview" ? getUserTodayView(session.username, session) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
@@ -319,6 +321,13 @@ export default async function AdminPage({
       {selectedSection === "accounts" ? (
         <section className="stack">
           <article className="glass-panel stack admin-management-panel">
+            <AdminInviteLinkPanel
+              initialLinks={inviteLinks}
+              departments={accountDepartments}
+              enabled={adminDataMutationEnabled}
+              actorRole={session.role}
+              actorDepartmentId={session.departmentId}
+            />
             <AdminUserManagementPanel
               initialUsers={adminUsers}
               departments={accountDepartments}

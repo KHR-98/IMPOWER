@@ -1,10 +1,11 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { findUserByKakaoId } from "@/lib/app-data";
+import { findUserByKakaoId, getInviteRegistrationContext } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
 import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
+import { INVITE_LINK_COOKIE } from "@/lib/invite-link-cookie";
 import { isAdminRole } from "@/lib/permissions";
 
 const KAKAO_PENDING_COOKIE = "kakao_pending";
@@ -93,14 +94,23 @@ export async function GET(request: Request) {
   }
 
   const existingUser = await findUserByKakaoId(kakaoId);
+  const store = await cookies();
 
   if (existingUser) {
+    store.delete(INVITE_LINK_COOKIE);
     await createSession(existingUser);
     redirect(isAdminRole(existingUser.role) ? "/admin" : "/dashboard");
   }
 
+  const inviteToken = store.get(INVITE_LINK_COOKIE)?.value;
+  const inviteContext = inviteToken ? await getInviteRegistrationContext(inviteToken) : null;
+
+  if (!inviteContext) {
+    store.delete(INVITE_LINK_COOKIE);
+    redirect("/login?error=invite_required");
+  }
+
   const pendingToken = await encodeKakaoPendingToken({ kakaoId, kakaoNickname });
-  const store = await cookies();
   store.set(KAKAO_PENDING_COOKIE, pendingToken, {
     httpOnly: true,
     sameSite: "lax",

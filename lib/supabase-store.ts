@@ -16,6 +16,7 @@ import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google
 import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
+import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
 import type {
   AdminAttendanceCorrectionInput,
   AdminRosterControlInput,
@@ -32,6 +33,9 @@ import type {
   DashboardView,
   Department,
   DepartmentAttendanceSettings,
+  InviteLinkListItem,
+  InviteLinkType,
+  InviteRegistrationContext,
   RosterEntry,
   RosterSyncPreview,
   RosterSyncResult,
@@ -88,11 +92,20 @@ const TABLES = {
   globalSettings: "config_global_settings",
   departmentSettings: "config_department_settings",
   attendanceWindows: "config_attendance_windows",
+  inviteLinks: "account_invite_links",
 } as const;
 
 const defaultSettings: AppSettings = buildOperationalSettings(100);
 const DEFAULT_WEEKEND_LUNCH_OUT_WINDOW = DEFAULT_WEEKEND_SHIFT_SETTINGS.lunchOutWindow ?? { start: "11:30", end: "13:50" };
 const DEFAULT_WEEKEND_LUNCH_IN_WINDOW = DEFAULT_WEEKEND_SHIFT_SETTINGS.lunchInWindow ?? DEFAULT_WEEKEND_LUNCH_OUT_WINDOW;
+const INITIAL_INVITE_LINK_LIMITS: Record<string, number> = {
+  memory: 70,
+  memory_pcs: 50,
+  foundry_pcs: 15,
+};
+const INITIAL_INVITE_LINK_DURATION_HOURS = 72;
+const STANDARD_INVITE_LINK_DURATION_HOURS = 24;
+const STANDARD_INVITE_LINK_MAX_USES = 5;
 
 const zoneIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -394,6 +407,42 @@ function mapAdminUserListItem(row: Record<string, unknown>): AdminUserListItem {
     departmentName: null,
     isActive: Boolean(row.is_active),
     createdAt: String(row.created_at),
+  };
+}
+
+function buildExpiresAt(hours: number): string {
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
+function isInviteLinkUsable(row: Record<string, unknown>): boolean {
+  return (
+    Boolean(row.is_active) &&
+    Date.parse(String(row.expires_at)) > Date.now() &&
+    Number(row.used_count ?? 0) < Number(row.max_uses ?? 0)
+  );
+}
+
+function mapInviteLinkListItem(
+  row: Record<string, unknown>,
+  department?: Department | null,
+): InviteLinkListItem {
+  const token = isInviteLinkUsable(row) ? decryptInviteToken(nullableString(row.token_encrypted)) : null;
+
+  return {
+    id: String(row.id),
+    label: String(row.label),
+    departmentId: String(row.department_id),
+    departmentCode: department?.code ?? nullableString(row.department_code),
+    departmentName: department?.name ?? nullableString(row.department_name),
+    maxUses: Number(row.max_uses ?? 0),
+    usedCount: Number(row.used_count ?? 0),
+    expiresAt: String(row.expires_at),
+    isActive: Boolean(row.is_active),
+    linkType: row.link_type === "initial" ? "initial" : "standard",
+    createdBy: String(row.created_by),
+    createdAt: String(row.created_at),
+    lastUsedAt: nullableString(row.last_used_at),
+    token,
   };
 }
 
@@ -837,45 +886,32 @@ export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionU
   };
 }
 
-export async function createKakaoUser(kakaoId: string, displayName: string, departmentCode: string): Promise<SessionUser> {
+export async function createKakaoUser(kakaoId: string, displayName: string, inviteToken: string): Promise<SessionUser> {
   const client = getSupabaseAdminClient();
-  const username = `kakao_${kakaoId}`;
-
-  const { data: deptRow, error: deptError } = await client
-    .from(TABLES.departments)
-    .select("id, name")
-    .eq("code", departmentCode)
-    .single();
-
-  if (deptError) {
-    throw deptError;
-  }
-
-  if (!deptRow?.id) {
-    throw new Error("선택한 부서를 찾을 수 없습니다.");
-  }
-
-  const { error } = await client.from(TABLES.users).insert({
-    username,
-    display_name: displayName,
-    password_hash: null,
-    kakao_id: kakaoId,
-    role: "user",
-    is_active: true,
-    department_id: deptRow.id,
+  const tokenHash = hashInviteToken(inviteToken);
+  const { data, error } = await client.rpc("create_account_user_from_invite_link", {
+    p_token_hash: tokenHash,
+    p_kakao_id: kakaoId,
+    p_display_name: displayName,
   });
 
   if (error) {
     throw error;
   }
 
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row) {
+    throw new Error("초대링크가 유효하지 않거나 만료되었습니다.");
+  }
+
   return {
-    username,
-    displayName,
+    username: String(row.username),
+    displayName: String(row.display_name),
     role: "user",
-    departmentId: deptRow.id,
-    departmentCode,
-    departmentName: deptRow.name ?? null,
+    departmentId: String(row.department_id),
+    departmentCode: nullableString(row.department_code),
+    departmentName: nullableString(row.department_name),
   };
 }
 
@@ -952,8 +988,326 @@ async function getDefaultActiveDepartmentId(): Promise<string | null> {
   return fallbackDepartment?.id ? String(fallbackDepartment.id) : null;
 }
 
+async function getDepartmentById(departmentId: string): Promise<Department | null> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from(TABLES.departments)
+    .select("id, code, name, is_active")
+    .eq("id", departmentId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ? mapDepartment(data) : null;
+}
+
+async function getActiveDepartmentsByCodes(codes: string[]): Promise<Department[]> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from(TABLES.departments)
+    .select("id, code, name, is_active")
+    .in("code", codes)
+    .eq("is_active", true);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((row) => mapDepartment(row));
+}
+
 function canDepartmentAdminManageRole(role: UserRole): boolean {
   return role === "user" || role === "sub_admin";
+}
+
+async function loadDepartmentMap(departmentIds: string[]): Promise<Map<string, Department>> {
+  const uniqueIds = Array.from(new Set(departmentIds.filter(Boolean)));
+  if (!uniqueIds.length) {
+    return new Map();
+  }
+
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from(TABLES.departments)
+    .select("id, code, name, is_active")
+    .in("id", uniqueIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return new Map((data ?? []).map((row) => {
+    const department = mapDepartment(row);
+    return [department.id, department];
+  }));
+}
+
+async function insertInviteLink(input: {
+  department: Department;
+  label: string;
+  maxUses: number;
+  expiresAt: string;
+  linkType: InviteLinkType;
+  createdBy: string;
+}): Promise<InviteLinkListItem> {
+  const client = getSupabaseAdminClient();
+  const token = generateInviteToken(input.department.code);
+  const { data, error } = await client
+    .from(TABLES.inviteLinks)
+    .insert({
+      token_hash: hashInviteToken(token),
+      token_encrypted: encryptInviteToken(token),
+      label: input.label,
+      department_id: input.department.id,
+      max_uses: input.maxUses,
+      used_count: 0,
+      expires_at: input.expiresAt,
+      is_active: true,
+      link_type: input.linkType,
+      created_by: input.createdBy,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    ...mapInviteLinkListItem(data, input.department),
+    token,
+  };
+}
+
+export async function getSupabaseInviteRegistrationContext(token: string): Promise<InviteRegistrationContext | null> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from(TABLES.inviteLinks)
+    .select("*")
+    .eq("token_hash", hashInviteToken(token))
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data || !isInviteLinkUsable(data)) {
+    return null;
+  }
+
+  const department = await getDepartmentById(String(data.department_id));
+  if (!department) {
+    return null;
+  }
+
+  return {
+    departmentId: department.id,
+    departmentCode: department.code,
+    departmentName: department.name,
+    maxUses: Number(data.max_uses ?? 0),
+    usedCount: Number(data.used_count ?? 0),
+    expiresAt: String(data.expires_at),
+  };
+}
+
+export async function getSupabaseInviteLinks(actor: SessionUser): Promise<InviteLinkListItem[]> {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return [];
+  }
+
+  if (actor.role === "admin" && !actor.departmentId) {
+    return [];
+  }
+
+  const client = getSupabaseAdminClient();
+  let query = client
+    .from(TABLES.inviteLinks)
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (actor.role === "admin") {
+    query = query.eq("department_id", actor.departmentId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  const departmentMap = await loadDepartmentMap((data ?? []).map((row) => String(row.department_id)));
+  return (data ?? []).map((row) => mapInviteLinkListItem(row, departmentMap.get(String(row.department_id))));
+}
+
+export async function createSupabaseInitialInviteLinks(actor: SessionUser): Promise<{ ok: boolean; message: string; links: InviteLinkListItem[] }> {
+  if (actor.role !== "master") {
+    return {
+      ok: false,
+      message: "초기 가입 링크는 마스터만 생성할 수 있습니다.",
+      links: [],
+    };
+  }
+
+  const departments = await getActiveDepartmentsByCodes(Object.keys(INITIAL_INVITE_LINK_LIMITS));
+  const departmentsByCode = new Map(departments.map((department) => [department.code, department]));
+  const missingCodes = Object.keys(INITIAL_INVITE_LINK_LIMITS).filter((code) => !departmentsByCode.has(code));
+
+  if (missingCodes.length) {
+    return {
+      ok: false,
+      message: `초기 링크를 만들 부서를 찾을 수 없습니다: ${missingCodes.join(", ")}`,
+      links: [],
+    };
+  }
+
+  const client = getSupabaseAdminClient();
+  const departmentIds = departments.map((department) => department.id);
+  const { error: deactivateError } = await client
+    .from(TABLES.inviteLinks)
+    .update({ is_active: false })
+    .in("department_id", departmentIds)
+    .eq("link_type", "initial")
+    .eq("is_active", true);
+
+  if (deactivateError) {
+    throw deactivateError;
+  }
+
+  const expiresAt = buildExpiresAt(INITIAL_INVITE_LINK_DURATION_HOURS);
+  const links: InviteLinkListItem[] = [];
+
+  for (const [code, maxUses] of Object.entries(INITIAL_INVITE_LINK_LIMITS)) {
+    const department = departmentsByCode.get(code);
+    if (!department) continue;
+    links.push(await insertInviteLink({
+      department,
+      label: `초기 가입 - ${department.name}`,
+      maxUses,
+      expiresAt,
+      linkType: "initial",
+      createdBy: actor.username,
+    }));
+  }
+
+  return {
+    ok: true,
+    message: "초기 가입 링크를 생성했습니다.",
+    links,
+  };
+}
+
+export async function createSupabaseStandardInviteLink(
+  input: { departmentId: string | null; maxUses: number },
+  actor: SessionUser,
+): Promise<{ ok: boolean; message: string; links: InviteLinkListItem[] }> {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return {
+      ok: false,
+      message: "초대링크 생성 권한이 없습니다.",
+      links: [],
+    };
+  }
+
+  const departmentId = actor.role === "admin" ? actor.departmentId : input.departmentId;
+
+  if (!departmentId) {
+    return {
+      ok: false,
+      message: "부서를 선택하세요.",
+      links: [],
+    };
+  }
+
+  if (input.maxUses < 1 || input.maxUses > STANDARD_INVITE_LINK_MAX_USES) {
+    return {
+      ok: false,
+      message: `신규 가입 링크는 최대 ${STANDARD_INVITE_LINK_MAX_USES}명까지 사용할 수 있습니다.`,
+      links: [],
+    };
+  }
+
+  const department = await getDepartmentById(departmentId);
+  if (!department) {
+    return {
+      ok: false,
+      message: "선택한 부서를 찾을 수 없습니다.",
+      links: [],
+    };
+  }
+
+  const link = await insertInviteLink({
+    department,
+    label: `신규 가입 - ${department.name}`,
+    maxUses: input.maxUses,
+    expiresAt: buildExpiresAt(STANDARD_INVITE_LINK_DURATION_HOURS),
+    linkType: "standard",
+    createdBy: actor.username,
+  });
+
+  return {
+    ok: true,
+    message: "신규 가입 링크를 생성했습니다.",
+    links: [link],
+  };
+}
+
+export async function deactivateSupabaseInviteLink(
+  id: string,
+  actor: SessionUser,
+): Promise<{ ok: boolean; message: string }> {
+  if (actor.role !== "master" && actor.role !== "admin") {
+    return {
+      ok: false,
+      message: "초대링크 관리 권한이 없습니다.",
+    };
+  }
+
+  const client = getSupabaseAdminClient();
+  let query = client
+    .from(TABLES.inviteLinks)
+    .select("id, department_id")
+    .eq("id", id);
+
+  if (actor.role === "admin") {
+    if (!actor.departmentId) {
+      return {
+        ok: false,
+        message: "소속 부서가 지정되지 않아 초대링크를 관리할 수 없습니다.",
+      };
+    }
+    query = query.eq("department_id", actor.departmentId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    return {
+      ok: false,
+      message: "초대링크를 찾을 수 없습니다.",
+    };
+  }
+
+  const { error: updateError } = await client
+    .from(TABLES.inviteLinks)
+    .update({ is_active: false })
+    .eq("id", id);
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  return {
+    ok: true,
+    message: "초대링크를 폐기했습니다.",
+  };
 }
 
 export async function saveSupabaseAdminUser(
