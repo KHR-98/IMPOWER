@@ -32,7 +32,7 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(
-    enabled ? null : "현재 저장소에서는 기록 정정 기능을 사용할 수 없습니다.",
+    enabled ? null : "현재 저장소에서는 출결 기록 정정 기능을 사용할 수 없습니다.",
   );
 
   const selectedRow = rows.find((row) => row.username === selectedUsername) ?? rows[0] ?? null;
@@ -79,11 +79,11 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
       const data = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        setMessage(data.error ?? "기록 정정에 실패했습니다.");
+        setMessage(data.error ?? "출결 기록 정정에 실패했습니다.");
         return;
       }
 
-      setMessage(data.message ?? "기록 정정을 저장했습니다.");
+      setMessage(data.message ?? "출결 기록 정정을 저장했습니다.");
       startTransition(() => router.refresh());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
@@ -96,8 +96,7 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
     <div className="stack correction-panel">
       <div className="panel-header">
         <div>
-          <h2 className="section-title">기록 정정</h2>
-          <p className="section-subtitle">관리자 권한으로 오늘 출결 시간을 직접 수정하고 사유를 기록합니다.</p>
+          <h2 className="section-title">출결 기록 정정</h2>
         </div>
       </div>
 
@@ -142,7 +141,7 @@ export function AdminAttendanceCorrectionPanel({ dateKey, rows, enabled }: Admin
 
       <div className="inline-row">
         <button type="button" className="button" disabled={!enabled || pending || !selectedRow} onClick={handleSave}>
-          {pending ? "정정 저장 중..." : "기록 정정 저장"}
+          {pending ? "정정 저장 중..." : "출결 기록 정정 저장"}
         </button>
         {selectedRow?.correctedByAdmin ? <span className="status-pill status-pending">최근 관리자 정정 있음</span> : null}
       </div>
