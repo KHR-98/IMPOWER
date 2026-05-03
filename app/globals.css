@@ -475,7 +475,7 @@ button {
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   padding: 24px 20px;
   overflow-y: auto;
@@ -483,12 +483,6 @@ button {
     radial-gradient(ellipse at 20% 10%, rgba(15, 109, 95, 0.18) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 90%, rgba(10, 79, 69, 0.14) 0%, transparent 50%),
     linear-gradient(160deg, #e8f4f1 0%, #f0f7fb 50%, #eaf2ee 100%);
-}
-
-@media (min-width: 768px) and (min-height: 720px) {
-  .login-shell {
-    align-items: center;
-  }
 }
 
 /* ── Login Card ──────────────────────────────── */
