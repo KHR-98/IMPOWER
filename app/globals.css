@@ -472,7 +472,8 @@ button {
 
 /* ── Login Shell ─────────────────────────────── */
 .login-shell {
-  min-height: 100dvh;
+  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -484,7 +485,7 @@ button {
     linear-gradient(160deg, #e8f4f1 0%, #f0f7fb 50%, #eaf2ee 100%);
 }
 
-@media (min-height: 720px) {
+@media (min-width: 768px) and (min-height: 720px) {
   .login-shell {
     align-items: center;
   }
@@ -609,16 +610,16 @@ button {
   border-radius: 16px;
   text-decoration: none;
   box-shadow: 0 4px 20px rgba(254, 229, 0, 0.35);
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: box-shadow 0.15s;
 }
 
 .kakao-login-button:hover {
-  transform: translateY(-2px);
+  transform: none;
   box-shadow: 0 8px 28px rgba(254, 229, 0, 0.45);
 }
 
 .kakao-login-button:active {
-  transform: translateY(0);
+  transform: none;
 }
 
 /* ── Unused legacy (kept for safety) ────────── */
