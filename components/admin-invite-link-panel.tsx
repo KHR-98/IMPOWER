@@ -53,6 +53,9 @@ export function AdminInviteLinkPanel({
   const [message, setMessage] = useState<string | null>(canManage ? null : "초대링크 관리 권한이 없습니다.");
   const [pending, setPending] = useState(false);
   const [generatedLinks, setGeneratedLinks] = useState<InviteLinkListItem[]>([]);
+  const [hiddenLinkIds, setHiddenLinkIds] = useState<Set<string>>(() => new Set());
+  const visibleInitialLinks = initialLinks.filter((link) => link.isActive && !hiddenLinkIds.has(link.id));
+  const visibleGeneratedLinks = generatedLinks.filter((link) => link.isActive && !hiddenLinkIds.has(link.id));
 
   async function copyLink(token: string) {
     await navigator.clipboard.writeText(buildJoinUrl(token));
@@ -151,6 +154,7 @@ export function AdminInviteLinkPanel({
       }
 
       setMessage(data.message ?? "초대링크를 폐기했습니다.");
+      setHiddenLinkIds((current) => new Set(current).add(id));
       startTransition(() => router.refresh());
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
@@ -216,11 +220,11 @@ export function AdminInviteLinkPanel({
         </button>
       </div>
 
-      {generatedLinks.length ? (
+      {visibleGeneratedLinks.length ? (
         <div className="notice small invite-link-generated-box">
           <strong>방금 생성된 링크</strong>
           <div className="invite-link-generated-list">
-            {generatedLinks.map((link) => link.token ? (
+            {visibleGeneratedLinks.map((link) => link.token ? (
               <div key={link.id} className="invite-link-generated-row">
                 <span className="invite-link-generated-meta">{link.departmentName} · {link.usedCount}/{link.maxUses}명 · {formatDateTime(link.expiresAt)}까지</span>
                 <button type="button" className="button-subtle" onClick={() => copyLink(link.token as string)}>
@@ -233,7 +237,7 @@ export function AdminInviteLinkPanel({
       ) : null}
 
       <div className="mgmt-user-list">
-        {initialLinks.length ? initialLinks.map((link) => {
+        {visibleInitialLinks.length ? visibleInitialLinks.map((link) => {
           const status = getStatusLabel(link);
           const canCopy = Boolean(link.token) && status === "활성";
 

@@ -544,7 +544,7 @@ export function getInviteLinks(actor: SessionUser): InviteLinkListItem[] {
   }
 
   return inviteLinks
-    .filter((link) => actor.role === "master" || link.departmentId === actor.departmentId)
+    .filter((link) => link.isActive && (actor.role === "master" || link.departmentId === actor.departmentId))
     .slice(0, 50)
     .map(mapInviteLink);
 }
@@ -628,6 +628,10 @@ export function deactivateInviteLink(id: string, actor: SessionUser): { ok: bool
   }
 
   link.isActive = false;
+  if (link.isActive) {
+    return { ok: false, message: "초대링크 폐기 상태를 확인하지 못했습니다." };
+  }
+
   return { ok: true, message: "초대링크를 폐기했습니다." };
 }
 

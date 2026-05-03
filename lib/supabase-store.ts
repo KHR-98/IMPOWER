@@ -1126,6 +1126,7 @@ export async function getSupabaseInviteLinks(actor: SessionUser): Promise<Invite
   let query = client
     .from(TABLES.inviteLinks)
     .select("*")
+    .eq("is_active", true)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -1302,6 +1303,23 @@ export async function deactivateSupabaseInviteLink(
 
   if (updateError) {
     throw updateError;
+  }
+
+  const { data: verifyData, error: verifyError } = await client
+    .from(TABLES.inviteLinks)
+    .select("id, is_active")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (verifyError) {
+    throw verifyError;
+  }
+
+  if (!verifyData || verifyData.is_active !== false) {
+    return {
+      ok: false,
+      message: "초대링크 폐기 상태를 확인하지 못했습니다.",
+    };
   }
 
   return {
