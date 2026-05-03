@@ -122,13 +122,19 @@ export function UserLocationMap({ zones }: { zones: Zone[] }) {
   const zoneOverlaysRef = useRef<any[]>([]);
   const userDotRef = useRef<any>(null);
   const userRingRef = useRef<any>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [mapReady, setMapReady] = useState(false);
   const [status, setStatus] = useState<string | null>(
     appKey ? "지도를 준비하는 중입니다." : "NEXT_PUBLIC_KAKAO_MAP_APP_KEY가 설정되지 않았습니다.",
   );
 
   useEffect(() => {
-    if (!appKey || !mapContainerRef.current) return;
+    if (!isExpanded || !appKey || !mapContainerRef.current) return;
+    if (mapRef.current) {
+      mapRef.current.relayout();
+      return;
+    }
+
     let cancelled = false;
 
     loadKakaoSdk(appKey)
@@ -154,7 +160,7 @@ export function UserLocationMap({ zones }: { zones: Zone[] }) {
     return () => { cancelled = true; };
   // zones는 초기 센터 계산에만 쓰고 이후엔 별도 effect에서 처리하므로 deps에서 제외
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appKey]);
+  }, [appKey, isExpanded]);
 
   useEffect(() => {
     const kakao = kakaoRef.current;
@@ -204,7 +210,7 @@ export function UserLocationMap({ zones }: { zones: Zone[] }) {
   }, [zones, mapReady]);
 
   useEffect(() => {
-    if (!mapReady) return;
+    if (!isExpanded || !mapReady) return;
     const kakao = kakaoRef.current;
     const map = mapRef.current;
     if (!kakao || !map) return;
@@ -256,15 +262,25 @@ export function UserLocationMap({ zones }: { zones: Zone[] }) {
       userDotRef.current?.setMap(null);
       userRingRef.current?.setMap(null);
     };
-  }, [mapReady]);
+  }, [isExpanded, mapReady]);
 
   return (
     <div className="user-location-map-wrap">
-      <div>
-        <h2 className="section-title">출입가능구역</h2>
+      <div className="panel-header user-location-map-header">
+        <span className="section-title">출입가능구역</span>
+        <button
+          type="button"
+          className="button-subtle"
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((value) => !value)}
+        >
+          {isExpanded ? "▲" : "▼"}
+        </button>
       </div>
-      <div ref={mapContainerRef} className="user-location-map-canvas" />
-      {status ? <div className="notice small">{status}</div> : null}
+      <div className="user-location-map-body" hidden={!isExpanded}>
+        <div ref={mapContainerRef} className="user-location-map-canvas" />
+        {status ? <div className="notice small">{status}</div> : null}
+      </div>
     </div>
   );
 }

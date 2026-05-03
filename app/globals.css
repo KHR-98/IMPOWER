@@ -2622,6 +2622,26 @@ button {
   margin-top: 4px;
 }
 
+.user-location-map-header {
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.user-location-map-header .button-subtle {
+  min-width: 38px;
+  padding: 4px 8px;
+}
+
+.user-location-map-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-location-map-body[hidden] {
+  display: none;
+}
+
 .user-location-map-canvas {
   width: 100%;
   min-height: 320px;
