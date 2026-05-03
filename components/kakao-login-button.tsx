@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, type MouseEvent } from "react";
+
 function lockLoginViewport() {
   const root = document.documentElement;
   root.style.setProperty("--login-lock-height", `${window.innerHeight}px`);
@@ -7,8 +9,20 @@ function lockLoginViewport() {
 }
 
 export function KakaoLoginButton() {
+  const leavingRef = useRef(false);
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (leavingRef.current) {
+      event.preventDefault();
+      return;
+    }
+
+    leavingRef.current = true;
+    lockLoginViewport();
+  }
+
   return (
-    <a href="/api/auth/kakao/start" className="button kakao-login-button" onClick={lockLoginViewport}>
+    <a href="/api/auth/kakao/start" className="button kakao-login-button" onClick={handleClick}>
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
         <path
           fillRule="evenodd"

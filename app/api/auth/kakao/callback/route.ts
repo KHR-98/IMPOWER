@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { findUserByKakaoId } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
-import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
+import { KAKAO_OAUTH_STATE_COOKIE, getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
 import { isAdminRole } from "@/lib/permissions";
 
@@ -15,12 +15,11 @@ type KakaoTokenError = {
   error_description?: string;
 };
 
-async function getTokenErrorCode(response: Response): Promise<string | null> {
+async function getTokenError(response: Response): Promise<KakaoTokenError> {
   try {
-    const body = (await response.json()) as KakaoTokenError;
-    return body.error_code ?? body.error ?? null;
+    return (await response.json()) as KakaoTokenError;
   } catch {
-    return null;
+    return {};
   }
 }
 
@@ -28,9 +27,18 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
+  const state = searchParams.get("state");
+  const store = await cookies();
+  const expectedState = store.get(KAKAO_OAUTH_STATE_COOKIE)?.value;
+
+  store.delete(KAKAO_OAUTH_STATE_COOKIE);
 
   if (error || !code) {
     redirect("/login?error=kakao_cancelled");
+  }
+
+  if (!state || !expectedState || state !== expectedState) {
+    redirect("/login?error=kakao_state");
   }
 
   const restApiKey = getKakaoRestApiKey();
@@ -57,7 +65,14 @@ export async function GET(request: Request) {
   });
 
   if (!tokenRes.ok) {
-    const tokenErrorCode = await getTokenErrorCode(tokenRes);
+    const tokenError = await getTokenError(tokenRes);
+    const tokenErrorCode = tokenError.error_code ?? tokenError.error ?? null;
+    console.error("Kakao token exchange failed", {
+      status: tokenRes.status,
+      error: tokenError.error,
+      error_code: tokenError.error_code,
+      error_description: tokenError.error_description,
+    });
     if (tokenErrorCode === "KOE010" || tokenErrorCode === "invalid_client") {
       redirect("/login?error=kakao_credentials");
     }
@@ -69,6 +84,7 @@ export async function GET(request: Request) {
   const accessToken = tokenData.access_token;
 
   if (!accessToken) {
+    console.error("Kakao token exchange returned no access token");
     redirect("/login?error=kakao_token");
   }
 
@@ -100,7 +116,6 @@ export async function GET(request: Request) {
   }
 
   const pendingToken = await encodeKakaoPendingToken({ kakaoId, kakaoNickname });
-  const store = await cookies();
   store.set(KAKAO_PENDING_COOKIE, pendingToken, {
     httpOnly: true,
     sameSite: "lax",
