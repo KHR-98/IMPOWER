@@ -324,6 +324,7 @@ export function AdminSettingsPanel({
   );
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [maxGpsAccuracyInput, setMaxGpsAccuracyInput] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(
     enabled ? (canEdit ? null : "운영 설정은 조회만 가능합니다.") : "현재 저장소에서는 운영 설정을 수정할 수 없습니다.",
@@ -405,6 +406,12 @@ export function AdminSettingsPanel({
   }
 
   function updateMaxGpsAccuracy(value: string) {
+    setMaxGpsAccuracyInput(value);
+
+    if (value.trim() === "") {
+      return;
+    }
+
     setSettings((current) => ({
       ...current,
       maxGpsAccuracyM: Number(value),
@@ -465,7 +472,7 @@ export function AdminSettingsPanel({
     <div className="stack admin-settings-stack">
       <div className="panel-header">
         <div>
-          <h2 className="section-title">운영 설정 편집</h2>
+          <h2 className="section-title">시간 설정 편집</h2>
         </div>
         <button
           type="button"
@@ -480,23 +487,36 @@ export function AdminSettingsPanel({
       <div className="wheel-settings-wrap">
         {visibleDepartments.length > 0 ? (
           <div className={`admin-settings-department-list${visibleDepartments.length > 1 ? " admin-settings-department-list-grid" : ""}`}>
-            {visibleDepartments.map((department) => (
-              <button
-                key={department.id}
-                type="button"
-                className={`button-subtle admin-settings-choice-button admin-settings-department-button${department.id === selectedDepartmentId ? " admin-settings-choice-button-selected admin-settings-department-button-selected" : ""}`}
-                aria-pressed={department.id === selectedDepartmentId}
-                disabled={!enabled || pending || isDeptAdmin}
-                onClick={() => {
-                  setSelectedDepartmentId(department.id);
-                  if (timeMode === "weekend" && !department.weekendShift) {
-                    setTimeMode("weekday");
-                  }
-                }}
-              >
-                {department.name}
-              </button>
-            ))}
+            {visibleDepartments.map((department) => {
+              const selected = department.id === selectedDepartmentId;
+
+              return (
+                <button
+                  key={department.id}
+                  type="button"
+                  className={`button-subtle admin-settings-choice-button admin-settings-department-button${selected ? " admin-settings-choice-button-selected admin-settings-department-button-selected" : ""}`}
+                  aria-pressed={selected}
+                  disabled={!enabled || pending || isDeptAdmin}
+                  onClick={() => {
+                    if (selected) {
+                      setSelectedDepartmentId(null);
+                      setTimeMode("weekday");
+                      return;
+                    }
+
+                    setSelectedDepartmentId(department.id);
+                    if (timeMode === "weekend" && !department.weekendShift) {
+                      setTimeMode("weekday");
+                    }
+                  }}
+                >
+                  <span>{department.name}</span>
+                  <span aria-hidden="true" className="admin-settings-department-toggle">
+                    {selected ? "▲" : "▼"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : null}
 
@@ -536,18 +556,6 @@ export function AdminSettingsPanel({
           />
         ) : null}
 
-        <div className="field" style={{ maxWidth: 240 }}>
-          <label htmlFor="max-gps-accuracy">GPS 허용 오차(m)</label>
-          <input
-            id="max-gps-accuracy"
-            type="number"
-            min={10}
-            max={1000}
-            value={settings.maxGpsAccuracyM}
-            disabled={!isEditing || !enabled || !canEdit || pending}
-            onChange={(event) => updateMaxGpsAccuracy(event.target.value)}
-          />
-        </div>
       </div>
 
       {!isDeptAdmin ? (
@@ -566,7 +574,22 @@ export function AdminSettingsPanel({
         <div className="panel-header">
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 className="section-title">지점 편집</h2>
-            <p className="section-subtitle">지점을 선택해 이름·유형·좌표·반경·활성 상태를 수정하세요.</p>
+            <div className="field map-gps-accuracy-field">
+              <label className="sr-only" htmlFor="max-gps-accuracy">GPS 허용 오차</label>
+              <div className="input-with-unit">
+                <input
+                  id="max-gps-accuracy"
+                  type="number"
+                  min={10}
+                  max={1000}
+                  placeholder="GPS 허용 오차"
+                  value={maxGpsAccuracyInput}
+                  disabled={!isMapEditing || !enabled || !canEdit || pending}
+                  onChange={(event) => updateMaxGpsAccuracy(event.target.value)}
+                />
+                <span aria-hidden="true" className="input-unit">m</span>
+              </div>
+            </div>
           </div>
           <div className="stack" style={{ gap: 6, flexShrink: 0 }}>
             <button type="button" className="button-subtle" disabled={!isMapEditing || !enabled || !canEdit || pending} onClick={addZone}>
