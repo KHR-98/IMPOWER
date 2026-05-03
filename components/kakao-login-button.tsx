@@ -1,8 +1,14 @@
 "use client";
 
+function lockLoginViewport() {
+  const root = document.documentElement;
+  root.style.setProperty("--login-lock-height", `${window.innerHeight}px`);
+  root.classList.add("kakao-auth-leaving");
+}
+
 export function KakaoLoginButton() {
   return (
-    <a href="/api/auth/kakao/start" className="button kakao-login-button">
+    <a href="/api/auth/kakao/start" className="button kakao-login-button" onClick={lockLoginViewport}>
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
         <path
           fillRule="evenodd"

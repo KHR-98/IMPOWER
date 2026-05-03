@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "보안 사업장 출퇴근 및 TBM 출문 관리 웹앱",
     start_url: "/",
     scope: "/",
-    display: "browser",
+    display: "standalone",
     background_color: "#ffffff",
     theme_color: "#0f6d5f",
     icons: [

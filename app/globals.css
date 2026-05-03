@@ -485,6 +485,20 @@ button {
     linear-gradient(160deg, #e8f4f1 0%, #f0f7fb 50%, #eaf2ee 100%);
 }
 
+html.kakao-auth-leaving,
+html.kakao-auth-leaving body {
+  height: var(--login-lock-height, 100svh);
+  overflow: hidden;
+}
+
+html.kakao-auth-leaving .login-shell {
+  position: fixed;
+  inset: 0;
+  height: var(--login-lock-height, 100svh);
+  min-height: var(--login-lock-height, 100svh);
+  overflow: hidden;
+}
+
 /* ── Login Card ──────────────────────────────── */
 .login-card {
   width: min(420px, 100%);
