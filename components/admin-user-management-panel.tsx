@@ -45,9 +45,10 @@ export function AdminUserManagementPanel({
   );
 
   const isMaster = actorRole === "master";
+  const activeUsers = initialUsers.filter((user) => user.isActive);
   const visibleUsers = isMaster
-    ? initialUsers
-    : initialUsers.filter((user) => user.departmentId === actorDepartmentId);
+    ? activeUsers
+    : activeUsers.filter((user) => user.departmentId === actorDepartmentId);
   const canManageUser = (user: AdminUserListItem) =>
     isMaster || (user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"));
   const roleOptions: Array<{ value: UserRole; label: string }> = isMaster
