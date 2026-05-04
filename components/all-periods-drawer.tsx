@@ -19,12 +19,22 @@ export function AllPeriodsTrigger({
   open,
   section,
   periodTitle,
+  departmentId,
 }: {
   open: boolean;
   section: string;
   periodTitle: string;
+  departmentId?: string | null;
 }) {
-  const href = open ? `?section=${section}` : `?section=${section}&allPeriods=1`;
+  const params = new URLSearchParams();
+  params.set("section", section);
+  if (departmentId) {
+    params.set("departmentId", departmentId);
+  }
+  if (!open) {
+    params.set("allPeriods", "1");
+  }
+  const href = `?${params.toString()}`;
 
   return (
     <Link

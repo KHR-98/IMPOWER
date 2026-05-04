@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { performAttendanceAction } from "@/lib/app-data";
+import { isMdmRequiredAttendanceAction } from "@/lib/attendance-security";
 import { isAttendanceAction } from "@/lib/attendance-rules";
 import { getSession } from "@/lib/auth";
+import { getInAppBrowserInfo, IN_APP_BROWSER_ATTENDANCE_MESSAGE } from "@/lib/in-app-browser";
 
 const coordinateSchema = z.object({
   latitude: z.number(),
@@ -29,14 +31,26 @@ export async function POST(
     return NextResponse.json({ error: "지원하지 않는 기록 유형입니다." }, { status: 404 });
   }
 
+  if (isMdmRequiredAttendanceAction(action)) {
+    const inAppBrowser = getInAppBrowserInfo(request.headers.get("user-agent"));
+
+    if (inAppBrowser.isInApp) {
+      return NextResponse.json(
+        {
+          error: `${inAppBrowser.label ?? "인앱 브라우저"}에서는 출결 보안 확인을 진행할 수 없습니다. ${IN_APP_BROWSER_ATTENDANCE_MESSAGE}`,
+        },
+        { status: 403 },
+      );
+    }
+  }
+
   const parsed = coordinateSchema.safeParse(await request.json());
 
   if (!parsed.success) {
     return NextResponse.json({ error: "위치 정보 형식이 올바르지 않습니다." }, { status: 400 });
   }
 
-  const mdmRequiredActions = ["check-in", "lunch-register", "lunch-in"];
-  if (mdmRequiredActions.includes(action) && parsed.data.mdmVerified !== true) {
+  if (isMdmRequiredAttendanceAction(action) && parsed.data.mdmVerified !== true) {
     return NextResponse.json(
       { error: "MDM 보안 확인이 필요합니다. 출퇴근 등록 전 MDM 보안 프로그램을 활성화해주세요." },
       { status: 403 },

@@ -1,4 +1,4 @@
-import { isWithinWindow } from "@/lib/time";
+import { isWithinWindow, parseTimeToMinutes } from "@/lib/time";
 import type {
   AppSettings,
   AttendancePoint,
@@ -38,6 +38,12 @@ interface PeriodDefinition {
 interface PeriodStageDefinition {
   label: string;
   getPoint: (record: AttendanceRecord | null) => AttendancePoint | null;
+}
+
+interface ActivePeriodDefinition {
+  definition: PeriodDefinition;
+  index: number;
+  window: TimeWindow;
 }
 
 function getScheduledEntries(entries: RosterEntry[]): RosterEntry[] {
@@ -333,23 +339,39 @@ function buildStat(
   };
 }
 
+function compareActivePeriodByLatestStart(left: ActivePeriodDefinition, right: ActivePeriodDefinition): number {
+  const leftStart = parseTimeToMinutes(left.window.start);
+  const rightStart = parseTimeToMinutes(right.window.start);
+
+  if (leftStart !== rightStart) {
+    return rightStart - leftStart;
+  }
+
+  return left.index - right.index;
+}
+
 export function getCurrentPeriod(
   settings: AppSettings,
   now: Date = new Date(),
   scheduledUsers?: RosterEntry[],
 ): CurrentPeriodInfo {
-  const activeDefinitions = PERIOD_DEFINITIONS.filter((definition) => {
-    const window = definition.getWindow(settings);
-    return window ? isWithinWindow(window.start, window.end, now) : false;
-  });
+  const activeDefinitions: ActivePeriodDefinition[] = PERIOD_DEFINITIONS.map((definition, index) => ({
+    definition,
+    index,
+    window: definition.getWindow(settings),
+  })).filter((item): item is ActivePeriodDefinition =>
+    item.window ? isWithinWindow(item.window.start, item.window.end, now) : false,
+  );
 
   if (activeDefinitions.length === 0) {
     return NONE_PERIOD;
   }
 
-  const definition = scheduledUsers
-    ? activeDefinitions.find((item) => item.getEntries(scheduledUsers).length > 0) ?? activeDefinitions[0]
-    : activeDefinitions[0];
+  const candidateDefinitions = scheduledUsers
+    ? activeDefinitions.filter((item) => item.definition.getEntries(scheduledUsers).length > 0)
+    : activeDefinitions;
+  const definition = [...(candidateDefinitions.length > 0 ? candidateDefinitions : activeDefinitions)]
+    .sort(compareActivePeriodByLatestStart)[0].definition;
 
   return {
     code: definition.code,

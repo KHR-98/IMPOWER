@@ -9,7 +9,7 @@ import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
-import { getAdminUserList, getDashboardView, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
+import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
@@ -69,23 +69,49 @@ function getSpecialCaseLabel(code: RosterReasonCode): string {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string }>;
+  searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string; departmentId?: string }>;
 }) {
   const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const availableSections = getAdminSectionOptions(session.role);
   const selectedSection = normalizeAdminSection(resolvedSearchParams?.section, availableSections);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";
-  const filterDeptId = session.role === "master" ? undefined : session.departmentId ?? null;
+  const departments = await getDepartments();
+  const activeDepartments = departments.filter((department) => department.isActive);
+  const sessionDepartment =
+    session.departmentId ? departments.find((department) => department.id === session.departmentId) ?? null : null;
+  const dashboardDepartmentOptions = session.role === "master"
+    ? activeDepartments
+    : sessionDepartment
+      ? [sessionDepartment]
+      : [];
+  const selectedDashboardDepartment = session.role === "master"
+    ? dashboardDepartmentOptions.find((department) => department.id === resolvedSearchParams?.departmentId) ??
+      dashboardDepartmentOptions[0] ??
+      null
+    : sessionDepartment;
+  const dashboardDepartmentId = session.role === "master"
+    ? selectedDashboardDepartment?.id ?? null
+    : session.departmentId ?? null;
+  const accountScopeDepartmentId = session.role === "master" ? undefined : session.departmentId ?? null;
+  const dashboardQueryDepartmentId = selectedSection === "overview" ? dashboardDepartmentId : accountScopeDepartmentId;
   const canUseAccountManagement = session.role === "master" || session.role === "admin";
   const [dashboard, runtime, adminUsers, inviteLinks, adminTodayView, devCoordinates] = await Promise.all([
-    getDashboardView(filterDeptId),
+    getDashboardView(dashboardQueryDepartmentId),
     getRuntimeInfo(),
-    canUseAccountManagement ? getAdminUserList(filterDeptId) : Promise.resolve([]),
+    canUseAccountManagement ? getAdminUserList(accountScopeDepartmentId) : Promise.resolve([]),
     canUseAccountManagement ? getInviteLinkList(session) : Promise.resolve([]),
     selectedSection === "overview" ? getUserTodayView(session.username, session) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
   ]);
+  const buildOverviewHref = (departmentId: string, keepAllPeriods = showAllPeriods) => {
+    const params = new URLSearchParams();
+    params.set("departmentId", departmentId);
+    if (keepAllPeriods) {
+      params.set("allPeriods", "1");
+    }
+    return `/admin?${params.toString()}`;
+  };
   const currentPeriodRows = buildCurrentPeriodOperatorRows({
     rows: dashboard.rows,
     scheduledUsers: dashboard.scheduledUsers,
@@ -158,7 +184,7 @@ export default async function AdminPage({
       : periodLabel.includes("주간조")
       ? "주간조 출결표"
       : `${periodLabel} 출결표`;
-  const accountDepartments = dashboard.settings.departmentSettings.map((department) => ({
+  const accountDepartments = departments.map((department) => ({
     id: department.id,
     code: department.code,
     name: department.name,
@@ -201,10 +227,30 @@ export default async function AdminPage({
 
       {selectedSection === "overview" ? (
         <>
+        {dashboardDepartmentOptions.length > 0 ? (
+          <nav className="inline-row account-department-filter-list" aria-label="오늘현황 부서 선택">
+            {dashboardDepartmentOptions.map((department) => {
+              const selected = department.id === dashboardDepartmentId;
+              return (
+                <Link
+                  key={department.id}
+                  href={buildOverviewHref(department.id)}
+                  className={`${selected ? "button" : "button-subtle"} account-department-filter-button`}
+                  scroll={false}
+                >
+                  {department.name}
+                </Link>
+              );
+            })}
+          </nav>
+        ) : (
+          <div className="notice small">오늘현황을 조회할 부서가 없습니다.</div>
+        )}
+
         <section className="glass-panel admin-hero-panel">
           <div className="admin-hero-copy">
             <span className="brand-kicker">실시간 운영 콘솔</span>
-            <h1>{getKoreaDateSlashLabel()} {dashboard.currentPeriod.label}</h1>
+            <h1>{getKoreaDateSlashLabel()} {selectedDashboardDepartment ? `${selectedDashboardDepartment.name} ` : ""}{dashboard.currentPeriod.label}</h1>
           </div>
           <div className="admin-hero-meta">
             <div className="admin-hero-stat">
@@ -226,7 +272,12 @@ export default async function AdminPage({
         <section className="stack admin-overview-section">
           <article className="table-panel stack admin-detail-panel admin-period-table-panel">
             <div className="panel-header admin-period-table-header">
-              <AllPeriodsTrigger open={showAllPeriods} section={selectedSection} periodTitle={periodTableTitle} />
+              <AllPeriodsTrigger
+                open={showAllPeriods}
+                section={selectedSection}
+                periodTitle={periodTableTitle}
+                departmentId={dashboardDepartmentId}
+              />
               <div>
                 <h2 className="section-title">{showAllPeriods ? "전체 출결표" : periodTableTitle}</h2>
                 <div className="admin-period-legend">
@@ -353,7 +404,7 @@ export default async function AdminPage({
               canEdit={session.role !== "sub_admin" && (session.role === "master" || Boolean(session.departmentId))}
               initialSettings={scopedSettings}
               initialZones={dashboard.zones}
-              actorDepartmentId={filterDeptId}
+              actorDepartmentId={accountScopeDepartmentId}
             />
           </article>
         </section>

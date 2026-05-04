@@ -1,7 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { isMdmRequiredAttendanceAction } from "@/lib/attendance-security";
+import {
+  buildAndroidBrowserIntentUrl,
+  getInAppBrowserInfo,
+  IN_APP_BROWSER_ATTENDANCE_MESSAGE,
+  type InAppBrowserInfo,
+} from "@/lib/in-app-browser";
 import type { AttendanceAction, AttendanceEventState, CoordinatePayload } from "@/lib/types";
 
 interface AttendanceActionPanelProps {
@@ -10,7 +17,11 @@ interface AttendanceActionPanelProps {
   variant?: "default" | "quick";
 }
 
-const MDM_REQUIRED_ACTIONS: AttendanceAction[] = ["check-in", "lunch-register", "lunch-in"];
+const CHROME_ANDROID_PACKAGE = "com.android.chrome";
+const SAMSUNG_INTERNET_ANDROID_PACKAGE = "com.sec.android.app.sbrowser";
+const CHROME_STORE_URL = "https://play.google.com/store/apps/details?id=com.android.chrome";
+const SAMSUNG_INTERNET_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.sec.android.app.sbrowser";
 
 type MdmCheckResult =
   | { ok: true; cameraTestResult: string }
@@ -167,19 +178,54 @@ function getStatusMessage(visibleStates: AttendanceEventState[], allStates: Atte
   return "오늘 필요한 기록이 모두 완료되었습니다.";
 }
 
+function getInAppAttendanceMessage(info: InAppBrowserInfo): string {
+  const label = info.label ?? "인앱 브라우저";
+  return `${label}에서는 ${IN_APP_BROWSER_ATTENDANCE_MESSAGE}`;
+}
+
 export function AttendanceActionPanel({ eventStates: initialEventStates, devCoordinates, variant = "default" }: AttendanceActionPanelProps) {
   const [eventStates, setEventStates] = useState<AttendanceEventState[]>(initialEventStates);
   const [pendingAction, setPendingAction] = useState<AttendanceAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [userAgent, setUserAgent] = useState<string | null>(null);
 
   const visibleStates = useMemo(() => getVisibleStates(eventStates), [eventStates]);
   const quickActionStates = useMemo(() => getQuickActionStates(eventStates), [eventStates]);
   const actionStates = variant === "quick" ? quickActionStates : visibleStates;
-  const statusMessage = useMemo(() => getStatusMessage(visibleStates, eventStates), [eventStates, visibleStates]);
+  const inAppBrowser = useMemo(() => getInAppBrowserInfo(userAgent), [userAgent]);
+  const hasMdmRequiredAction = useMemo(
+    () =>
+      actionStates.some(
+        (state) => state.action && isMdmRequiredAttendanceAction(state.action) && !state.occurredAt,
+      ),
+    [actionStates],
+  );
+  const inAppWarning =
+    inAppBrowser.isInApp && hasMdmRequiredAction ? getInAppAttendanceMessage(inAppBrowser) : null;
+  const statusMessage = useMemo(
+    () => inAppWarning ?? getStatusMessage(visibleStates, eventStates),
+    [eventStates, inAppWarning, visibleStates],
+  );
+
+  useEffect(() => {
+    setUserAgent(window.navigator.userAgent);
+  }, []);
+
+  function openExternalBrowser(packageName: string, fallbackUrl: string) {
+    const targetUrl = window.location.href;
+    window.location.href = buildAndroidBrowserIntentUrl(targetUrl, packageName, fallbackUrl);
+  }
 
   async function submitAction(action: AttendanceAction, useDemoCoordinates: boolean) {
+    const requiresMdm = !useDemoCoordinates && isMdmRequiredAttendanceAction(action);
+    const currentInAppBrowser = getInAppBrowserInfo(window.navigator.userAgent);
+
+    if (requiresMdm && currentInAppBrowser.isInApp) {
+      setMessage(getInAppAttendanceMessage(currentInAppBrowser));
+      return;
+    }
+
     setPendingAction(action);
-    const requiresMdm = !useDemoCoordinates && MDM_REQUIRED_ACTIONS.includes(action);
     setMessage(requiresMdm ? "보안·위치 확인 중..." : "위치 확인 중...");
 
     try {
@@ -197,7 +243,7 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
       setMessage(null);
 
       const body: Record<string, unknown> = { ...position };
-      if (MDM_REQUIRED_ACTIONS.includes(action)) {
+      if (isMdmRequiredAttendanceAction(action)) {
         if (useDemoCoordinates) {
           // 데모 모드에서는 MDM 검사 생략
           body.mdmVerified = true;
@@ -241,13 +287,20 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
           const action = state.action;
           const busy = action ? pendingAction === action : false;
           const canUseDemoCoordinates = variant === "default" && process.env.NODE_ENV !== "production" && action && devCoordinates?.[action];
-          const disabled = !action || !state.available || pendingAction !== null || Boolean(state.occurredAt);
+          const blockedByInAppBrowser =
+            inAppBrowser.isInApp && Boolean(action && isMdmRequiredAttendanceAction(action));
+          const disabled =
+            !action ||
+            !state.available ||
+            pendingAction !== null ||
+            Boolean(state.occurredAt) ||
+            blockedByInAppBrowser;
 
           return (
             <div key={state.code} className={`check-button-row${variant === "quick" ? " check-button-row-quick" : ""}`}>
               <button
                 type="button"
-                className={getButtonClassName(state)}
+                className={`${getButtonClassName(state)}${blockedByInAppBrowser ? " check-button-disabled" : ""}`}
                 disabled={disabled}
                 onClick={() => {
                   if (action) {
@@ -275,6 +328,29 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
           );
         })}
       </div>
+
+      {inAppWarning ? (
+        <div className="notice small check-browser-warning">
+          <strong>외부 브라우저로 열어주세요.</strong>
+          <span>{inAppWarning}</span>
+          <div className="check-browser-actions">
+            <button
+              type="button"
+              className="button-subtle"
+              onClick={() => openExternalBrowser(CHROME_ANDROID_PACKAGE, CHROME_STORE_URL)}
+            >
+              Chrome으로 열기
+            </button>
+            <button
+              type="button"
+              className="button-subtle"
+              onClick={() => openExternalBrowser(SAMSUNG_INTERNET_ANDROID_PACKAGE, SAMSUNG_INTERNET_STORE_URL)}
+            >
+              삼성 인터넷으로 열기
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="check-message">{message ?? statusMessage}</div>
     </div>

@@ -45,6 +45,39 @@ const EVENT_ZONE_TYPES: Record<AttendanceEventCode, ZoneType> = {
   check_out: "entry",
 };
 
+function getAllowedZoneTypes(code: AttendanceEventCode): ZoneType[] {
+  if (code === "lunch_register") {
+    return ["tbm"];
+  }
+
+  return [EVENT_ZONE_TYPES[code]];
+}
+
+function findMatchingAllowedZone(
+  zones: Zone[],
+  zoneTypes: ZoneType[],
+  latitude: number,
+  longitude: number,
+): Zone | null {
+  for (const zoneType of zoneTypes) {
+    const zone = findMatchingZone(zones, zoneType, latitude, longitude);
+
+    if (zone) {
+      return zone;
+    }
+  }
+
+  return null;
+}
+
+function getZoneFailureMessage(code: AttendanceEventCode, zoneType: ZoneType): string {
+  if (code === "lunch_register") {
+    return "점심 등록은 TBM 반경 안에서만 가능합니다.";
+  }
+
+  return zoneType === "tbm" ? "TBM 집합 위치 안에서만 가능합니다." : "출입 반경 밖입니다. 사업장 내로 이동해주세요.";
+}
+
 const DAY_TBM_CODES: AttendanceEventCode[] = ["tbm_morning", "tbm_afternoon", "tbm_checkout"];
 const WEEKEND_UNAVAILABLE_CODES: AttendanceEventCode[] = [
   "tbm_morning",
@@ -271,11 +304,11 @@ export function buildEventAvailability(
   const windowText = formatWindow(window);
 
   if (!window) {
-    return buildUnavailableState(code, `${label} 시간이 아직 설정되지 않았습니다.`, occurredAt);
+    return buildUnavailableState(code, "출결 시간이 아직 설정되지 않았습니다.", occurredAt);
   }
 
   if (!isWindowActive(window, now)) {
-    return buildHiddenPendingState(code, `${label} 시간이 아닙니다.`);
+    return buildHiddenPendingState(code, "출결 시간이 아닙니다.");
   }
 
   return {
@@ -340,12 +373,17 @@ export function validateAttendanceMutation(input: {
     };
   }
 
-  const zone = findMatchingZone(input.zones, state.zoneType, input.latitude, input.longitude);
+  const zone = findMatchingAllowedZone(
+    input.zones,
+    getAllowedZoneTypes(eventCode),
+    input.latitude,
+    input.longitude,
+  );
 
   if (!zone) {
     return {
       ok: false,
-      message: state.zoneType === "tbm" ? "TBM 집합 위치 안에서만 가능합니다." : "출입 반경 밖입니다. 사업장 내로 이동해주세요.",
+      message: getZoneFailureMessage(eventCode, state.zoneType),
       eventCode,
     };
   }

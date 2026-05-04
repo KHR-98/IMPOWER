@@ -2585,6 +2585,24 @@ html.kakao-auth-leaving .login-shell {
   text-align: center;
 }
 
+.check-browser-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.check-browser-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.check-browser-actions .button-subtle {
+  min-height: 42px;
+  padding: 10px 14px;
+}
+
 @media (max-width: 780px) {
   .check-screen {
     min-height: auto;
