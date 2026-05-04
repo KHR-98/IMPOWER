@@ -227,7 +227,7 @@ export default async function AdminPage({
 
       {selectedSection === "overview" ? (
         <>
-        {dashboardDepartmentOptions.length > 0 ? (
+        {session.role === "master" && dashboardDepartmentOptions.length > 0 ? (
           <nav className="inline-row account-department-filter-list" aria-label="오늘현황 부서 선택">
             {dashboardDepartmentOptions.map((department) => {
               const selected = department.id === dashboardDepartmentId;
@@ -243,9 +243,9 @@ export default async function AdminPage({
               );
             })}
           </nav>
-        ) : (
+        ) : session.role === "master" ? (
           <div className="notice small">오늘현황을 조회할 부서가 없습니다.</div>
-        )}
+        ) : null}
 
         <section className="glass-panel admin-hero-panel">
           <div className="admin-hero-copy">
