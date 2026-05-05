@@ -265,14 +265,14 @@ as $$
 begin
   with current_events(action_type, occurred_at, latitude, longitude, accuracy_m, zone_id, mdm_verified, camera_test) as (
     values
-      ('check_in'::text, new.check_in_at, new.check_in_lat, new.check_in_lng, new.check_in_accuracy_m, new.check_in_zone_id, new.check_in_mdm_verified, new.check_in_camera_test),
-      ('tbm_morning'::text, coalesce(new.tbm_morning_at, new.tbm_at), coalesce(new.tbm_morning_lat, new.tbm_lat), coalesce(new.tbm_morning_lng, new.tbm_lng), coalesce(new.tbm_morning_accuracy_m, new.tbm_accuracy_m), coalesce(new.tbm_morning_zone_id, new.tbm_zone_id), null::boolean, null::text),
-      ('lunch_register'::text, new.lunch_register_at, new.lunch_register_lat, new.lunch_register_lng, new.lunch_register_accuracy_m, new.lunch_register_zone_id, new.lunch_register_mdm_verified, new.lunch_register_camera_test),
-      ('lunch_out'::text, new.lunch_out_at, new.lunch_out_lat, new.lunch_out_lng, new.lunch_out_accuracy_m, new.lunch_out_zone_id, null::boolean, null::text),
-      ('lunch_in'::text, new.lunch_in_at, new.lunch_in_lat, new.lunch_in_lng, new.lunch_in_accuracy_m, new.lunch_in_zone_id, new.lunch_in_mdm_verified, new.lunch_in_camera_test),
-      ('tbm_afternoon'::text, new.tbm_afternoon_at, new.tbm_afternoon_lat, new.tbm_afternoon_lng, new.tbm_afternoon_accuracy_m, new.tbm_afternoon_zone_id, null::boolean, null::text),
-      ('tbm_checkout'::text, new.tbm_checkout_at, new.tbm_checkout_lat, new.tbm_checkout_lng, new.tbm_checkout_accuracy_m, new.tbm_checkout_zone_id, null::boolean, null::text),
-      ('check_out'::text, new.check_out_at, new.check_out_lat, new.check_out_lng, new.check_out_accuracy_m, new.check_out_zone_id, new.check_out_mdm_verified, new.check_out_camera_test)
+      ('check_in'::text, new.check_in_at, null::double precision, null::double precision, null::double precision, new.check_in_zone_id, new.check_in_mdm_verified, new.check_in_camera_test),
+      ('tbm_morning'::text, coalesce(new.tbm_morning_at, new.tbm_at), null::double precision, null::double precision, null::double precision, coalesce(new.tbm_morning_zone_id, new.tbm_zone_id), null::boolean, null::text),
+      ('lunch_register'::text, new.lunch_register_at, null::double precision, null::double precision, null::double precision, new.lunch_register_zone_id, new.lunch_register_mdm_verified, new.lunch_register_camera_test),
+      ('lunch_out'::text, new.lunch_out_at, null::double precision, null::double precision, null::double precision, new.lunch_out_zone_id, null::boolean, null::text),
+      ('lunch_in'::text, new.lunch_in_at, null::double precision, null::double precision, null::double precision, new.lunch_in_zone_id, new.lunch_in_mdm_verified, new.lunch_in_camera_test),
+      ('tbm_afternoon'::text, new.tbm_afternoon_at, null::double precision, null::double precision, null::double precision, new.tbm_afternoon_zone_id, null::boolean, null::text),
+      ('tbm_checkout'::text, new.tbm_checkout_at, null::double precision, null::double precision, null::double precision, new.tbm_checkout_zone_id, null::boolean, null::text),
+      ('check_out'::text, new.check_out_at, null::double precision, null::double precision, null::double precision, new.check_out_zone_id, new.check_out_mdm_verified, new.check_out_camera_test)
   ),
   deleted as (
     delete from attendance_events

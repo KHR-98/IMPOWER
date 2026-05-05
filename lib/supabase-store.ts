@@ -532,18 +532,12 @@ function buildEventColumnPayload(
   const prefix = EVENT_STORAGE_PREFIX[eventCode];
   const payload: Record<string, string | number | boolean | null> = {
     [`${prefix}_at`]: point.occurredAt,
-    [`${prefix}_lat`]: point.latitude,
-    [`${prefix}_lng`]: point.longitude,
-    [`${prefix}_accuracy_m`]: point.accuracyM,
     [`${prefix}_zone_id`]: point.zoneId,
     updated_at: updatedAt,
   };
 
   if (eventCode === "tbm_morning") {
     payload.tbm_at = point.occurredAt;
-    payload.tbm_lat = point.latitude;
-    payload.tbm_lng = point.longitude;
-    payload.tbm_accuracy_m = point.accuracyM;
     payload.tbm_zone_id = point.zoneId;
   }
 
