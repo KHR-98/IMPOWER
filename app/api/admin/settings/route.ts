@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { saveAdminConfiguration } from "@/lib/app-data";
+import { getSettings, saveAdminConfiguration } from "@/lib/app-data";
 import { buildOperationalSettings } from "@/lib/attendance-schedule";
 import { getSession } from "@/lib/auth";
+import { preserveDisabledDepartmentLunchTbmSettings } from "@/lib/department-feature-policy";
 import { isSystemAdminRole } from "@/lib/permissions";
 
 const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -136,6 +137,12 @@ export async function PATCH(request: Request) {
   }
 
   const baseSettings = buildOperationalSettings(parsed.data.settings.maxGpsAccuracyM);
+  const currentSettings = await getSettings();
+  const departmentSettings = preserveDisabledDepartmentLunchTbmSettings(
+    parsed.data.settings.departmentSettings,
+    currentSettings.departmentSettings,
+    currentSettings,
+  );
   const result = await saveAdminConfiguration(
     {
       settings: {
@@ -147,7 +154,7 @@ export async function PATCH(request: Request) {
         checkOutWindow: parsed.data.settings.checkOutWindow,
         lateCheckInWindow: parsed.data.settings.lateCheckInWindow,
         lateCheckOutWindow: parsed.data.settings.lateCheckOutWindow,
-        departmentSettings: parsed.data.settings.departmentSettings,
+        departmentSettings,
         maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
         dayShift: {
           ...baseSettings.dayShift,

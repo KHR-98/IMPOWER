@@ -1,10 +1,14 @@
 import type {
   ActionAvailability,
+  AppSettings,
   AttendanceAction,
   AttendanceEventCode,
   AttendanceEventState,
   CurrentPeriodCode,
   CurrentPeriodStat,
+  DepartmentAttendanceSettings,
+  ShiftAttendanceSettings,
+  TimeWindow,
 } from "@/lib/types";
 
 const LUNCH_TBM_DISABLED_DEPARTMENT_CODES = new Set(["memory", "foundry_pcs"]);
@@ -32,6 +36,18 @@ export const DEPARTMENT_FEATURE_DISABLED_MESSAGE = "해당 부서는 점심/TBM 
 
 export function departmentUsesLunchAndTbm(departmentCode?: string | null): boolean {
   return !departmentCode || !LUNCH_TBM_DISABLED_DEPARTMENT_CODES.has(departmentCode);
+}
+
+export function isLunchTbmSettingsKey(key: string): boolean {
+  return (
+    key === "tbmWindow" ||
+    key === "lunchOutWindow" ||
+    key === "lunchInWindow" ||
+    key === "tbmAfternoonWindow" ||
+    key === "tbmCheckoutWindow" ||
+    key === "lateLunchOutWindow" ||
+    key === "lateLunchInWindow"
+  );
 }
 
 export function isAttendanceActionAllowedForDepartment(
@@ -112,4 +128,81 @@ export function getDepartmentCurrentPeriodLabel(
   }
 
   return label;
+}
+
+function cloneWindow(window: TimeWindow | null): TimeWindow | null {
+  return window ? { ...window } : null;
+}
+
+function preserveDisabledShiftLunchTbmWindows(
+  next: ShiftAttendanceSettings,
+  current: ShiftAttendanceSettings | null | undefined,
+  fallback: AppSettings,
+  shiftType: "day" | "late" | "weekend",
+): ShiftAttendanceSettings {
+  if (!current) {
+    return next;
+  }
+
+  if (shiftType === "day") {
+    return {
+      ...next,
+      tbmMorningWindow: cloneWindow(current.tbmMorningWindow),
+      lunchOutWindow: cloneWindow(current.lunchOutWindow),
+      lunchInWindow: cloneWindow(current.lunchInWindow),
+      tbmAfternoonWindow: cloneWindow(current.tbmAfternoonWindow),
+      tbmCheckoutWindow: cloneWindow(current.tbmCheckoutWindow),
+    };
+  }
+
+  if (shiftType === "weekend") {
+    return {
+      ...next,
+      tbmMorningWindow: cloneWindow(current.tbmMorningWindow),
+      lunchOutWindow: cloneWindow(current.lunchOutWindow ?? fallback.weekendShift?.lunchOutWindow ?? null),
+      lunchInWindow: cloneWindow(current.lunchInWindow ?? fallback.weekendShift?.lunchInWindow ?? null),
+      tbmAfternoonWindow: cloneWindow(current.tbmAfternoonWindow),
+      tbmCheckoutWindow: cloneWindow(current.tbmCheckoutWindow),
+    };
+  }
+
+  return {
+    ...next,
+    lunchOutWindow: cloneWindow(current.lunchOutWindow),
+    lunchInWindow: cloneWindow(current.lunchInWindow),
+  };
+}
+
+export function preserveDisabledDepartmentLunchTbmSettings(
+  nextDepartmentSettings: DepartmentAttendanceSettings[],
+  currentDepartmentSettings: DepartmentAttendanceSettings[],
+  fallbackSettings: AppSettings,
+): DepartmentAttendanceSettings[] {
+  const currentById = new Map(currentDepartmentSettings.map((department) => [department.id, department]));
+
+  return nextDepartmentSettings.map((department) => {
+    if (departmentUsesLunchAndTbm(department.code)) {
+      return department;
+    }
+
+    const current = currentById.get(department.id);
+
+    if (!current) {
+      return department;
+    }
+
+    return {
+      ...department,
+      dayShift: preserveDisabledShiftLunchTbmWindows(department.dayShift, current.dayShift, fallbackSettings, "day"),
+      lateShift: preserveDisabledShiftLunchTbmWindows(department.lateShift, current.lateShift, fallbackSettings, "late"),
+      weekendShift: department.weekendShift
+        ? preserveDisabledShiftLunchTbmWindows(
+            department.weekendShift,
+            current.weekendShift,
+            fallbackSettings,
+            "weekend",
+          )
+        : department.weekendShift,
+    };
+  });
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { KakaoZoneMap } from "@/components/kakao-zone-map";
 import { CombinedTimeSettingsPicker, type SettingsKey, type TimeSettingsSegment } from "@/components/time-wheel-picker";
+import { departmentUsesLunchAndTbm, isLunchTbmSettingsKey } from "@/lib/department-feature-policy";
 import type { AppSettings, DepartmentAttendanceSettings, ShiftAttendanceSettings, TimeWindow, Zone, ZoneType } from "@/lib/types";
 
 const DEFAULT_ZONE_CENTER = {
@@ -239,18 +240,32 @@ interface WeekendTimeSettingsPickerProps {
   fallbackSettings: Record<SettingsKey, TimeWindow>;
   onChangeWindow: (key: WeekendSettingsKey, field: "start" | "end", value: string) => void;
   disabled?: boolean;
+  showLunchTbmSettings?: boolean;
 }
 
 interface WeekdayTimeSettingsPickerProps {
   settings: Record<SettingsKey, TimeWindow>;
   onChangeWindow: (key: SettingsKey, field: "start" | "end", value: string) => void;
   disabled?: boolean;
+  showLunchTbmSettings?: boolean;
 }
 
-function WeekdayTimeSettingsPicker({ settings, onChangeWindow, disabled }: WeekdayTimeSettingsPickerProps) {
+function WeekdayTimeSettingsPicker({
+  settings,
+  onChangeWindow,
+  disabled,
+  showLunchTbmSettings = true,
+}: WeekdayTimeSettingsPickerProps) {
+  const groups = WEEKDAY_TIME_GROUPS.map((group) => ({
+    ...group,
+    segments: showLunchTbmSettings
+      ? group.segments
+      : group.segments.filter((segment) => !isLunchTbmSettingsKey(segment.key)),
+  })).filter((group) => group.segments.length > 0);
+
   return (
     <div className="settings-grid weekday-time-settings-grid" style={{ width: "100%" }}>
-      {WEEKDAY_TIME_GROUPS.map((group) => (
+      {groups.map((group) => (
         <div key={group.title} className="stack weekday-time-settings-group">
           <div className="inline-row" style={{ gap: 8 }}>
             <span className="badge">{group.title}</span>
@@ -267,9 +282,18 @@ function WeekdayTimeSettingsPicker({ settings, onChangeWindow, disabled }: Weekd
   );
 }
 
-function WeekendTimeSettingsPicker({ settings, fallbackSettings, onChangeWindow, disabled }: WeekendTimeSettingsPickerProps) {
+function WeekendTimeSettingsPicker({
+  settings,
+  fallbackSettings,
+  onChangeWindow,
+  disabled,
+  showLunchTbmSettings = true,
+}: WeekendTimeSettingsPickerProps) {
   const lunchOutWindow = fallbackWindow(settings.lunchOutWindow, fallbackSettings.lunchOutWindow);
   const lunchInWindow = fallbackWindow(settings.lunchInWindow, fallbackSettings.lunchInWindow);
+  const segments = showLunchTbmSettings
+    ? WEEKEND_TIME_SEGMENTS
+    : WEEKEND_TIME_SEGMENTS.filter((segment) => !isLunchTbmSettingsKey(segment.key));
   const pickerSettings: Record<SettingsKey, TimeWindow> = {
     checkInWindow: settings.checkInWindow,
     tbmWindow: settings.checkInWindow,
@@ -291,7 +315,7 @@ function WeekendTimeSettingsPicker({ settings, fallbackSettings, onChangeWindow,
       </div>
       <CombinedTimeSettingsPicker
         settings={pickerSettings}
-        segments={WEEKEND_TIME_SEGMENTS}
+        segments={segments}
         onChangeWindow={(key, field, value) => {
           if (key === "checkInWindow" || key === "lunchOutWindow" || key === "lunchInWindow" || key === "checkOutWindow") {
             onChangeWindow(key, field, value);
@@ -331,6 +355,7 @@ export function AdminSettingsPanel({
   );
   const visibleDepartments = settings.departmentSettings.filter((department) => !isDeptAdmin || department.id === actorDepartmentId);
   const selectedDepartment = visibleDepartments.find((department) => department.id === selectedDepartmentId) ?? null;
+  const selectedDepartmentUsesLunchAndTbm = departmentUsesLunchAndTbm(selectedDepartment?.code ?? null);
   const selectedDepartmentHasWeekend = Boolean(selectedDepartment?.weekendShift);
   const timeModeOptions = TIME_MODE_OPTIONS.filter((option) => option.key === "weekday" || selectedDepartmentHasWeekend);
   const pickerSettings = getDepartmentPickerSettings(settings, selectedDepartment);
@@ -361,6 +386,10 @@ export function AdminSettingsPanel({
 
   function updateTimeWindow(key: SettingsKey, field: "start" | "end", value: string) {
     if (selectedDepartment) {
+      if (!selectedDepartmentUsesLunchAndTbm && isLunchTbmSettingsKey(key)) {
+        return;
+      }
+
       setSettings((current) => ({
         ...current,
         departmentSettings: current.departmentSettings.map((department) =>
@@ -392,6 +421,10 @@ export function AdminSettingsPanel({
 
   function updateWeekendTimeWindow(key: WeekendSettingsKey, field: "start" | "end", value: string) {
     if (!selectedDepartment) {
+      return;
+    }
+
+    if (!selectedDepartmentUsesLunchAndTbm && isLunchTbmSettingsKey(key)) {
       return;
     }
 
@@ -546,6 +579,7 @@ export function AdminSettingsPanel({
             settings={pickerSettings}
             onChangeWindow={updateTimeWindow}
             disabled={!isEditing || !enabled || !canEdit || pending}
+            showLunchTbmSettings={selectedDepartmentUsesLunchAndTbm}
           />
         ) : selectedDepartment ? (
           <WeekendTimeSettingsPicker
@@ -553,6 +587,7 @@ export function AdminSettingsPanel({
             fallbackSettings={pickerSettings}
             onChangeWindow={updateWeekendTimeWindow}
             disabled={!isEditing || !enabled || !canEdit || pending}
+            showLunchTbmSettings={selectedDepartmentUsesLunchAndTbm}
           />
         ) : null}
 
