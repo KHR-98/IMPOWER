@@ -14,6 +14,7 @@ import type {
   AppSettings,
   AdminUserListItem,
   AdminUserMutationInput,
+  AccuracyCheckResult,
   AttendanceAction,
   AttendanceEventCode,
   AttendanceMutationResult,
@@ -28,6 +29,7 @@ import type {
   UserRole,
   UserTodayView,
   Zone,
+  ZoneCheckResult,
 } from "@/lib/types";
 
 const demoPasswordHash = hashSync("demo1234", 10);
@@ -928,9 +930,9 @@ export function getDevCoordinates(): Partial<Record<AttendanceAction, { latitude
 export function performAttendanceAction(input: {
   username: string;
   action: AttendanceAction;
-  latitude: number;
-  longitude: number;
-  accuracyM: number;
+  zoneId: string;
+  zoneCheckResult: ZoneCheckResult;
+  accuracyCheckResult: AccuracyCheckResult;
 }): AttendanceMutationResult {
   const workDate = getKoreaDateKey();
   const sessionUser = getSessionUser(input.username);
@@ -948,9 +950,9 @@ export function performAttendanceAction(input: {
   if (currentRecord) {
     const duplicateValidation = validateAttendanceMutation({
       action: input.action,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      accuracyM: input.accuracyM,
+      zoneId: input.zoneId,
+      zoneCheckResult: input.zoneCheckResult,
+      accuracyCheckResult: input.accuracyCheckResult,
       rosterEntry,
       record: currentRecord,
       zones,
@@ -964,9 +966,9 @@ export function performAttendanceAction(input: {
 
   const validation = validateAttendanceMutation({
     action: input.action,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    accuracyM: input.accuracyM,
+    zoneId: input.zoneId,
+    zoneCheckResult: input.zoneCheckResult,
+    accuracyCheckResult: input.accuracyCheckResult,
     rosterEntry,
     record: currentRecord,
     zones,
@@ -980,9 +982,9 @@ export function performAttendanceAction(input: {
   const nextRecord = currentRecord ?? buildEmptyRecord(workDate, input.username, sessionUser.displayName);
   const point = {
     occurredAt: new Date().toISOString(),
-    latitude: input.latitude,
-    longitude: input.longitude,
-    accuracyM: input.accuracyM,
+    latitude: 0,
+    longitude: 0,
+    accuracyM: 0,
     zoneId: validation.zoneId,
   };
 

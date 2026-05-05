@@ -12,6 +12,7 @@ import {
   getDepartments as getDemoDepartments,
   getDemoCredentials,
   getDevCoordinates,
+  getSettings as getDemoSettings,
   getInviteLinks as getDemoInviteLinks,
   getInviteRegistrationContext as getDemoInviteRegistrationContext,
   getSessionUser as getDemoSessionUser,
@@ -40,6 +41,7 @@ import {
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
   getSupabaseDepartments,
+  getSupabaseSettings,
   getSupabaseSessionUser,
   getSupabaseSheetUserImportPreview,
   getSupabaseUserTodayView,
@@ -62,6 +64,7 @@ import type {
   AppSettings,
   AttendanceAction,
   AttendanceMutationResult,
+  AccuracyCheckResult,
   CoordinatePayload,
   DashboardView,
   DataSourceKind,
@@ -75,6 +78,7 @@ import type {
   UserRole,
   UserTodayView,
   Zone,
+  ZoneCheckResult,
 } from "@/lib/types";
 
 interface ResolvedDataSource {
@@ -165,6 +169,10 @@ export async function getZones(): Promise<Zone[]> {
   return resolveDataSource().dataSource === "supabase" ? getSupabaseZones() : getDemoZones();
 }
 
+export async function getSettings(): Promise<AppSettings> {
+  return resolveDataSource().dataSource === "supabase" ? getSupabaseSettings() : getDemoSettings();
+}
+
 export async function getAdminUserList(departmentId?: string | null): Promise<AdminUserListItem[]> {
   return resolveDataSource().dataSource === "supabase" ? getSupabaseAdminUsers(departmentId) : getDemoAdminUsers(departmentId);
 }
@@ -197,9 +205,9 @@ export async function deactivateInviteLink(id: string, actor: SessionUser): Prom
 export async function performAttendanceAction(input: {
   username: string;
   action: AttendanceAction;
-  latitude: number;
-  longitude: number;
-  accuracyM: number;
+  zoneId: string;
+  zoneCheckResult: ZoneCheckResult;
+  accuracyCheckResult: AccuracyCheckResult;
   mdmVerified?: boolean;
   cameraTestResult?: string | null;
   sessionUser?: SessionUser;

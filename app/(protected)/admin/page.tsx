@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { AdminAttendanceCorrectionPanel } from "@/components/admin-attendance-correction-panel";
 import { AdminInviteLinkPanel } from "@/components/admin-invite-link-panel";
@@ -11,6 +12,7 @@ import { AdminUserManagementPanel } from "@/components/admin-user-management-pan
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
 import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdmin } from "@/lib/auth";
+import { hasCurrentConsent } from "@/lib/consent-store";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode, ShiftType, UserRole } from "@/lib/types";
@@ -43,6 +45,17 @@ function normalizeAdminSection(
   return "overview";
 }
 
+function buildAdminNextPath(searchParams?: { section?: string; focus?: string; allPeriods?: string; departmentId?: string }) {
+  const params = new URLSearchParams();
+
+  if (searchParams?.section) params.set("section", searchParams.section);
+  if (searchParams?.focus) params.set("focus", searchParams.focus);
+  if (searchParams?.allPeriods) params.set("allPeriods", searchParams.allPeriods);
+  if (searchParams?.departmentId) params.set("departmentId", searchParams.departmentId);
+
+  const query = params.toString();
+  return query ? `/admin?${query}` : "/admin";
+}
 
 const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military", "blocked"];
 function getSpecialCaseLabel(code: RosterReasonCode): string {
@@ -73,6 +86,11 @@ export default async function AdminPage({
 }) {
   const session = await requireAdmin();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+
+  if (!(await hasCurrentConsent(session.username))) {
+    redirect(`/consent?next=${encodeURIComponent(buildAdminNextPath(resolvedSearchParams))}`);
+  }
+
   const availableSections = getAdminSectionOptions(session.role);
   const selectedSection = normalizeAdminSection(resolvedSearchParams?.section, availableSections);
   const showAllPeriods = resolvedSearchParams?.allPeriods === "1";

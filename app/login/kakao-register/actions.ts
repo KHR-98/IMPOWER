@@ -154,5 +154,5 @@ export async function kakaoRegisterAction(
   store.delete(KAKAO_PENDING_COOKIE);
   store.delete(INVITE_LINK_COOKIE);
   await createSession(user);
-  redirect("/dashboard");
+  redirect(`/consent?next=${encodeURIComponent("/dashboard")}`);
 }

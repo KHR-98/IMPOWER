@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { AttendanceActionPanel } from "@/components/attendance-action-panel";
 import { UserLocationMap } from "@/components/user-location-map";
 import { getShiftLabel } from "@/lib/attendance-events";
-import { getDevCoordinatesForTesting, getRuntimeInfo, getUserTodayView, getZones } from "@/lib/app-data";
+import { getDevCoordinatesForTesting, getRuntimeInfo, getSettings, getUserTodayView, getZones } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
+import { hasCurrentConsent } from "@/lib/consent-store";
 
 
 export default async function DashboardPage({
@@ -20,11 +21,16 @@ export default async function DashboardPage({
     redirect("/admin");
   }
 
-  const [view, devCoordinates, runtime, zones] = await Promise.all([
+  if (!(await hasCurrentConsent(session.username))) {
+    redirect(`/consent?next=${encodeURIComponent(isAdminUserPreview ? "/dashboard?view=user" : "/dashboard")}`);
+  }
+
+  const [view, devCoordinates, runtime, zones, settings] = await Promise.all([
     getUserTodayView(session.username, session),
     getDevCoordinatesForTesting(),
     getRuntimeInfo(),
     getZones(),
+    getSettings(),
   ]);
   return (
     <main className="check-screen">
@@ -44,7 +50,13 @@ export default async function DashboardPage({
 
 {runtime.setupMessage ? <div className="error-box">{runtime.setupMessage}</div> : null}
 
-        <AttendanceActionPanel eventStates={view.eventStates} devCoordinates={devCoordinates} variant="quick" />
+        <AttendanceActionPanel
+          eventStates={view.eventStates}
+          devCoordinates={devCoordinates}
+          zones={zones}
+          maxGpsAccuracyM={settings.maxGpsAccuracyM}
+          variant="quick"
+        />
         <UserLocationMap zones={zones} />
       </section>
     </main>

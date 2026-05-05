@@ -5,15 +5,16 @@ import { performAttendanceAction } from "@/lib/app-data";
 import { isMdmRequiredAttendanceAction } from "@/lib/attendance-security";
 import { isAttendanceAction } from "@/lib/attendance-rules";
 import { getSession } from "@/lib/auth";
+import { hasCurrentConsent } from "@/lib/consent-store";
 import { getInAppBrowserInfo, IN_APP_BROWSER_ATTENDANCE_MESSAGE } from "@/lib/in-app-browser";
 
-const coordinateSchema = z.object({
-  latitude: z.number(),
-  longitude: z.number(),
-  accuracyM: z.number().nonnegative(),
+const attendanceActionSchema = z.object({
+  zoneId: z.string().min(1),
+  zoneCheckResult: z.enum(["ALLOWED", "NOT_ALLOWED", "FAILED"]),
+  accuracyCheckResult: z.enum(["PASS", "FAIL"]),
   mdmVerified: z.boolean().optional(),
-  cameraTestResult: z.string().nullable().optional(),
-});
+  cameraTestResult: z.enum(["CAMERA_ACCESSIBLE", "CAMERA_BLOCKED_OR_DENIED", "CAMERA_TEST_ERROR"]).nullable().optional(),
+}).strict();
 
 export async function POST(
   request: Request,
@@ -31,6 +32,13 @@ export async function POST(
     return NextResponse.json({ error: "지원하지 않는 기록 유형입니다." }, { status: 404 });
   }
 
+  if (!(await hasCurrentConsent(session.username))) {
+    return NextResponse.json(
+      { error: "필수 동의가 완료되지 않았습니다. 동의 후 자동 앱 기반 입·출문을 사용할 수 있습니다." },
+      { status: 403 },
+    );
+  }
+
   if (isMdmRequiredAttendanceAction(action)) {
     const inAppBrowser = getInAppBrowserInfo(request.headers.get("user-agent"));
 
@@ -44,15 +52,18 @@ export async function POST(
     }
   }
 
-  const parsed = coordinateSchema.safeParse(await request.json());
+  const parsed = attendanceActionSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "위치 정보 형식이 올바르지 않습니다." }, { status: 400 });
+    return NextResponse.json({ error: "출결 확인 결과 형식이 올바르지 않습니다." }, { status: 400 });
   }
 
-  if (isMdmRequiredAttendanceAction(action) && parsed.data.mdmVerified !== true) {
+  if (
+    isMdmRequiredAttendanceAction(action) &&
+    (parsed.data.mdmVerified !== true || parsed.data.cameraTestResult !== "CAMERA_BLOCKED_OR_DENIED")
+  ) {
     return NextResponse.json(
-      { error: "MDM 보안 확인이 필요합니다. 출퇴근 등록 전 MDM 보안 프로그램을 활성화해주세요." },
+      { error: "보안 앱/카메라 제한 정책 간접 확인이 필요합니다. 자동 앱 기반 입·출문을 사용할 수 없습니다." },
       { status: 403 },
     );
   }

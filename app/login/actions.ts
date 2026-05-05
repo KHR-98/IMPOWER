@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { authenticateUser, changePassword, getDepartments } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
+import { hasCurrentConsent } from "@/lib/consent-store";
 import { isAdminRole } from "@/lib/permissions";
 import type { SessionUser, UserRole } from "@/lib/types";
 
@@ -85,6 +86,11 @@ const changePasswordSchema = z
     }
   });
 
+async function getPostLoginPath(user: SessionUser): Promise<string> {
+  const defaultPath = isAdminRole(user.role) ? "/admin" : "/dashboard";
+  return (await hasCurrentConsent(user.username)) ? defaultPath : `/consent?next=${encodeURIComponent(defaultPath)}`;
+}
+
 export async function loginAction(_previousState: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
     username: formData.get("username"),
@@ -106,7 +112,7 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   }
 
   await createSession(user);
-  redirect(isAdminRole(user.role) ? "/admin" : "/dashboard");
+  redirect(await getPostLoginPath(user));
 }
 
 export async function devLoginAction(formData: FormData) {
@@ -139,7 +145,7 @@ export async function devLoginAction(formData: FormData) {
   };
 
   await createSession(user);
-  redirect(isAdminRole(user.role) ? "/admin" : "/dashboard");
+  redirect(await getPostLoginPath(user));
 }
 
 export async function changePasswordAction(

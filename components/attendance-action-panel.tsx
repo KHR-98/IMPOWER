@@ -3,17 +3,30 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { isMdmRequiredAttendanceAction } from "@/lib/attendance-security";
+import { getAllowedZoneTypes } from "@/lib/attendance-rules";
+import { MANUAL_FALLBACK_STEPS } from "@/lib/consent-copy";
+import { findMatchingZone } from "@/lib/geo";
 import {
   buildAndroidBrowserIntentUrl,
   getInAppBrowserInfo,
   IN_APP_BROWSER_ATTENDANCE_MESSAGE,
   type InAppBrowserInfo,
 } from "@/lib/in-app-browser";
-import type { AttendanceAction, AttendanceEventState, CoordinatePayload } from "@/lib/types";
+import type {
+  AccuracyCheckResult,
+  AttendanceAction,
+  AttendanceEventState,
+  CameraTestResult,
+  CoordinatePayload,
+  Zone,
+  ZoneCheckResult,
+} from "@/lib/types";
 
 interface AttendanceActionPanelProps {
   eventStates: AttendanceEventState[];
   devCoordinates: Partial<Record<AttendanceAction, CoordinatePayload>> | null;
+  zones: Zone[];
+  maxGpsAccuracyM: number;
   variant?: "default" | "quick";
 }
 
@@ -23,13 +36,17 @@ const CHROME_STORE_URL = "https://play.google.com/store/apps/details?id=com.andr
 const SAMSUNG_INTERNET_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.sec.android.app.sbrowser";
 
-type MdmCheckResult =
-  | { ok: true; cameraTestResult: string }
-  | { ok: false; error: string };
+type CameraPolicyCheckResult =
+  | { ok: true; cameraTestResult: CameraTestResult }
+  | { ok: false; cameraTestResult: CameraTestResult; error: string };
 
-async function checkMdmViaCamera(): Promise<MdmCheckResult> {
+async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> {
   if (!navigator.mediaDevices?.getUserMedia) {
-    return { ok: false, error: "이 브라우저는 카메라 API를 지원하지 않습니다. Chrome 브라우저를 사용해주세요." };
+    return {
+      ok: false,
+      cameraTestResult: "CAMERA_TEST_ERROR",
+      error: "이 브라우저는 카메라 API를 지원하지 않습니다.",
+    };
   }
 
   let permState: PermissionState = "prompt";
@@ -43,29 +60,38 @@ async function checkMdmViaCamera(): Promise<MdmCheckResult> {
   if (permState === "denied") {
     return {
       ok: false,
-      error: "카메라 권한이 거부되어 있습니다. 브라우저 설정에서 카메라 권한을 허용 후 다시 시도하세요.",
+      cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
+      error: "카메라 권한 상태를 확인할 수 없습니다.",
     };
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    // 카메라가 열림 = MDM 미활성 상태
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     stream.getTracks().forEach((t) => t.stop());
     return {
       ok: false,
-      error: "MDM 보안 프로그램이 활성화되지 않은 것으로 확인됩니다. MDM을 활성화한 후 다시 시도하세요.",
+      cameraTestResult: "CAMERA_ACCESSIBLE",
+      error: "카메라가 열려 자동 보안 정책 간접 확인을 완료할 수 없습니다.",
     };
   } catch (err) {
     const code = err instanceof DOMException ? err.name : "UnknownError";
-    // 권한 요청 중 사용자가 거부한 경우 (MDM 아님)
+    if (code === "NotFoundError" || code === "OverconstrainedError" || code === "TypeError") {
+      return {
+        ok: false,
+        cameraTestResult: "CAMERA_TEST_ERROR",
+        error: "카메라 테스트를 완료할 수 없습니다.",
+      };
+    }
+
     if (permState === "prompt" && code === "NotAllowedError") {
       return {
         ok: false,
-        error: "카메라 권한을 허용해야 MDM 확인이 가능합니다. 권한 허용 후 다시 시도하세요.",
+        cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
+        error: "카메라 권한 요청이 완료되지 않았습니다.",
       };
     }
-    // 권한은 허용됐으나 카메라가 차단됨 = MDM 활성 상태로 판단
-    return { ok: true, cameraTestResult: code };
+
+    return { ok: true, cameraTestResult: "CAMERA_BLOCKED_OR_DENIED" };
   }
 }
 
@@ -183,10 +209,69 @@ function getInAppAttendanceMessage(info: InAppBrowserInfo): string {
   return `${label}에서는 ${IN_APP_BROWSER_ATTENDANCE_MESSAGE}`;
 }
 
-export function AttendanceActionPanel({ eventStates: initialEventStates, devCoordinates, variant = "default" }: AttendanceActionPanelProps) {
+function findMatchingAllowedZone(
+  zones: Zone[],
+  state: AttendanceEventState,
+  position: CoordinatePayload,
+): Zone | null {
+  for (const zoneType of getAllowedZoneTypes(state.code)) {
+    const zone = findMatchingZone(zones, zoneType, position.latitude, position.longitude);
+
+    if (zone) {
+      return zone;
+    }
+  }
+
+  return null;
+}
+
+function buildLocationCheckPayload(
+  state: AttendanceEventState,
+  position: CoordinatePayload,
+  zones: Zone[],
+  maxGpsAccuracyM: number,
+):
+  | { ok: true; zoneId: string; zoneCheckResult: ZoneCheckResult; accuracyCheckResult: AccuracyCheckResult }
+  | { ok: false; message: string; zoneCheckResult: ZoneCheckResult; accuracyCheckResult: AccuracyCheckResult } {
+  if (position.accuracyM > maxGpsAccuracyM) {
+    return {
+      ok: false,
+      message: "위치 정확도 기준을 통과하지 못했습니다.",
+      zoneCheckResult: "FAILED",
+      accuracyCheckResult: "FAIL",
+    };
+  }
+
+  const zone = findMatchingAllowedZone(zones, state, position);
+
+  if (!zone) {
+    return {
+      ok: false,
+      message: "허용된 입·출문 구역 안에서만 자동 앱 기반 입·출문을 사용할 수 있습니다.",
+      zoneCheckResult: "NOT_ALLOWED",
+      accuracyCheckResult: "PASS",
+    };
+  }
+
+  return {
+    ok: true,
+    zoneId: zone.id,
+    zoneCheckResult: "ALLOWED",
+    accuracyCheckResult: "PASS",
+  };
+}
+
+export function AttendanceActionPanel({
+  eventStates: initialEventStates,
+  devCoordinates,
+  zones,
+  maxGpsAccuracyM,
+  variant = "default",
+}: AttendanceActionPanelProps) {
   const [eventStates, setEventStates] = useState<AttendanceEventState[]>(initialEventStates);
   const [pendingAction, setPendingAction] = useState<AttendanceAction | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [manualFallbackReason, setManualFallbackReason] = useState<string | null>(null);
   const [userAgent, setUserAgent] = useState<string | null>(null);
 
   const visibleStates = useMemo(() => getVisibleStates(eventStates), [eventStates]);
@@ -216,41 +301,62 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
     window.location.href = buildAndroidBrowserIntentUrl(targetUrl, packageName, fallbackUrl);
   }
 
-  async function submitAction(action: AttendanceAction, useDemoCoordinates: boolean) {
+  function showManualFallback(reason: string) {
+    setMessage(reason);
+    setManualFallbackReason(reason);
+  }
+
+  async function submitAction(state: AttendanceEventState, useDemoCoordinates: boolean) {
+    const action = state.action;
+
+    if (!action) {
+      return;
+    }
+
     const requiresMdm = !useDemoCoordinates && isMdmRequiredAttendanceAction(action);
     const currentInAppBrowser = getInAppBrowserInfo(window.navigator.userAgent);
 
     if (requiresMdm && currentInAppBrowser.isInApp) {
-      setMessage(getInAppAttendanceMessage(currentInAppBrowser));
+      showManualFallback(getInAppAttendanceMessage(currentInAppBrowser));
       return;
     }
 
     setPendingAction(action);
+    setManualFallbackReason(null);
     setMessage(requiresMdm ? "보안·위치 확인 중..." : "위치 확인 중...");
 
     try {
       const demoPayload = useDemoCoordinates && devCoordinates ? devCoordinates[action] : null;
-      const [position, mdmResult] = await Promise.all([
+      const [position, cameraResult] = await Promise.all([
         demoPayload ? Promise.resolve(demoPayload) : getCurrentPosition(),
-        requiresMdm ? checkMdmViaCamera() : Promise.resolve(null),
+        requiresMdm ? checkCameraRestrictionPolicy() : Promise.resolve(null),
       ]);
 
-      if (mdmResult !== null && !mdmResult.ok) {
-        setMessage(mdmResult.error);
+      if (cameraResult !== null && !cameraResult.ok) {
+        showManualFallback(cameraResult.error);
+        return;
+      }
+
+      const locationCheck = buildLocationCheckPayload(state, position, zones, maxGpsAccuracyM);
+      if (!locationCheck.ok) {
+        showManualFallback(locationCheck.message);
         return;
       }
 
       setMessage(null);
 
-      const body: Record<string, unknown> = { ...position };
+      const body: Record<string, unknown> = {
+        zoneId: locationCheck.zoneId,
+        zoneCheckResult: locationCheck.zoneCheckResult,
+        accuracyCheckResult: locationCheck.accuracyCheckResult,
+      };
       if (isMdmRequiredAttendanceAction(action)) {
         if (useDemoCoordinates) {
-          // 데모 모드에서는 MDM 검사 생략
           body.mdmVerified = true;
-          body.cameraTestResult = "demo";
-        } else if (mdmResult?.ok) {
+          body.cameraTestResult = "CAMERA_BLOCKED_OR_DENIED";
+        } else if (cameraResult?.ok) {
           body.mdmVerified = true;
-          body.cameraTestResult = mdmResult.cameraTestResult;
+          body.cameraTestResult = cameraResult.cameraTestResult;
         }
       }
 
@@ -265,16 +371,17 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
       const data = (await response.json()) as { error?: string; message?: string; eventStates?: AttendanceEventState[] };
 
       if (!response.ok) {
-        setMessage(data.error ?? "서버를 불러오지 못했습니다. 다시 시도해주세요.");
+        showManualFallback(data.error ?? "서버를 불러오지 못했습니다.");
         return;
       }
 
       setMessage(data.message ?? "기록이 저장되었습니다.");
+      setManualFallbackReason(null);
       if (data.eventStates) {
         setEventStates(data.eventStates);
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
+      showManualFallback(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
     } finally {
       setPendingAction(null);
     }
@@ -304,7 +411,7 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
                 disabled={disabled}
                 onClick={() => {
                   if (action) {
-                    void submitAction(action, false);
+                    void submitAction(state, false);
                   }
                 }}
               >
@@ -317,7 +424,7 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
                   disabled={disabled}
                   onClick={() => {
                     if (action) {
-                      void submitAction(action, true);
+                      void submitAction(state, true);
                     }
                   }}
                 >
@@ -353,6 +460,16 @@ export function AttendanceActionPanel({ eventStates: initialEventStates, devCoor
       ) : null}
 
       <div className="check-message">{message ?? statusMessage}</div>
+      {manualFallbackReason ? (
+        <div className="notice small manual-fallback-box">
+          <strong>자동 앱 기반 입·출문을 사용할 수 없습니다. 아래 수동 입·출문 절차를 진행하세요.</strong>
+          <ol>
+            {MANUAL_FALLBACK_STEPS.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
     </div>
   );
 }

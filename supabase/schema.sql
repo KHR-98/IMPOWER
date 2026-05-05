@@ -30,6 +30,28 @@ create table if not exists account_users (
 
 create index if not exists account_users_department_id_idx on account_users(department_id);
 
+create table if not exists app_consent_records (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references account_users(id),
+  username text not null references account_users(username),
+  consent_version text not null,
+  consent_text_hash text not null,
+  consented_at timestamptz not null default now(),
+  signed_name text not null check (length(trim(signed_name)) > 0),
+  user_agent text,
+  ip_address text,
+  agreed_personal_info boolean not null,
+  agreed_location boolean not null,
+  agreed_camera_policy_check boolean not null,
+  agreed_cloud_processing boolean not null,
+  agreed_refusal_manual_procedure boolean not null,
+  agreed_e_signature_log boolean not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists app_consent_records_username_version_idx
+  on app_consent_records(username, consent_version, consented_at desc);
+
 create table if not exists account_invite_links (
   id uuid primary key default gen_random_uuid(),
   token_hash text not null unique,
@@ -171,6 +193,8 @@ create table if not exists attendance_events (
   longitude double precision,
   accuracy_m double precision,
   zone_id uuid references geo_zones(id),
+  zone_check_result text not null default 'ALLOWED' check (zone_check_result in ('ALLOWED', 'NOT_ALLOWED', 'FAILED')),
+  accuracy_check_result text not null default 'PASS' check (accuracy_check_result in ('PASS', 'FAIL')),
   mdm_verified boolean,
   camera_test text,
   source text not null default 'daily_record_sync',
@@ -263,16 +287,16 @@ returns trigger
 language plpgsql
 as $$
 begin
-  with current_events(action_type, occurred_at, latitude, longitude, accuracy_m, zone_id, mdm_verified, camera_test) as (
+  with current_events(action_type, occurred_at, zone_id, zone_check_result, accuracy_check_result, mdm_verified, camera_test) as (
     values
-      ('check_in'::text, new.check_in_at, null::double precision, null::double precision, null::double precision, new.check_in_zone_id, new.check_in_mdm_verified, new.check_in_camera_test),
-      ('tbm_morning'::text, coalesce(new.tbm_morning_at, new.tbm_at), null::double precision, null::double precision, null::double precision, coalesce(new.tbm_morning_zone_id, new.tbm_zone_id), null::boolean, null::text),
-      ('lunch_register'::text, new.lunch_register_at, null::double precision, null::double precision, null::double precision, new.lunch_register_zone_id, new.lunch_register_mdm_verified, new.lunch_register_camera_test),
-      ('lunch_out'::text, new.lunch_out_at, null::double precision, null::double precision, null::double precision, new.lunch_out_zone_id, null::boolean, null::text),
-      ('lunch_in'::text, new.lunch_in_at, null::double precision, null::double precision, null::double precision, new.lunch_in_zone_id, new.lunch_in_mdm_verified, new.lunch_in_camera_test),
-      ('tbm_afternoon'::text, new.tbm_afternoon_at, null::double precision, null::double precision, null::double precision, new.tbm_afternoon_zone_id, null::boolean, null::text),
-      ('tbm_checkout'::text, new.tbm_checkout_at, null::double precision, null::double precision, null::double precision, new.tbm_checkout_zone_id, null::boolean, null::text),
-      ('check_out'::text, new.check_out_at, null::double precision, null::double precision, null::double precision, new.check_out_zone_id, new.check_out_mdm_verified, new.check_out_camera_test)
+      ('check_in'::text, new.check_in_at, new.check_in_zone_id, 'ALLOWED'::text, 'PASS'::text, new.check_in_mdm_verified, new.check_in_camera_test),
+      ('tbm_morning'::text, coalesce(new.tbm_morning_at, new.tbm_at), coalesce(new.tbm_morning_zone_id, new.tbm_zone_id), 'ALLOWED'::text, 'PASS'::text, null::boolean, null::text),
+      ('lunch_register'::text, new.lunch_register_at, new.lunch_register_zone_id, 'ALLOWED'::text, 'PASS'::text, new.lunch_register_mdm_verified, new.lunch_register_camera_test),
+      ('lunch_out'::text, new.lunch_out_at, new.lunch_out_zone_id, 'ALLOWED'::text, 'PASS'::text, null::boolean, null::text),
+      ('lunch_in'::text, new.lunch_in_at, new.lunch_in_zone_id, 'ALLOWED'::text, 'PASS'::text, new.lunch_in_mdm_verified, new.lunch_in_camera_test),
+      ('tbm_afternoon'::text, new.tbm_afternoon_at, new.tbm_afternoon_zone_id, 'ALLOWED'::text, 'PASS'::text, null::boolean, null::text),
+      ('tbm_checkout'::text, new.tbm_checkout_at, new.tbm_checkout_zone_id, 'ALLOWED'::text, 'PASS'::text, null::boolean, null::text),
+      ('check_out'::text, new.check_out_at, new.check_out_zone_id, 'ALLOWED'::text, 'PASS'::text, new.check_out_mdm_verified, new.check_out_camera_test)
   ),
   deleted as (
     delete from attendance_events
@@ -290,10 +314,9 @@ begin
     attendance_daily_record_id,
     action_type,
     occurred_at,
-    latitude,
-    longitude,
-    accuracy_m,
     zone_id,
+    zone_check_result,
+    accuracy_check_result,
     mdm_verified,
     camera_test,
     source,
@@ -303,10 +326,9 @@ begin
     new.id,
     current_events.action_type,
     current_events.occurred_at,
-    current_events.latitude,
-    current_events.longitude,
-    current_events.accuracy_m,
     current_events.zone_id,
+    current_events.zone_check_result,
+    current_events.accuracy_check_result,
     current_events.mdm_verified,
     current_events.camera_test,
     'daily_record_sync',
@@ -315,10 +337,12 @@ begin
   where current_events.occurred_at is not null
   on conflict (attendance_daily_record_id, action_type) do update set
     occurred_at = excluded.occurred_at,
-    latitude = excluded.latitude,
-    longitude = excluded.longitude,
-    accuracy_m = excluded.accuracy_m,
     zone_id = excluded.zone_id,
+    latitude = null,
+    longitude = null,
+    accuracy_m = null,
+    zone_check_result = excluded.zone_check_result,
+    accuracy_check_result = excluded.accuracy_check_result,
     mdm_verified = excluded.mdm_verified,
     camera_test = excluded.camera_test,
     source = excluded.source,
@@ -470,6 +494,7 @@ comment on table account_roles is '계정 권한 정의';
 comment on table account_users is '사용자 계정';
 comment on column account_users.role is '권한: user=대원, sub_admin=조장, admin=팀장, master=마스터';
 comment on column account_users.is_active is 'false면 비활성 계정. 출퇴근 기록 보존을 위해 삭제 대신 사용';
+comment on table app_consent_records is '자동 앱 기반 입출문 필수 동의 이력';
 comment on table account_invite_links is '부서별 카카오 신규 가입 초대링크. token_hash로 검증하고 token_encrypted는 활성 링크 복사용으로만 사용';
 comment on column account_invite_links.max_uses is '초대링크로 가입 가능한 최대 인원';
 comment on column account_invite_links.used_count is '초대링크로 가입 완료된 인원 수';
@@ -485,6 +510,7 @@ comment on table config_attendance_windows is '부서별/근무유형별/액션�
 
 create or replace view departments as select * from org_departments;
 create or replace view users as select * from account_users;
+create or replace view consent_records as select * from app_consent_records;
 create or replace view zones as select * from geo_zones;
 create or replace view roster_entries as select * from work_rosters;
 create or replace view attendance_records as select * from attendance_daily_records;
@@ -496,6 +522,7 @@ create or replace view department_attendance_windows as select * from config_att
 create or replace view "부서" as select * from org_departments;
 create or replace view "계정권한" as select * from account_roles;
 create or replace view "계정" as select * from account_users;
+create or replace view "동의기록" as select * from app_consent_records;
 create or replace view "출결구역" as select * from geo_zones;
 create or replace view "출결대상자" as select * from work_rosters;
 create or replace view "출결 일자정리표" as select * from attendance_daily_records;

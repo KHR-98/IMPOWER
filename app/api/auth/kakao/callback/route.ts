@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 
 import { findUserByKakaoId, getInviteRegistrationContext } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
+import { hasCurrentConsent } from "@/lib/consent-store";
 import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
 import { INVITE_LINK_COOKIE } from "@/lib/invite-link-cookie";
 import { isAdminRole } from "@/lib/permissions";
+import type { SessionUser } from "@/lib/types";
 
 const KAKAO_PENDING_COOKIE = "kakao_pending";
 
@@ -15,6 +17,11 @@ type KakaoTokenError = {
   error_code?: string;
   error_description?: string;
 };
+
+async function getPostLoginPath(user: Pick<SessionUser, "username" | "role">): Promise<string> {
+  const defaultPath = isAdminRole(user.role) ? "/admin" : "/dashboard";
+  return (await hasCurrentConsent(user.username)) ? defaultPath : `/consent?next=${encodeURIComponent(defaultPath)}`;
+}
 
 async function getTokenErrorCode(response: Response): Promise<string | null> {
   try {
@@ -99,7 +106,7 @@ export async function GET(request: Request) {
   if (existingUser) {
     store.delete(INVITE_LINK_COOKIE);
     await createSession(existingUser);
-    redirect(isAdminRole(existingUser.role) ? "/admin" : "/dashboard");
+    redirect(await getPostLoginPath(existingUser));
   }
 
   const inviteToken = store.get(INVITE_LINK_COOKIE)?.value;

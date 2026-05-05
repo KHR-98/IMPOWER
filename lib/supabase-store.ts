@@ -25,6 +25,7 @@ import type {
   AdminUserListItem,
   AdminUserMutationInput,
   AppSettings,
+  AccuracyCheckResult,
   AttendanceAction,
   AttendanceEventCode,
   AttendanceMutationResult,
@@ -47,6 +48,7 @@ import type {
   UserTodayView,
   UserRole,
   Zone,
+  ZoneCheckResult,
 } from "@/lib/types";
 
 const EVENT_STORAGE_PREFIX: Record<AttendanceEventCode, "check_in" | "tbm" | "tbm_morning" | "lunch_register" | "lunch_out" | "lunch_in" | "tbm_afternoon" | "tbm_checkout" | "check_out"> = {
@@ -2135,9 +2137,9 @@ export async function saveSupabaseRosterEntry(input: AdminRosterEntryInput): Pro
 export async function performSupabaseAttendanceAction(input: {
   username: string;
   action: AttendanceAction;
-  latitude: number;
-  longitude: number;
-  accuracyM: number;
+  zoneId: string;
+  zoneCheckResult: ZoneCheckResult;
+  accuracyCheckResult: AccuracyCheckResult;
   mdmVerified?: boolean;
   cameraTestResult?: string | null;
   sessionUser?: SessionUser;
@@ -2177,9 +2179,9 @@ export async function performSupabaseAttendanceAction(input: {
 
   const validation = validateAttendanceMutation({
     action: input.action,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    accuracyM: input.accuracyM,
+    zoneId: input.zoneId,
+    zoneCheckResult: input.zoneCheckResult,
+    accuracyCheckResult: input.accuracyCheckResult,
     rosterEntry,
     record: mappedRecord,
     zones,
@@ -2192,9 +2194,9 @@ export async function performSupabaseAttendanceAction(input: {
 
   const point = {
     occurredAt: new Date().toISOString(),
-    latitude: input.latitude,
-    longitude: input.longitude,
-    accuracyM: input.accuracyM,
+    latitude: 0,
+    longitude: 0,
+    accuracyM: 0,
     zoneId: validation.zoneId,
   } satisfies AttendancePoint;
 
@@ -2229,10 +2231,40 @@ function toAdminCorrectedPoint(nextOccurredAt: string | null, currentPoint: Atte
 
   return {
     occurredAt: nextOccurredAt,
-    latitude: currentPoint?.latitude ?? 0,
-    longitude: currentPoint?.longitude ?? 0,
-    accuracyM: currentPoint?.accuracyM ?? 0,
+    latitude: 0,
+    longitude: 0,
+    accuracyM: 0,
     zoneId: currentPoint?.zoneId ?? "",
+  };
+}
+
+function sanitizeAttendancePointForAudit(point: AttendancePoint | null): Pick<AttendancePoint, "occurredAt" | "zoneId"> | null {
+  if (!point) {
+    return null;
+  }
+
+  return {
+    occurredAt: point.occurredAt,
+    zoneId: point.zoneId,
+  };
+}
+
+function sanitizeAttendanceRecordForAudit(record: AttendanceRecord | null) {
+  if (!record) {
+    return null;
+  }
+
+  return {
+    ...record,
+    checkIn: sanitizeAttendancePointForAudit(record.checkIn),
+    tbm: sanitizeAttendancePointForAudit(record.tbm),
+    tbmMorning: sanitizeAttendancePointForAudit(record.tbmMorning),
+    lunchRegister: sanitizeAttendancePointForAudit(record.lunchRegister),
+    lunchOut: sanitizeAttendancePointForAudit(record.lunchOut),
+    lunchIn: sanitizeAttendancePointForAudit(record.lunchIn),
+    tbmAfternoon: sanitizeAttendancePointForAudit(record.tbmAfternoon),
+    tbmCheckout: sanitizeAttendancePointForAudit(record.tbmCheckout),
+    checkOut: sanitizeAttendancePointForAudit(record.checkOut),
   };
 }
 
@@ -2286,29 +2318,29 @@ export async function correctSupabaseAttendanceRecord(
     username: nextRecord.username,
     display_name: nextRecord.displayName,
     check_in_at: nextRecord.checkIn?.occurredAt ?? null,
-    check_in_lat: nextRecord.checkIn ? nextRecord.checkIn.latitude : null,
-    check_in_lng: nextRecord.checkIn ? nextRecord.checkIn.longitude : null,
-    check_in_accuracy_m: nextRecord.checkIn ? nextRecord.checkIn.accuracyM : null,
+    check_in_lat: null,
+    check_in_lng: null,
+    check_in_accuracy_m: null,
     check_in_zone_id: nextRecord.checkIn?.zoneId || null,
     tbm_at: nextRecord.tbm?.occurredAt ?? null,
-    tbm_lat: nextRecord.tbm ? nextRecord.tbm.latitude : null,
-    tbm_lng: nextRecord.tbm ? nextRecord.tbm.longitude : null,
-    tbm_accuracy_m: nextRecord.tbm ? nextRecord.tbm.accuracyM : null,
+    tbm_lat: null,
+    tbm_lng: null,
+    tbm_accuracy_m: null,
     tbm_zone_id: nextRecord.tbm?.zoneId || null,
     tbm_morning_at: nextRecord.tbmMorning?.occurredAt ?? null,
-    tbm_morning_lat: nextRecord.tbmMorning ? nextRecord.tbmMorning.latitude : null,
-    tbm_morning_lng: nextRecord.tbmMorning ? nextRecord.tbmMorning.longitude : null,
-    tbm_morning_accuracy_m: nextRecord.tbmMorning ? nextRecord.tbmMorning.accuracyM : null,
+    tbm_morning_lat: null,
+    tbm_morning_lng: null,
+    tbm_morning_accuracy_m: null,
     tbm_morning_zone_id: nextRecord.tbmMorning?.zoneId || null,
     lunch_register_at: nextRecord.lunchRegister?.occurredAt ?? null,
-    lunch_register_lat: nextRecord.lunchRegister ? nextRecord.lunchRegister.latitude : null,
-    lunch_register_lng: nextRecord.lunchRegister ? nextRecord.lunchRegister.longitude : null,
-    lunch_register_accuracy_m: nextRecord.lunchRegister ? nextRecord.lunchRegister.accuracyM : null,
+    lunch_register_lat: null,
+    lunch_register_lng: null,
+    lunch_register_accuracy_m: null,
     lunch_register_zone_id: nextRecord.lunchRegister?.zoneId || null,
     check_out_at: nextRecord.checkOut?.occurredAt ?? null,
-    check_out_lat: nextRecord.checkOut ? nextRecord.checkOut.latitude : null,
-    check_out_lng: nextRecord.checkOut ? nextRecord.checkOut.longitude : null,
-    check_out_accuracy_m: nextRecord.checkOut ? nextRecord.checkOut.accuracyM : null,
+    check_out_lat: null,
+    check_out_lng: null,
+    check_out_accuracy_m: null,
     check_out_zone_id: nextRecord.checkOut?.zoneId || null,
     corrected_by_admin: true,
     correction_note: input.reason,
@@ -2379,8 +2411,8 @@ export async function correctSupabaseAttendanceRecord(
   const { error: auditError } = await client.from(TABLES.auditAttendanceLogs).insert({
     target_record_id: savedRow.id,
     action_type: "admin_correction",
-    before_json: previousRecord,
-    after_json: mapAttendanceRecord(savedRow),
+    before_json: sanitizeAttendanceRecordForAudit(previousRecord),
+    after_json: sanitizeAttendanceRecordForAudit(mapAttendanceRecord(savedRow)),
     reason: input.reason,
     actor_name: actorName,
   });

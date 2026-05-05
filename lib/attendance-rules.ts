@@ -1,4 +1,3 @@
-import { findMatchingZone } from "@/lib/geo";
 import { isWithinWindow } from "@/lib/time";
 import type {
   ActionAvailability,
@@ -8,9 +7,11 @@ import type {
   AttendanceEventState,
   AttendanceMutationResult,
   AttendanceRecord,
+  AccuracyCheckResult,
   RosterEntry,
   ShiftAttendanceSettings,
   Zone,
+  ZoneCheckResult,
   ZoneType,
 } from "@/lib/types";
 
@@ -45,29 +46,12 @@ const EVENT_ZONE_TYPES: Record<AttendanceEventCode, ZoneType> = {
   check_out: "entry",
 };
 
-function getAllowedZoneTypes(code: AttendanceEventCode): ZoneType[] {
+export function getAllowedZoneTypes(code: AttendanceEventCode): ZoneType[] {
   if (code === "lunch_register") {
     return ["tbm"];
   }
 
   return [EVENT_ZONE_TYPES[code]];
-}
-
-function findMatchingAllowedZone(
-  zones: Zone[],
-  zoneTypes: ZoneType[],
-  latitude: number,
-  longitude: number,
-): Zone | null {
-  for (const zoneType of zoneTypes) {
-    const zone = findMatchingZone(zones, zoneType, latitude, longitude);
-
-    if (zone) {
-      return zone;
-    }
-  }
-
-  return null;
 }
 
 function getZoneFailureMessage(code: AttendanceEventCode, zoneType: ZoneType): string {
@@ -344,9 +328,9 @@ export function buildActionAvailability(
 
 export function validateAttendanceMutation(input: {
   action: AttendanceAction;
-  latitude: number;
-  longitude: number;
-  accuracyM: number;
+  zoneId: string;
+  zoneCheckResult: ZoneCheckResult;
+  accuracyCheckResult: AccuracyCheckResult;
   rosterEntry: RosterEntry | null;
   record: AttendanceRecord | null;
   zones: Zone[];
@@ -365,22 +349,33 @@ export function validateAttendanceMutation(input: {
     };
   }
 
-  if (input.accuracyM > input.settings.maxGpsAccuracyM) {
+  if (input.accuracyCheckResult !== "PASS") {
     return {
       ok: false,
-      message: "GPS 정확도가 낮습니다. 다시 시도하세요.",
+      message: "위치 정확도 기준을 통과하지 못했습니다. 수동 입·출문 절차를 진행하세요.",
       eventCode,
     };
   }
 
-  const zone = findMatchingAllowedZone(
-    input.zones,
-    getAllowedZoneTypes(eventCode),
-    input.latitude,
-    input.longitude,
-  );
+  if (input.zoneCheckResult !== "ALLOWED") {
+    return {
+      ok: false,
+      message: getZoneFailureMessage(eventCode, state.zoneType),
+      eventCode,
+    };
+  }
+
+  const zone = input.zones.find((candidate) => candidate.id === input.zoneId && candidate.isActive);
 
   if (!zone) {
+    return {
+      ok: false,
+      message: "허용 구역 정보를 확인할 수 없습니다. 수동 입·출문 절차를 진행하세요.",
+      eventCode,
+    };
+  }
+
+  if (!getAllowedZoneTypes(eventCode).includes(zone.type)) {
     return {
       ok: false,
       message: getZoneFailureMessage(eventCode, state.zoneType),

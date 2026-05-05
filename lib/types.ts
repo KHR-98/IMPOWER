@@ -226,6 +226,10 @@ export interface CoordinatePayload {
   accuracyM: number;
 }
 
+export type ZoneCheckResult = "ALLOWED" | "NOT_ALLOWED" | "FAILED";
+export type AccuracyCheckResult = "PASS" | "FAIL";
+export type CameraTestResult = "CAMERA_ACCESSIBLE" | "CAMERA_BLOCKED_OR_DENIED" | "CAMERA_TEST_ERROR";
+
 export interface DemoCredentials {
   username: string;
   password: string;
