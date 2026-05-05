@@ -51,26 +51,24 @@ export function AdminUserManagementPanel({
     : activeUsers.filter((user) => user.departmentId === actorDepartmentId);
   const canManageUser = (user: AdminUserListItem) =>
     isMaster || (user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"));
-  const roleOptions: Array<{ value: UserRole; label: string }> = isMaster
-    ? [
-        { value: "user", label: "대원" },
-        { value: "sub_admin", label: "조장" },
-        { value: "admin", label: "팀장" },
-        { value: "master", label: "마스터" },
-      ]
-    : [
-        { value: "user", label: "대원" },
-        { value: "sub_admin", label: "조장" },
-      ];
+  const allRoleOptions: Array<{ value: UserRole; label: string }> = [
+    { value: "user", label: "대원" },
+    { value: "sub_admin", label: "조장" },
+    { value: "admin", label: "팀장" },
+    { value: "master", label: "마스터" },
+  ];
+  const roleOptions = isMaster
+    ? allRoleOptions
+    : allRoleOptions.filter((option) => option.value === "user" || option.value === "sub_admin");
   const openUser = openUsername ? (visibleUsers.find((u) => u.username === openUsername) ?? null) : null;
 
   useEffect(() => {
     if (openUser) {
-      setRole(isMaster ? openUser.role : openUser.role === "sub_admin" ? "sub_admin" : "user");
+      setRole(openUser.role);
       setDepartmentId(openUser.departmentId);
       setIsActive(openUser.isActive);
     }
-  }, [isMaster, openUser]);
+  }, [openUser]);
 
   useEffect(() => {
     if (departmentFilterId !== "all" && !departments.some((department) => department.id === departmentFilterId)) {
@@ -206,7 +204,8 @@ export function AdminUserManagementPanel({
             const isSaving = saving === user.username;
             const isConfirmingDelete = confirmDelete === user.username;
             const canManage = canManageUser(user);
-            const departmentName = departments.find((department) => department.id === user.departmentId)?.name ?? "부서 미지정";
+            const formDisabled = !enabled || isSaving || !canManage;
+            const rowRoleOptions = canManage ? roleOptions : allRoleOptions;
 
             return (
               <div key={user.id} className={`mgmt-user-row${isOpen ? " mgmt-user-row-open" : ""}`}>
@@ -220,48 +219,22 @@ export function AdminUserManagementPanel({
                 >
                   <span className="mgmt-user-name">{isSaving ? "처리 중..." : user.displayName}</span>
                   <span className="badge">{getRoleLabel(user.role)}</span>
-                  {!canManage && <span className="badge">조회 전용</span>}
                   {!user.isActive && (
                     <span className="badge" style={{ background: "#e53e3e", color: "#fff" }}>비활성</span>
                   )}
                   <span className="mgmt-user-chevron">{isOpen ? "▲" : "▼"}</span>
                 </button>
 
-                {isOpen && !canManage && (
-                  <div className="mgmt-user-options" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 8, padding: "10px 14px" }}>
-                    <div>
-                      <div className="section-subtitle">이름</div>
-                      <strong>{user.displayName}</strong>
-                    </div>
-                    <div>
-                      <div className="section-subtitle">로그인 ID</div>
-                      <strong>{user.username}</strong>
-                    </div>
-                    <div>
-                      <div className="section-subtitle">권한</div>
-                      <strong>{getRoleLabel(user.role)}</strong>
-                    </div>
-                    <div>
-                      <div className="section-subtitle">부서</div>
-                      <strong>{departmentName}</strong>
-                    </div>
-                    <div>
-                      <div className="section-subtitle">상태</div>
-                      <strong>{user.isActive ? "활성" : "비활성"}</strong>
-                    </div>
-                  </div>
-                )}
-
-                {isOpen && canManage && (
+                {isOpen && (
                   <div className="mgmt-user-options" style={{ display: "flex", flexDirection: "column", gap: 8, padding: "10px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <select
                         value={role}
-                        disabled={!enabled || isSaving}
+                        disabled={formDisabled}
                         onChange={(e) => setRole(e.target.value as UserRole)}
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
-                        {roleOptions.map((option) => (
+                        {rowRoleOptions.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -269,7 +242,7 @@ export function AdminUserManagementPanel({
                       </select>
                       <select
                         value={departmentId ?? departments[0]?.id ?? ""}
-                        disabled={!enabled || isSaving || departments.length === 0}
+                        disabled={formDisabled || departments.length === 0}
                         onChange={(e) => setDepartmentId(e.target.value)}
                         style={{ flex: 1, fontSize: "0.82rem", height: 30, borderRadius: "var(--radius-sm)", border: "1px solid var(--line)", background: "rgba(255,255,255,0.7)", padding: "0 8px" }}
                       >
@@ -279,11 +252,11 @@ export function AdminUserManagementPanel({
                           </option>
                         ))}
                       </select>
-                      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.82rem", whiteSpace: "nowrap", cursor: enabled ? "pointer" : "default" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "0.82rem", whiteSpace: "nowrap", cursor: enabled && canManage ? "pointer" : "default" }}>
                         <input
                           type="checkbox"
                           checked={isActive}
-                          disabled={!enabled || isSaving}
+                          disabled={formDisabled}
                           onChange={(e) => setIsActive(e.target.checked)}
                         />
                         활성
@@ -294,7 +267,7 @@ export function AdminUserManagementPanel({
                       <button
                         type="button"
                         className="button-subtle"
-                        disabled={!enabled || isSaving}
+                        disabled={formDisabled}
                         onClick={() => handleSave(user)}
                         style={{ whiteSpace: "nowrap" }}
                       >
@@ -307,7 +280,7 @@ export function AdminUserManagementPanel({
                           <button
                             type="button"
                             className="button-subtle"
-                            disabled={isSaving}
+                            disabled={isSaving || !canManage}
                             onClick={() => handleDelete(user.username)}
                             style={{ whiteSpace: "nowrap", color: "#e53e3e", borderColor: "#e53e3e" }}
                           >
@@ -327,7 +300,7 @@ export function AdminUserManagementPanel({
                         <button
                           type="button"
                           className="button-subtle"
-                          disabled={!enabled || isSaving}
+                          disabled={formDisabled}
                           onClick={() => setConfirmDelete(user.username)}
                           style={{ whiteSpace: "nowrap", fontSize: "0.82rem", color: "#e53e3e", borderColor: "#e53e3e" }}
                         >
