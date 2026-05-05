@@ -6,6 +6,10 @@ import { isMdmRequiredAttendanceAction } from "@/lib/attendance-security";
 import { isAttendanceAction } from "@/lib/attendance-rules";
 import { getSession } from "@/lib/auth";
 import { hasCurrentConsent } from "@/lib/consent-store";
+import {
+  DEPARTMENT_FEATURE_DISABLED_MESSAGE,
+  isAttendanceActionAllowedForDepartment,
+} from "@/lib/department-feature-policy";
 import { getInAppBrowserInfo, IN_APP_BROWSER_ATTENDANCE_MESSAGE } from "@/lib/in-app-browser";
 
 const attendanceActionSchema = z.object({
@@ -37,6 +41,10 @@ export async function POST(
       { error: "필수 동의가 완료되지 않았습니다. 동의 후 자동 앱 기반 입·출문을 사용할 수 있습니다." },
       { status: 403 },
     );
+  }
+
+  if (!isAttendanceActionAllowedForDepartment(action, session.departmentCode)) {
+    return NextResponse.json({ error: DEPARTMENT_FEATURE_DISABLED_MESSAGE }, { status: 403 });
   }
 
   if (isMdmRequiredAttendanceAction(action)) {

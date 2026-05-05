@@ -14,6 +14,11 @@ import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesFo
 import { requireAdmin } from "@/lib/auth";
 import { hasCurrentConsent } from "@/lib/consent-store";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
+import {
+  filterCurrentPeriodStatsForDepartment,
+  filterLunchTbmLabels,
+  getDepartmentCurrentPeriodLabel,
+} from "@/lib/department-feature-policy";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode, ShiftType, UserRole } from "@/lib/types";
 
@@ -113,6 +118,8 @@ export default async function AdminPage({
     : session.departmentId ?? null;
   const accountScopeDepartmentId = session.role === "master" ? undefined : session.departmentId ?? null;
   const dashboardQueryDepartmentId = selectedSection === "overview" ? dashboardDepartmentId : accountScopeDepartmentId;
+  const dashboardDepartmentCode =
+    selectedSection === "overview" ? selectedDashboardDepartment?.code ?? session.departmentCode : session.departmentCode;
   const canUseAccountManagement = session.role === "master" || session.role === "admin";
   const [dashboard, runtime, adminUsers, inviteLinks, adminTodayView, devCoordinates] = await Promise.all([
     getDashboardView(dashboardQueryDepartmentId),
@@ -134,12 +141,21 @@ export default async function AdminPage({
     rows: dashboard.rows,
     scheduledUsers: dashboard.scheduledUsers,
     periodCode: dashboard.currentPeriod.code,
-  });
+  })
+    .map((row) => ({
+      ...row,
+      statuses: filterLunchTbmLabels(row.statuses, dashboardDepartmentCode),
+    }))
+    .filter((row) => row.statuses.length > 0);
+  const currentPeriodStats = filterCurrentPeriodStatsForDepartment(
+    dashboard.currentPeriodStats,
+    dashboard.currentPeriod.code,
+    dashboardDepartmentCode,
+  );
   const currentPeriodLabels =
-    dashboard.currentPeriodStats.length > 0
-      ? dashboard.currentPeriodStats.map((stat) => stat.label)
+    currentPeriodStats.length > 0
+      ? currentPeriodStats.map((stat) => stat.label)
       : currentPeriodRows[0]?.statuses.map((status) => status.label) ?? [];
-  const currentPeriodPendingTotal = dashboard.currentPeriodStats.reduce((sum, stat) => sum + stat.pendingCount, 0);
   const currentPeriodPendingPeople = currentPeriodRows.filter((row) => row.statuses.some((s) => !s.occurredAt)).length;
   const currentPeriodCompletedPeople = currentPeriodRows.length - currentPeriodPendingPeople;
   const specialCaseSourceRows = dashboard.scheduledUsers;
@@ -157,11 +173,11 @@ export default async function AdminPage({
   const periodTableLabels = currentPeriodLabels;
   const periodTableRows = currentPeriodRows;
   const currentPeriodGridTemplate = `1.15fr repeat(${Math.max(periodTableLabels.length, 1)}, minmax(0, 1fr))`;
-  const buildAllPeriodsRow = (u: { username: string; displayName: string; shiftType: ShiftType }, record: typeof dashboard.rows[number] | undefined): AllPeriodsRow => ({
-    username: u.username,
-    displayName: u.displayName,
-    shiftType: u.shiftType,
-    items: u.shiftType === "day"
+  const buildAllPeriodsRow = (
+    u: { username: string; displayName: string; shiftType: ShiftType },
+    record: typeof dashboard.rows[number] | undefined,
+  ): AllPeriodsRow => {
+    const items = u.shiftType === "day"
       ? [
           { label: "출근", done: !!record?.checkIn, occurredAt: record?.checkIn?.occurredAt ?? null },
           { label: "오전 TBM", done: !!(record?.tbmMorning ?? record?.tbm), occurredAt: (record?.tbmMorning ?? record?.tbm)?.occurredAt ?? null },
@@ -172,8 +188,15 @@ export default async function AdminPage({
       : [
           { label: "출근", done: !!record?.checkIn, occurredAt: record?.checkIn?.occurredAt ?? null },
           { label: "퇴근", done: !!record?.checkOut, occurredAt: record?.checkOut?.occurredAt ?? null },
-        ],
-  });
+        ];
+
+    return {
+      username: u.username,
+      displayName: u.displayName,
+      shiftType: u.shiftType,
+      items: filterLunchTbmLabels(items, dashboardDepartmentCode),
+    };
+  };
 
   const scheduledRows = dashboard.scheduledUsers.filter((u) => u.isScheduled);
   const liveAllPeriodsRows: AllPeriodsRow[] = scheduledRows.map((u) =>
@@ -181,7 +204,7 @@ export default async function AdminPage({
   );
 
   const allPeriodsIsPreview = liveAllPeriodsRows.length === 0;
-  const allPeriodsRows: AllPeriodsRow[] = allPeriodsIsPreview
+  const allPeriodsRowsSource: AllPeriodsRow[] = allPeriodsIsPreview
     ? dashboard.scheduledUsers.length > 0
       ? dashboard.scheduledUsers.slice(0, 8).map((u) =>
           buildAllPeriodsRow(u, dashboard.rows.find((r) => r.username === u.username))
@@ -192,10 +215,18 @@ export default async function AdminPage({
           { username: "ex-late-1", displayName: "이늦조", shiftType: "late", items: [{ label: "출근", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
         ]
     : liveAllPeriodsRows;
+  const allPeriodsRows: AllPeriodsRow[] = allPeriodsRowsSource.map((row) => ({
+    ...row,
+    items: filterLunchTbmLabels(row.items, dashboardDepartmentCode),
+  }));
 
-  const periodLabel = dashboard.currentPeriod.label;
+  const periodLabel = getDepartmentCurrentPeriodLabel(
+    dashboard.currentPeriod.code,
+    dashboard.currentPeriod.label,
+    dashboardDepartmentCode,
+  );
   const periodTableTitle =
-    dashboard.currentPeriod.code === "none"
+    dashboard.currentPeriod.code === "none" || currentPeriodRows.length === 0
       ? "현재 출결표"
       : periodLabel.includes("늦조")
       ? "늦조 출결표"
@@ -268,7 +299,7 @@ export default async function AdminPage({
         <section className="glass-panel admin-hero-panel">
           <div className="admin-hero-copy">
             <span className="brand-kicker">실시간 운영 콘솔</span>
-            <h1>{getKoreaDateSlashLabel()} {selectedDashboardDepartment ? `${selectedDashboardDepartment.name} ` : ""}{dashboard.currentPeriod.label}</h1>
+            <h1>{getKoreaDateSlashLabel()} {selectedDashboardDepartment ? `${selectedDashboardDepartment.name} ` : ""}{periodLabel}</h1>
           </div>
           <div className="admin-hero-meta">
             <div className="admin-hero-stat">

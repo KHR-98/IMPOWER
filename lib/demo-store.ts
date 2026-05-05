@@ -7,6 +7,12 @@ import { buildEventStates } from "@/lib/attendance-events";
 import { buildCurrentPeriodStats, getCurrentPeriod } from "@/lib/current-period";
 import { buildDepartmentAttendanceSettings, buildOperationalSettings } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
+import {
+  DEPARTMENT_FEATURE_DISABLED_MESSAGE,
+  filterActionStatesForDepartment,
+  filterEventStatesForDepartment,
+  isAttendanceActionAllowedForDepartment,
+} from "@/lib/department-feature-policy";
 import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
 import { getRosterReasonMessage } from "@/lib/roster-reasons";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
@@ -797,6 +803,20 @@ export function getUserTodayView(username: string): UserTodayView {
   const record = getRecord(workDate, username);
   const shiftType = rosterEntry?.shiftType ?? "day";
   const currentPeriod = getCurrentPeriod(settings);
+  const actionStates = [
+    buildActionAvailability("check-in", rosterEntry, record, settings),
+    buildActionAvailability("tbm", rosterEntry, record, settings),
+    buildActionAvailability("lunch-register", rosterEntry, record, settings),
+    buildActionAvailability("lunch-out", rosterEntry, record, settings),
+    buildActionAvailability("lunch-in", rosterEntry, record, settings),
+    buildActionAvailability("check-out", rosterEntry, record, settings),
+  ];
+  const eventStates = buildEventStates({
+    shiftType,
+    rosterEntry,
+    record,
+    settings,
+  });
 
   return {
     dateKey: workDate,
@@ -806,20 +826,8 @@ export function getUserTodayView(username: string): UserTodayView {
     shiftType,
     currentPeriod,
     record,
-    actionStates: [
-      buildActionAvailability("check-in", rosterEntry, record, settings),
-      buildActionAvailability("tbm", rosterEntry, record, settings),
-      buildActionAvailability("lunch-register", rosterEntry, record, settings),
-      buildActionAvailability("lunch-out", rosterEntry, record, settings),
-      buildActionAvailability("lunch-in", rosterEntry, record, settings),
-      buildActionAvailability("check-out", rosterEntry, record, settings),
-    ],
-    eventStates: buildEventStates({
-      shiftType,
-      rosterEntry,
-      record,
-      settings,
-    }),
+    actionStates: filterActionStatesForDepartment(actionStates, sessionUser.departmentCode),
+    eventStates: filterEventStatesForDepartment(eventStates, sessionUser.departmentCode),
   };
 }
 
@@ -944,6 +952,13 @@ export function performAttendanceAction(input: {
     };
   }
 
+  if (!isAttendanceActionAllowedForDepartment(input.action, sessionUser.departmentCode)) {
+    return {
+      ok: false,
+      message: DEPARTMENT_FEATURE_DISABLED_MESSAGE,
+    };
+  }
+
   const rosterEntry = getTodayRoster().find((entry) => entry.username === input.username) ?? null;
   const currentRecord = getRecord(workDate, input.username);
 
@@ -997,11 +1012,14 @@ export function performAttendanceAction(input: {
     ok: true,
     message: validation.message,
     record: nextRecord,
-    eventStates: buildEventStates({
-      shiftType: rosterEntry?.shiftType ?? "day",
-      rosterEntry,
-      record: nextRecord,
-      settings,
-    }),
+    eventStates: filterEventStatesForDepartment(
+      buildEventStates({
+        shiftType: rosterEntry?.shiftType ?? "day",
+        rosterEntry,
+        record: nextRecord,
+        settings,
+      }),
+      sessionUser.departmentCode,
+    ),
   };
 }

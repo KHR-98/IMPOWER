@@ -12,6 +12,12 @@ import {
   cloneShiftSettings,
 } from "@/lib/attendance-schedule";
 import { buildActionAvailability, validateAttendanceMutation } from "@/lib/attendance-rules";
+import {
+  DEPARTMENT_FEATURE_DISABLED_MESSAGE,
+  filterActionStatesForDepartment,
+  filterEventStatesForDepartment,
+  isAttendanceActionAllowedForDepartment,
+} from "@/lib/department-feature-policy";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
 import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
@@ -1967,6 +1973,20 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
   const shiftType = rosterEntry.shiftType;
   const effectiveSettings = applyDepartmentSettings(settings, user.departmentId);
   const currentPeriod = getCurrentPeriod(effectiveSettings, new Date(), [rosterEntry]);
+  const actionStates = [
+    buildActionAvailability("check-in", rosterEntry, record, effectiveSettings),
+    buildActionAvailability("tbm", rosterEntry, record, effectiveSettings),
+    buildActionAvailability("lunch-register", rosterEntry, record, effectiveSettings),
+    buildActionAvailability("lunch-out", rosterEntry, record, effectiveSettings),
+    buildActionAvailability("lunch-in", rosterEntry, record, effectiveSettings),
+    buildActionAvailability("check-out", rosterEntry, record, effectiveSettings),
+  ];
+  const eventStates = buildEventStates({
+    shiftType,
+    rosterEntry,
+    record,
+    settings: effectiveSettings,
+  });
 
   return {
     dateKey: workDate,
@@ -1976,20 +1996,8 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
     shiftType,
     currentPeriod,
     record,
-    actionStates: [
-      buildActionAvailability("check-in", rosterEntry, record, effectiveSettings),
-      buildActionAvailability("tbm", rosterEntry, record, effectiveSettings),
-      buildActionAvailability("lunch-register", rosterEntry, record, effectiveSettings),
-      buildActionAvailability("lunch-out", rosterEntry, record, effectiveSettings),
-      buildActionAvailability("lunch-in", rosterEntry, record, effectiveSettings),
-      buildActionAvailability("check-out", rosterEntry, record, effectiveSettings),
-    ],
-    eventStates: buildEventStates({
-      shiftType,
-      rosterEntry,
-      record,
-      settings: effectiveSettings,
-    }),
+    actionStates: filterActionStatesForDepartment(actionStates, user.departmentCode),
+    eventStates: filterEventStatesForDepartment(eventStates, user.departmentCode),
   };
 }
 
@@ -2161,6 +2169,13 @@ export async function performSupabaseAttendanceAction(input: {
     };
   }
 
+  if (!isAttendanceActionAllowedForDepartment(input.action, sessionUser.departmentCode)) {
+    return {
+      ok: false,
+      message: DEPARTMENT_FEATURE_DISABLED_MESSAGE,
+    };
+  }
+
   const rosterEntry = rosterRow
     ? mapRosterEntry(rosterRow, sessionUser.displayName)
     : {
@@ -2213,12 +2228,15 @@ export async function performSupabaseAttendanceAction(input: {
   });
 
   if (result.ok && result.record) {
-    result.eventStates = buildEventStates({
-      shiftType: rosterEntry.shiftType,
-      rosterEntry,
-      record: result.record,
-      settings: effectiveSettings,
-    });
+    result.eventStates = filterEventStatesForDepartment(
+      buildEventStates({
+        shiftType: rosterEntry.shiftType,
+        rosterEntry,
+        record: result.record,
+        settings: effectiveSettings,
+      }),
+      sessionUser.departmentCode,
+    );
   }
 
   return result;
