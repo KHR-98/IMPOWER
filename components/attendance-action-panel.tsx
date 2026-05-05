@@ -40,6 +40,8 @@ type CameraPolicyCheckResult =
   | { ok: true; cameraTestResult: CameraTestResult }
   | { ok: false; cameraTestResult: CameraTestResult; error: string };
 
+type DeviceGuideKind = "ios" | "android" | "other";
+
 async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> {
   if (!navigator.mediaDevices?.getUserMedia) {
     return {
@@ -209,6 +211,44 @@ function getInAppAttendanceMessage(info: InAppBrowserInfo): string {
   return `${label}에서는 ${IN_APP_BROWSER_ATTENDANCE_MESSAGE}`;
 }
 
+function getDeviceGuideKind(userAgent: string | null): DeviceGuideKind {
+  if (!userAgent) {
+    return "other";
+  }
+
+  if (/iPhone|iPad|iPod/i.test(userAgent) || (/Macintosh/i.test(userAgent) && /Mobile/i.test(userAgent))) {
+    return "ios";
+  }
+
+  if (/Android/i.test(userAgent)) {
+    return "android";
+  }
+
+  return "other";
+}
+
+function getMdmGuideMessage(state: AttendanceEventState | null, deviceKind: DeviceGuideKind): string | null {
+  if (!state?.action) {
+    return null;
+  }
+
+  if (state.action === "check-in") {
+    return deviceKind === "android"
+      ? "입문 후 MDM 활성화 확인 후 출근 버튼을 눌러주세요."
+      : "입문 전 MDM 활성화 확인 후 출근 버튼을 눌러주세요.";
+  }
+
+  if (state.action === "lunch-register" || state.action === "lunch-out" || state.action === "lunch-in") {
+    return "입·출문 전 MDM 확인 후 버튼을 눌러주세요.";
+  }
+
+  if (state.action === "check-out") {
+    return "출문 전 MDM 확인 후 출문 뒤 퇴근 버튼을 눌러주세요.";
+  }
+
+  return null;
+}
+
 function findMatchingAllowedZone(
   zones: Zone[],
   state: AttendanceEventState,
@@ -277,7 +317,15 @@ export function AttendanceActionPanel({
   const visibleStates = useMemo(() => getVisibleStates(eventStates), [eventStates]);
   const quickActionStates = useMemo(() => getQuickActionStates(eventStates), [eventStates]);
   const actionStates = variant === "quick" ? quickActionStates : visibleStates;
+  const guideState = useMemo(
+    () => actionStates.find((state) => state.visible && state.action && !state.occurredAt) ?? null,
+    [actionStates],
+  );
   const inAppBrowser = useMemo(() => getInAppBrowserInfo(userAgent), [userAgent]);
+  const mdmGuideMessage = useMemo(
+    () => getMdmGuideMessage(guideState, getDeviceGuideKind(userAgent)),
+    [guideState, userAgent],
+  );
   const hasMdmRequiredAction = useMemo(
     () =>
       actionStates.some(
@@ -288,9 +336,10 @@ export function AttendanceActionPanel({
   const inAppWarning =
     inAppBrowser.isInApp && hasMdmRequiredAction ? getInAppAttendanceMessage(inAppBrowser) : null;
   const statusMessage = useMemo(
-    () => inAppWarning ?? getStatusMessage(visibleStates, eventStates),
-    [eventStates, inAppWarning, visibleStates],
+    () => getStatusMessage(visibleStates, eventStates),
+    [eventStates, visibleStates],
   );
+  const displayMessage = message ?? inAppWarning ?? mdmGuideMessage ?? statusMessage;
 
   useEffect(() => {
     setUserAgent(window.navigator.userAgent);
@@ -459,7 +508,7 @@ export function AttendanceActionPanel({
         </div>
       ) : null}
 
-      <div className="check-message">{message ?? statusMessage}</div>
+      <div className="check-message">{displayMessage}</div>
       {manualFallbackReason ? (
         <div className="notice small manual-fallback-box">
           <strong>자동 앱 기반 입·출문을 사용할 수 없습니다. 아래 수동 입·출문 절차를 진행하세요.</strong>
