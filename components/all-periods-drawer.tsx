@@ -79,7 +79,10 @@ function AllPeriodsGroup({
 }) {
   if (rows.length === 0) return null;
 
-  const gridTemplate = `1fr repeat(${columns.length}, 1.1fr)`;
+  const visibleColumns = columns.filter((column) =>
+    rows.some((row) => row.items.some((item) => item.label === column)),
+  );
+  const gridTemplate = `1fr repeat(${visibleColumns.length}, 1.1fr)`;
 
   return (
     <div className="all-periods-group">
@@ -91,7 +94,7 @@ function AllPeriodsGroup({
         style={{ gridTemplateColumns: gridTemplate }}
       >
         <span>이름</span>
-        {columns.map((col) => (
+        {visibleColumns.map((col) => (
           <span key={col}>{col}</span>
         ))}
       </div>

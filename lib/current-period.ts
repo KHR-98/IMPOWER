@@ -31,6 +31,7 @@ interface PeriodDefinition {
   label: string;
   description: string;
   getWindow: (settings: AppSettings) => TimeWindow | null;
+  getWindows?: (settings: AppSettings) => TimeWindow[];
   getEntries: (entries: RosterEntry[]) => RosterEntry[];
   stages: PeriodStageDefinition[];
 }
@@ -45,6 +46,8 @@ interface ActivePeriodDefinition {
   index: number;
   window: TimeWindow;
 }
+
+const LUNCH_PERIOD_CODES = new Set<CurrentPeriodCode>(["lunch_day", "lunch_late", "lunch_weekend"]);
 
 function getScheduledEntries(entries: RosterEntry[]): RosterEntry[] {
   return entries.filter((entry) => entry.isScheduled);
@@ -103,6 +106,29 @@ function getShiftWindow(
   return selector(shift);
 }
 
+function getShiftWindows(
+  settings: AppSettings,
+  shiftType: RosterEntry["shiftType"],
+  selectors: Array<(shift: ShiftAttendanceSettings) => TimeWindow | null>,
+): TimeWindow[] {
+  const shift = getShiftSettings(settings, shiftType);
+
+  if (!shift) {
+    return [];
+  }
+
+  return selectors.map((selector) => selector(shift)).filter((window): window is TimeWindow => Boolean(window));
+}
+
+function getActiveWindows(definition: PeriodDefinition, settings: AppSettings): TimeWindow[] {
+  if (definition.getWindows) {
+    return definition.getWindows(settings);
+  }
+
+  const window = definition.getWindow(settings);
+  return window ? [window] : [];
+}
+
 const PERIOD_DEFINITIONS: PeriodDefinition[] = [
   {
     code: "am",
@@ -139,6 +165,8 @@ const PERIOD_DEFINITIONS: PeriodDefinition[] = [
     label: "주간조 점심",
     description: "주간조 점심 등록, 출문, 입문을 확인하는 시간입니다.",
     getWindow: (settings) => getShiftWindow(settings, "day", (shift) => shift.lunchOutWindow),
+    getWindows: (settings) =>
+      getShiftWindows(settings, "day", [(shift) => shift.lunchOutWindow, (shift) => shift.lunchInWindow]),
     getEntries: getDayLunchEntries,
     stages: [
       {
@@ -173,6 +201,8 @@ const PERIOD_DEFINITIONS: PeriodDefinition[] = [
     label: "늦조 점심",
     description: "늦조 점심 등록, 출문, 입문을 확인하는 시간입니다.",
     getWindow: (settings) => getShiftWindow(settings, "late", (shift) => shift.lunchOutWindow),
+    getWindows: (settings) =>
+      getShiftWindows(settings, "late", [(shift) => shift.lunchOutWindow, (shift) => shift.lunchInWindow]),
     getEntries: getLateLunchEntries,
     stages: [
       {
@@ -194,6 +224,8 @@ const PERIOD_DEFINITIONS: PeriodDefinition[] = [
     label: "주말 점심",
     description: "주말 점심 등록, 출문, 입문을 확인하는 시간입니다.",
     getWindow: (settings) => getShiftWindow(settings, "weekend", (shift) => shift.lunchOutWindow),
+    getWindows: (settings) =>
+      getShiftWindows(settings, "weekend", [(shift) => shift.lunchOutWindow, (shift) => shift.lunchInWindow]),
     getEntries: getWeekendLunchEntries,
     stages: [
       {
@@ -261,6 +293,20 @@ function getTargetEntries(entries: RosterEntry[], periodCode: CurrentPeriodCode)
   return PERIOD_DEFINITIONS.find((definition) => definition.code === periodCode)?.getEntries(entries) ?? [];
 }
 
+function getCurrentPeriodTargetEntries(
+  entries: RosterEntry[],
+  periodCode: CurrentPeriodCode,
+  rowMap: Map<string, AttendanceRecord>,
+): RosterEntry[] {
+  const targetEntries = getTargetEntries(entries, periodCode);
+
+  if (!LUNCH_PERIOD_CODES.has(periodCode)) {
+    return targetEntries;
+  }
+
+  return targetEntries.filter((entry) => Boolean(rowMap.get(entry.username)?.lunchRegister));
+}
+
 export function getCurrentPeriodStatuses(
   row: AttendanceRecord | null,
   periodCode: CurrentPeriodCode,
@@ -282,8 +328,8 @@ export function buildCurrentPeriodOperatorRows(input: {
   scheduledUsers: RosterEntry[];
   rows: AttendanceRecord[];
 }): CurrentPeriodOperatorRow[] {
-  const targetEntries = getTargetEntries(input.scheduledUsers, input.periodCode);
   const recordMap = new Map(input.rows.map((row) => [row.username, row]));
+  const targetEntries = getCurrentPeriodTargetEntries(input.scheduledUsers, input.periodCode, recordMap);
 
   return targetEntries
     .map((entry) => {
@@ -355,12 +401,14 @@ export function getCurrentPeriod(
   now: Date = new Date(),
   scheduledUsers?: RosterEntry[],
 ): CurrentPeriodInfo {
-  const activeDefinitions: ActivePeriodDefinition[] = PERIOD_DEFINITIONS.map((definition, index) => ({
-    definition,
-    index,
-    window: definition.getWindow(settings),
-  })).filter((item): item is ActivePeriodDefinition =>
-    item.window ? isWithinWindow(item.window.start, item.window.end, now) : false,
+  const activeDefinitions: ActivePeriodDefinition[] = PERIOD_DEFINITIONS.flatMap((definition, index) =>
+    getActiveWindows(definition, settings)
+      .filter((window) => isWithinWindow(window.start, window.end, now))
+      .map((window) => ({
+        definition,
+        index,
+        window,
+      })),
   );
 
   if (activeDefinitions.length === 0) {
@@ -393,8 +441,11 @@ export function buildCurrentPeriodStats(input: {
   }
 
   const targetEntries = definition.getEntries(input.scheduledUsers);
+  const effectiveTargetEntries = LUNCH_PERIOD_CODES.has(input.period.code)
+    ? targetEntries.filter((entry) => Boolean(rowMap.get(entry.username)?.lunchRegister))
+    : targetEntries;
 
   return definition.stages.map((stage) =>
-    buildStat(stage.label, targetEntries, rowMap, (record) => stage.getPoint(record)),
+    buildStat(stage.label, effectiveTargetEntries, rowMap, (record) => stage.getPoint(record)),
   );
 }
