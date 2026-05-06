@@ -46,6 +46,7 @@ import type {
   RosterEntry,
   RosterSyncPreview,
   RosterSyncResult,
+  RosterSyncUser,
   SessionUser,
   ShiftAttendanceSettings,
   ShiftType,
@@ -680,18 +681,37 @@ function buildRosterSourceLabel(mode: RosterSyncPreview["sourceMode"]): string {
   return "단순 표 형식";
 }
 
+async function buildRosterSyncUsers(
+  users: Array<{ username: string; display_name: string; department_id?: unknown }>,
+): Promise<RosterSyncUser[]> {
+  const departmentIds = users
+    .map((user) => nullableString(user.department_id))
+    .filter((departmentId): departmentId is string => Boolean(departmentId));
+  const departmentMap = await loadDepartmentMap(departmentIds);
+
+  return users.map((user) => {
+    const departmentId = nullableString(user.department_id);
+    const department = departmentId ? departmentMap.get(departmentId) : null;
+
+    return {
+      username: user.username,
+      displayName: user.display_name,
+      departmentId,
+      departmentCode: department?.code ?? null,
+    };
+  });
+}
+
 async function buildSupabaseRosterSyncPreview(workDate: string): Promise<RosterSyncPreview> {
   const [users, existingRows] = await Promise.all([
     getSupabaseActiveUsers(),
     getSupabaseRosterEntries(workDate),
   ]);
   const existingMap = new Map(existingRows.map((row) => [String(row.username), row]));
+  const rosterSyncUsers = await buildRosterSyncUsers(users);
   const snapshot = await fetchSheetRosterSnapshot(
     workDate,
-    users.map((user) => ({
-      username: user.username,
-      displayName: user.display_name,
-    })),
+    rosterSyncUsers,
   );
 
   const rows = snapshot.assignments
@@ -1909,7 +1929,7 @@ async function getSupabaseActiveUsers(departmentId?: string | null) {
   const client = getSupabaseAdminClient();
   let query = client
     .from(TABLES.users)
-    .select("username, display_name, role, is_active")
+    .select("username, display_name, role, is_active, department_id")
     .eq("is_active", true);
 
   if (departmentId !== undefined) {
@@ -2818,12 +2838,10 @@ export async function syncSupabaseRoster(): Promise<RosterSyncResult> {
     buildSupabaseRosterSyncPreview(workDate),
   ]);
   const existingMap = new Map(existingRows.map((row) => [String(row.username), row]));
+  const rosterSyncUsers = await buildRosterSyncUsers(users);
   const snapshot = await fetchSheetRosterSnapshot(
     workDate,
-    users.map((user) => ({
-      username: user.username,
-      displayName: user.display_name,
-    })),
+    rosterSyncUsers,
   );
 
   const payload = snapshot.assignments.map((assignment) => {

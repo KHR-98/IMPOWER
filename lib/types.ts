@@ -277,6 +277,7 @@ export interface RosterSyncUser {
   username: string;
   displayName: string;
   departmentId?: string | null;
+  departmentCode?: string | null;
 }
 
 export interface SheetRosterAssignment {

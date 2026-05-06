@@ -11,7 +11,7 @@ const schema = z.object({
   username: z.string().trim().min(1, "사용자 ID가 필요합니다."),
   displayName: z.string().trim().min(1, "표시 이름이 필요합니다."),
   isScheduled: z.boolean(),
-  shiftType: z.enum(["day", "late"]),
+  shiftType: z.enum(["day", "late", "weekend"]),
   reasonCode: z
     .enum(["leave", "half_day_am", "half_day_pm", "half_day", "military", "holiday", "blocked", "not_synced", "not_scheduled", "not_listed", "sheet_missing"])
     .nullable(),

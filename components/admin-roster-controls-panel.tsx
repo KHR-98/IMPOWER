@@ -90,6 +90,7 @@ export function AdminRosterControlsPanel({ dateKey, entries, enabled }: AdminRos
                 >
                   <option value="day">주간조</option>
                   <option value="late">늦조</option>
+                  <option value="weekend">주말근무</option>
                 </select>
               </div>
               <label className="checkbox-row" htmlFor={`lunch-${row.username}`}>

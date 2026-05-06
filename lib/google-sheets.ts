@@ -277,6 +277,150 @@ function buildSimpleDefaultAssignments(
   }));
 }
 
+type DepartmentSheetMode = "late_only" | "weekend_only";
+
+interface DepartmentSheetConfig {
+  departmentCode: "memory" | "foundry_pcs";
+  mode: DepartmentSheetMode;
+  spreadsheetId: string | null;
+  tabName: string;
+  dateColumn: string;
+  activeNameColumns: string;
+  leaveColumns: string;
+  dataStartRow: number;
+  range: string | null;
+}
+
+function normalizeEnvValue(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function columnToIndex(column: string): number {
+  const normalized = column.trim().replace(/[^A-Za-z]/g, "").toUpperCase();
+  if (!normalized) {
+    throw new Error(`Invalid Google Sheet column: ${column}`);
+  }
+
+  return normalized.split("").reduce((sum, char) => sum * 26 + char.charCodeAt(0) - 64, 0) - 1;
+}
+
+function indexToColumn(index: number): string {
+  let value = index + 1;
+  let column = "";
+
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    column = String.fromCharCode(65 + remainder) + column;
+    value = Math.floor((value - 1) / 26);
+  }
+
+  return column;
+}
+
+function parseColumnList(value: string): number[] {
+  if (/^(none|no|없음|-|x)$/i.test(value.trim())) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .flatMap((part) => {
+      const normalized = part.trim();
+      if (!normalized) {
+        return [];
+      }
+
+      const [start, end] = normalized.split(/\s*[:~\-]\s*/);
+      const startIndex = columnToIndex(start);
+      const endIndex = end ? columnToIndex(end) : startIndex;
+      const min = Math.min(startIndex, endIndex);
+      const max = Math.max(startIndex, endIndex);
+
+      return Array.from({ length: max - min + 1 }, (_, index) => min + index);
+    });
+}
+
+function getRangeStartColumn(range: string): number {
+  const match = range.trim().match(/^([A-Za-z]+)/);
+  return match ? columnToIndex(match[1]) : 0;
+}
+
+function buildDepartmentSheetRange(config: Pick<DepartmentSheetConfig, "dateColumn" | "activeNameColumns" | "leaveColumns">): string {
+  const columns = [
+    columnToIndex(config.dateColumn),
+    ...parseColumnList(config.activeNameColumns),
+    ...parseColumnList(config.leaveColumns),
+  ];
+  const min = Math.min(...columns);
+  const max = Math.max(...columns);
+
+  return `${indexToColumn(min)}:${indexToColumn(max)}`;
+}
+
+function quoteSheetName(tabName: string): string {
+  return `'${tabName.replace(/'/g, "''")}'`;
+}
+
+function getDepartmentSheetConfigs(): DepartmentSheetConfig[] {
+  const memorySpreadsheetId = normalizeEnvValue(process.env.GOOGLE_SHEET_ID_MEMORY);
+  const foundrySpreadsheetId = normalizeEnvValue(process.env.GOOGLE_SHEET_ID_FOUNDRY_PCS);
+
+  const configs: DepartmentSheetConfig[] = [
+    {
+      departmentCode: "memory",
+      mode: "late_only",
+      spreadsheetId: memorySpreadsheetId,
+      tabName: normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_MEMORY) ?? "메모리",
+      dateColumn: normalizeEnvValue(process.env.GOOGLE_SHEET_DATE_COL_MEMORY) ?? "B",
+      activeNameColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_MEMORY) ?? "D:H",
+      leaveColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LEAVE_COLS_MEMORY) ?? "L",
+      dataStartRow: Number(normalizeEnvValue(process.env.GOOGLE_SHEET_DATA_START_ROW_MEMORY) ?? "2"),
+      range: normalizeEnvValue(process.env.GOOGLE_SHEET_RANGE_MEMORY),
+    },
+    {
+      departmentCode: "foundry_pcs",
+      mode: "weekend_only",
+      spreadsheetId: foundrySpreadsheetId,
+      tabName: normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_FOUNDRY_PCS) ?? "파운드리PCS",
+      dateColumn: normalizeEnvValue(process.env.GOOGLE_SHEET_DATE_COL_FOUNDRY_PCS) ?? "B",
+      activeNameColumns:
+        normalizeEnvValue(process.env.GOOGLE_SHEET_WEEKEND_COLS_FOUNDRY_PCS) ??
+        normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_FOUNDRY_PCS) ??
+        "D:E",
+      leaveColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LEAVE_COLS_FOUNDRY_PCS) ?? "L",
+      dataStartRow: Number(normalizeEnvValue(process.env.GOOGLE_SHEET_DATA_START_ROW_FOUNDRY_PCS) ?? "2"),
+      range: normalizeEnvValue(process.env.GOOGLE_SHEET_RANGE_FOUNDRY_PCS),
+    },
+  ];
+
+  return configs.filter((config) => Boolean(config.spreadsheetId));
+}
+
+function isWeekendDate(dateKey: string): boolean {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return weekday === 0 || weekday === 6;
+}
+
+function mergeRosterSnapshots(
+  baseSnapshot: SheetRosterSnapshot,
+  supplementalSnapshots: SheetRosterSnapshot[],
+): SheetRosterSnapshot {
+  return {
+    mode: baseSnapshot.mode,
+    workDate: baseSnapshot.workDate,
+    assignments: [
+      ...baseSnapshot.assignments,
+      ...supplementalSnapshots.flatMap((snapshot) => snapshot.assignments),
+    ],
+    unmatchedNames: [
+      ...baseSnapshot.unmatchedNames,
+      ...supplementalSnapshots.flatMap((snapshot) => snapshot.unmatchedNames),
+    ],
+  };
+}
+
 function getTargetYear(targetDate: string): number {
   return Number(targetDate.slice(0, 4));
 }
@@ -610,6 +754,136 @@ async function fetchSimpleRosterSnapshot(input: {
   };
 }
 
+async function fetchDepartmentSheetRosterSnapshot(input: {
+  sheets: ReturnType<typeof google.sheets>;
+  targetDate: string;
+  knownUsers: RosterSyncUser[];
+  config: DepartmentSheetConfig;
+}): Promise<SheetRosterSnapshot> {
+  const range = input.config.range ?? buildDepartmentSheetRange(input.config);
+  const rangeStartColumn = getRangeStartColumn(range);
+  const dateIndex = columnToIndex(input.config.dateColumn) - rangeStartColumn;
+  const activeNameIndexes = parseColumnList(input.config.activeNameColumns).map((column) => column - rangeStartColumn);
+  const leaveIndexes = parseColumnList(input.config.leaveColumns).map((column) => column - rangeStartColumn);
+  const dataStartRow = Number.isFinite(input.config.dataStartRow) && input.config.dataStartRow > 0
+    ? input.config.dataStartRow
+    : 2;
+
+  const response = await input.sheets.spreadsheets.values.get({
+    spreadsheetId: input.config.spreadsheetId ?? "",
+    range: `${quoteSheetName(input.config.tabName)}!${range}`,
+  });
+  const values = response.data.values ?? [];
+  const targetYear = getTargetYear(input.targetDate);
+  const rowOffset = dataStartRow - 1;
+  const dataRows = values.slice(rowOffset);
+  const targetRowIndex = dataRows.findIndex((row) => normalizeDateValue(String(row[dateIndex] ?? ""), targetYear) === input.targetDate);
+
+  if (targetRowIndex < 0) {
+    return {
+      mode: "monthly_matrix",
+      workDate: input.targetDate,
+      assignments: buildSimpleDefaultAssignments(input.targetDate, input.knownUsers, "sheet_missing"),
+      unmatchedNames: [],
+    };
+  }
+
+  const row = dataRows[targetRowIndex];
+  const rowNumber = rowOffset + targetRowIndex + 1;
+  const activeNames = activeNameIndexes.flatMap((index) => splitNames(row[index]));
+  const leaveNames = leaveIndexes.flatMap((index) => splitNames(row[index]));
+  const rawReferencedNames = new Set([...activeNames, ...leaveNames]);
+  const activeNameSet = new Set(activeNames.map((name) => normalizeName(name)));
+  const leaveNameSet = new Set(leaveNames.map((name) => normalizeName(name)));
+  const knownUserMap = buildKnownUserMap(input.knownUsers);
+  const unmatchedNames = [...rawReferencedNames]
+    .filter((name) => !knownUserMap.has(normalizeName(name)))
+    .map((name) => `${input.config.departmentCode}:${name}`);
+  const weekend = isWeekendDate(input.targetDate);
+
+  const assignments = input.knownUsers.map((user) => {
+    const keys = [normalizeName(user.username), normalizeName(user.displayName)];
+    const isActiveName = keys.some((key) => activeNameSet.has(key));
+    const isLeave = keys.some((key) => leaveNameSet.has(key));
+    const sourceKeyBase = `department:${input.config.departmentCode}:${input.config.tabName}:${rowNumber}:${user.username}`;
+
+    if (isLeave) {
+      return {
+        sourceKey: encodeRosterSourceKey(sourceKeyBase, "leave"),
+        workDate: input.targetDate,
+        username: user.username,
+        matchedName: user.displayName,
+        isScheduled: false,
+        shiftType: "day",
+        allowLunchOut: false,
+        scheduleReasonCode: "leave",
+        scheduleReason: getRosterReasonMessage("leave"),
+      } satisfies SheetRosterAssignment;
+    }
+
+    if (input.config.mode === "late_only") {
+      if (weekend) {
+        return {
+          sourceKey: encodeRosterSourceKey(sourceKeyBase, "holiday"),
+          workDate: input.targetDate,
+          username: user.username,
+          matchedName: null,
+          isScheduled: false,
+          shiftType: "day",
+          allowLunchOut: false,
+          scheduleReasonCode: "holiday",
+          scheduleReason: getRosterReasonMessage("holiday"),
+        } satisfies SheetRosterAssignment;
+      }
+
+      return {
+        sourceKey: encodeRosterSourceKey(sourceKeyBase, null),
+        workDate: input.targetDate,
+        username: user.username,
+        matchedName: isActiveName ? user.displayName : null,
+        isScheduled: true,
+        shiftType: isActiveName ? "late" : "day",
+        allowLunchOut: false,
+        scheduleReasonCode: null,
+        scheduleReason: null,
+      } satisfies SheetRosterAssignment;
+    }
+
+    if (weekend) {
+      return {
+        sourceKey: encodeRosterSourceKey(sourceKeyBase, isActiveName ? null : "holiday"),
+        workDate: input.targetDate,
+        username: user.username,
+        matchedName: isActiveName ? user.displayName : null,
+        isScheduled: isActiveName,
+        shiftType: isActiveName ? "weekend" : "day",
+        allowLunchOut: false,
+        scheduleReasonCode: isActiveName ? null : "holiday",
+        scheduleReason: isActiveName ? null : getRosterReasonMessage("holiday"),
+      } satisfies SheetRosterAssignment;
+    }
+
+    return {
+      sourceKey: encodeRosterSourceKey(sourceKeyBase, null),
+      workDate: input.targetDate,
+      username: user.username,
+      matchedName: null,
+      isScheduled: true,
+      shiftType: "day",
+      allowLunchOut: false,
+      scheduleReasonCode: null,
+      scheduleReason: null,
+    } satisfies SheetRosterAssignment;
+  });
+
+  return {
+    mode: "monthly_matrix",
+    workDate: input.targetDate,
+    assignments,
+    unmatchedNames,
+  };
+}
+
 async function fetchLegacyUserCandidates(input: {
   sheets: ReturnType<typeof google.sheets>;
   spreadsheetId: string;
@@ -708,39 +982,84 @@ async function fetchSimpleUserCandidates(input: {
   };
 }
 
-export async function fetchSheetRosterSnapshot(
-  targetDate: string = getKoreaDateKey(),
-  knownUsers: RosterSyncUser[] = [],
-): Promise<SheetRosterSnapshot> {
-  const sheets = await createSheetsClient();
-  const spreadsheetId = getRequiredEnv("GOOGLE_SHEET_ID");
-  const titles = await listSheetTitles(sheets, spreadsheetId);
-  const monthTitle = getTargetMonthTitle(targetDate);
+async function fetchBaseSheetRosterSnapshot(input: {
+  sheets: ReturnType<typeof google.sheets>;
+  spreadsheetId: string;
+  targetDate: string;
+  knownUsers: RosterSyncUser[];
+}): Promise<SheetRosterSnapshot> {
+  const titles = await listSheetTitles(input.sheets, input.spreadsheetId);
+  const monthTitle = getTargetMonthTitle(input.targetDate);
 
   if (titles.includes("늦조인원")) {
     return fetchLegacyRosterSnapshot({
-      sheets,
-      spreadsheetId,
-      targetDate,
-      knownUsers,
+      sheets: input.sheets,
+      spreadsheetId: input.spreadsheetId,
+      targetDate: input.targetDate,
+      knownUsers: input.knownUsers,
     });
   }
 
   if (titles.includes(monthTitle)) {
     return fetchMonthlyMatrixSnapshot({
-      sheets,
-      spreadsheetId,
-      targetDate,
-      knownUsers,
+      sheets: input.sheets,
+      spreadsheetId: input.spreadsheetId,
+      targetDate: input.targetDate,
+      knownUsers: input.knownUsers,
     });
   }
 
   return fetchSimpleRosterSnapshot({
-    sheets,
-    spreadsheetId,
-    targetDate,
-    knownUsers,
+    sheets: input.sheets,
+    spreadsheetId: input.spreadsheetId,
+    targetDate: input.targetDate,
+    knownUsers: input.knownUsers,
   });
+}
+
+export async function fetchSheetRosterSnapshot(
+  targetDate: string = getKoreaDateKey(),
+  knownUsers: RosterSyncUser[] = [],
+): Promise<SheetRosterSnapshot> {
+  const sheets = await createSheetsClient();
+  const departmentConfigs = getDepartmentSheetConfigs();
+  const configuredDepartmentCodes = new Set(departmentConfigs.map((config) => config.departmentCode));
+  const baseUsers = departmentConfigs.length > 0
+    ? knownUsers.filter((user) => !user.departmentCode || !configuredDepartmentCodes.has(user.departmentCode as DepartmentSheetConfig["departmentCode"]))
+    : knownUsers;
+  const baseSnapshot = baseUsers.length > 0 || departmentConfigs.length === 0
+    ? await fetchBaseSheetRosterSnapshot({
+        sheets,
+        spreadsheetId: getRequiredEnv("GOOGLE_SHEET_ID"),
+        targetDate,
+        knownUsers: baseUsers,
+      })
+    : ({
+        mode: "simple_table",
+        workDate: targetDate,
+        assignments: [],
+        unmatchedNames: [],
+      } satisfies SheetRosterSnapshot);
+  const supplementalSnapshots = await Promise.all(
+    departmentConfigs.map((config) => {
+      const departmentUsers = knownUsers.filter((user) => user.departmentCode === config.departmentCode);
+      if (departmentUsers.length === 0) {
+        return null;
+      }
+
+      return fetchDepartmentSheetRosterSnapshot({
+        sheets,
+        targetDate,
+        knownUsers: departmentUsers,
+        config,
+      });
+    }),
+  );
+
+  return mergeRosterSnapshots(
+    baseSnapshot,
+    supplementalSnapshots.filter((snapshot): snapshot is SheetRosterSnapshot => Boolean(snapshot)),
+  );
 }
 
 export async function fetchSheetUserCandidates(): Promise<SheetUserCandidateSnapshot> {

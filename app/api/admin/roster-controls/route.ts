@@ -11,7 +11,7 @@ const schema = z.object({
   entries: z.array(
     z.object({
       username: z.string().trim().min(1, "사용자 ID가 필요합니다."),
-      shiftType: z.enum(["day", "late"]),
+      shiftType: z.enum(["day", "late", "weekend"]),
       allowLunchOut: z.boolean(),
     }),
   ),
