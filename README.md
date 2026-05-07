@@ -38,6 +38,12 @@ Copy `.env.example` to `.env.local` and fill the values.
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SECRET_KEY`
+- `GOOGLE_SHEET_ID_MEMORY_PCS`
+- `GOOGLE_SHEET_TAB_MEMORY_PCS`
+- `GOOGLE_SHEET_DATE_COL_MEMORY_PCS`
+- `GOOGLE_SHEET_DATA_START_ROW_MEMORY_PCS`
+- `GOOGLE_SHEET_LATE_COLS_MEMORY_PCS`
+- `GOOGLE_SHEET_LEAVE_COLS_MEMORY_PCS`
 - `GOOGLE_SHEET_ID`
 - `GOOGLE_SHEET_TAB_NAME`
 - `GOOGLE_SHEET_ID_MEMORY`
@@ -53,6 +59,9 @@ Copy `.env.example` to `.env.local` and fill the values.
 - `KAKAO_CLIENT_SECRET`
 
 For `GOOGLE_PRIVATE_KEY`, preserve newline characters by storing it with `\n` escapes in the env file.
+
+`GOOGLE_SHEET_ID` is kept as a legacy fallback for the Memory PCS sheet. Prefer `GOOGLE_SHEET_ID_MEMORY_PCS` for new configuration.
+Leave `GOOGLE_SHEET_TAB_MEMORY_PCS` empty when the Memory PCS sheet uses month tabs such as `3월`, `4월`.
 
 `NEXT_PUBLIC_KAKAO_MAP_APP_KEY` is optional. When it is set, the admin page shows a Kakao map so zones can be chosen by search and map click. Without it, manual latitude/longitude input still works.
 

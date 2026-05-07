@@ -62,11 +62,11 @@ function getLateEntries(entries: RosterEntry[]): RosterEntry[] {
 }
 
 function getDayLunchEntries(entries: RosterEntry[]): RosterEntry[] {
-  return getDayEntries(entries).filter((entry) => entry.allowLunchOut);
+  return getDayEntries(entries);
 }
 
 function getLateLunchEntries(entries: RosterEntry[]): RosterEntry[] {
-  return getLateEntries(entries).filter((entry) => entry.allowLunchOut);
+  return getLateEntries(entries);
 }
 
 function getWeekendEntries(entries: RosterEntry[]): RosterEntry[] {
@@ -74,7 +74,7 @@ function getWeekendEntries(entries: RosterEntry[]): RosterEntry[] {
 }
 
 function getWeekendLunchEntries(entries: RosterEntry[]): RosterEntry[] {
-  return getWeekendEntries(entries).filter((entry) => entry.allowLunchOut);
+  return getWeekendEntries(entries);
 }
 
 function getShiftSettings(settings: AppSettings, shiftType: RosterEntry["shiftType"]): ShiftAttendanceSettings | null {
@@ -293,6 +293,10 @@ function getTargetEntries(entries: RosterEntry[], periodCode: CurrentPeriodCode)
   return PERIOD_DEFINITIONS.find((definition) => definition.code === periodCode)?.getEntries(entries) ?? [];
 }
 
+function hasLunchRecord(record: AttendanceRecord | null): boolean {
+  return Boolean(record?.lunchRegister || record?.lunchOut || record?.lunchIn);
+}
+
 function getCurrentPeriodTargetEntries(
   entries: RosterEntry[],
   periodCode: CurrentPeriodCode,
@@ -304,7 +308,7 @@ function getCurrentPeriodTargetEntries(
     return targetEntries;
   }
 
-  return targetEntries.filter((entry) => Boolean(rowMap.get(entry.username)?.lunchRegister));
+  return targetEntries.filter((entry) => hasLunchRecord(rowMap.get(entry.username) ?? null));
 }
 
 export function getCurrentPeriodStatuses(
@@ -442,7 +446,7 @@ export function buildCurrentPeriodStats(input: {
 
   const targetEntries = definition.getEntries(input.scheduledUsers);
   const effectiveTargetEntries = LUNCH_PERIOD_CODES.has(input.period.code)
-    ? targetEntries.filter((entry) => Boolean(rowMap.get(entry.username)?.lunchRegister))
+    ? targetEntries.filter((entry) => hasLunchRecord(rowMap.get(entry.username) ?? null))
     : targetEntries;
 
   return definition.stages.map((stage) =>

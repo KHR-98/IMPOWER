@@ -882,6 +882,26 @@ export async function getSupabaseSessionUser(username: string): Promise<SessionU
   };
 }
 
+export async function getSupabaseUserDepartmentCode(username: string): Promise<string | null> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from(TABLES.users)
+    .select("department_id")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  const departmentId = nullableString(data?.department_id);
+  if (!departmentId) {
+    return null;
+  }
+
+  return (await getDepartmentById(departmentId))?.code ?? null;
+}
+
 export async function getSessionUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client

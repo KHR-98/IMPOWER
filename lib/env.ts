@@ -37,8 +37,17 @@ export function hasSupabaseEnv(): boolean {
 }
 
 export function hasGoogleSheetEnv(): boolean {
+  const hasAnySheetId = Boolean(
+    getOptionalEnv(
+      "GOOGLE_SHEET_ID_MEMORY_PCS",
+      "GOOGLE_SHEET_ID",
+      "GOOGLE_SHEET_ID_MEMORY",
+      "GOOGLE_SHEET_ID_FOUNDRY_PCS",
+    ),
+  );
+
   return Boolean(
-    process.env.GOOGLE_SHEET_ID &&
+    hasAnySheetId &&
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
       process.env.GOOGLE_PRIVATE_KEY,
   );

@@ -44,6 +44,7 @@ import {
   getSupabaseSettings,
   getSupabaseSessionUser,
   getSupabaseSheetUserImportPreview,
+  getSupabaseUserDepartmentCode,
   getSupabaseUserTodayView,
   getSupabaseZones,
   importSupabaseUsersFromSheet,
@@ -296,20 +297,33 @@ export async function saveAdminRosterEntry(input: AdminRosterEntryInput): Promis
   const result = await saveSupabaseRosterEntry(input);
 
   if (result.ok && hasGoogleSheetEnv()) {
-    await Promise.allSettled([
+    const departmentCode = await getSupabaseUserDepartmentCode(input.username);
+    const sheetWriteResults = await Promise.allSettled([
       writeSpecialStatusToSheet({
         workDate: input.workDate,
         displayName: input.displayName,
+        departmentCode,
         reasonCode: input.reasonCode,
       }),
-      input.isScheduled
-        ? writeShiftTypeToSheet({
-            workDate: input.workDate,
-            displayName: input.displayName,
-            shiftType: input.shiftType,
-          })
-        : Promise.resolve(),
-    ]).catch((err) => console.error("[sheets write]", String(err)));
+      writeShiftTypeToSheet({
+        workDate: input.workDate,
+        displayName: input.displayName,
+        departmentCode,
+        isScheduled: input.isScheduled,
+        shiftType: input.shiftType,
+      }),
+    ]);
+    const sheetWriteErrors = sheetWriteResults
+      .filter((writeResult): writeResult is PromiseRejectedResult => writeResult.status === "rejected")
+      .map((writeResult) => String(writeResult.reason));
+
+    if (sheetWriteErrors.length > 0) {
+      console.error("[sheets write]", sheetWriteErrors.join(" | "));
+      return {
+        ...result,
+        message: `${result.message} Google Sheet 반영은 실패했습니다: ${sheetWriteErrors[0]}`,
+      };
+    }
   }
 
   return result;

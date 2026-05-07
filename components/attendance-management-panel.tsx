@@ -57,6 +57,7 @@ export function AttendanceManagementPanel({
   const [saving, setSaving] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   const entryMap = new Map(rosterEntries.map((e) => [e.username, e]));
 
@@ -75,9 +76,13 @@ export function AttendanceManagementPanel({
           reasonCode: option.reasonCode,
         }),
       });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
       if (res.ok) {
+        setMessage(data.message ?? "근태 설정을 저장했습니다.");
         setOpenUsername(null);
         router.refresh();
+      } else {
+        setMessage(data.error ?? "근태 설정을 저장하지 못했습니다.");
       }
     } finally {
       setSaving(null);
@@ -131,6 +136,7 @@ export function AttendanceManagementPanel({
           </button>
         </div>
       </div>
+      {message ? <div className="notice small">{message}</div> : null}
     {isExpanded && (
     <div className="mgmt-user-list">
       {activeUsers.map((user) => {

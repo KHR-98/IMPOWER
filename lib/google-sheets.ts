@@ -278,6 +278,7 @@ function buildSimpleDefaultAssignments(
 }
 
 type DepartmentSheetMode = "late_only" | "weekend_only";
+type SheetDepartmentCode = "memory" | "memory_pcs" | "foundry_pcs";
 
 interface DepartmentSheetConfig {
   departmentCode: "memory" | "foundry_pcs";
@@ -291,9 +292,39 @@ interface DepartmentSheetConfig {
   range: string | null;
 }
 
+interface DepartmentSheetWriteConfig {
+  departmentCode: SheetDepartmentCode;
+  mode: DepartmentSheetMode;
+  spreadsheetId: string | null;
+  tabNameCandidates: string[];
+  dateColumn: string;
+  activeNameColumns: string;
+  leaveColumns: string;
+  dataStartRow: number;
+  range: string | null;
+}
+
 function normalizeEnvValue(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function uniqueValues(values: Array<string | null | undefined>): string[] {
+  return Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))));
+}
+
+function getMemoryPcsSpreadsheetId(): string | null {
+  return normalizeEnvValue(process.env.GOOGLE_SHEET_ID_MEMORY_PCS) ?? normalizeEnvValue(process.env.GOOGLE_SHEET_ID);
+}
+
+function getRequiredMemoryPcsSpreadsheetId(): string {
+  const spreadsheetId = getMemoryPcsSpreadsheetId();
+
+  if (!spreadsheetId) {
+    throw new Error("Missing Google Sheet ID. Set GOOGLE_SHEET_ID_MEMORY_PCS or legacy GOOGLE_SHEET_ID.");
+  }
+
+  return spreadsheetId;
 }
 
 function columnToIndex(column: string): number {
@@ -395,6 +426,60 @@ function getDepartmentSheetConfigs(): DepartmentSheetConfig[] {
   ];
 
   return configs.filter((config) => Boolean(config.spreadsheetId));
+}
+
+function getDepartmentSheetWriteConfig(
+  departmentCode: string | null | undefined,
+  workDate: string,
+): DepartmentSheetWriteConfig {
+  if (departmentCode === "memory") {
+    return {
+      departmentCode: "memory",
+      mode: "late_only",
+      spreadsheetId: normalizeEnvValue(process.env.GOOGLE_SHEET_ID_MEMORY),
+      tabNameCandidates: uniqueValues([normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_MEMORY) ?? "메모리"]),
+      dateColumn: normalizeEnvValue(process.env.GOOGLE_SHEET_DATE_COL_MEMORY) ?? "B",
+      activeNameColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_MEMORY) ?? "D:H",
+      leaveColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LEAVE_COLS_MEMORY) ?? "L",
+      dataStartRow: Number(normalizeEnvValue(process.env.GOOGLE_SHEET_DATA_START_ROW_MEMORY) ?? "2"),
+      range: normalizeEnvValue(process.env.GOOGLE_SHEET_RANGE_MEMORY),
+    };
+  }
+
+  if (departmentCode === "foundry_pcs") {
+    return {
+      departmentCode: "foundry_pcs",
+      mode: "weekend_only",
+      spreadsheetId: normalizeEnvValue(process.env.GOOGLE_SHEET_ID_FOUNDRY_PCS),
+      tabNameCandidates: uniqueValues([normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_FOUNDRY_PCS) ?? "파운드리PCS"]),
+      dateColumn: normalizeEnvValue(process.env.GOOGLE_SHEET_DATE_COL_FOUNDRY_PCS) ?? "B",
+      activeNameColumns:
+        normalizeEnvValue(process.env.GOOGLE_SHEET_WEEKEND_COLS_FOUNDRY_PCS) ??
+        normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_FOUNDRY_PCS) ??
+        "D:E",
+      leaveColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LEAVE_COLS_FOUNDRY_PCS) ?? "L",
+      dataStartRow: Number(normalizeEnvValue(process.env.GOOGLE_SHEET_DATA_START_ROW_FOUNDRY_PCS) ?? "2"),
+      range: normalizeEnvValue(process.env.GOOGLE_SHEET_RANGE_FOUNDRY_PCS),
+    };
+  }
+
+  const monthTitle = getTargetMonthTitle(workDate);
+
+  return {
+    departmentCode: "memory_pcs",
+    mode: "late_only",
+    spreadsheetId: getMemoryPcsSpreadsheetId(),
+    tabNameCandidates: uniqueValues([
+      normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_MEMORY_PCS),
+      monthTitle,
+      normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_NAME),
+    ]),
+    dateColumn: normalizeEnvValue(process.env.GOOGLE_SHEET_DATE_COL_MEMORY_PCS) ?? "B",
+    activeNameColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_MEMORY_PCS) ?? "D:K",
+    leaveColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LEAVE_COLS_MEMORY_PCS) ?? "L",
+    dataStartRow: Number(normalizeEnvValue(process.env.GOOGLE_SHEET_DATA_START_ROW_MEMORY_PCS) ?? "2"),
+    range: normalizeEnvValue(process.env.GOOGLE_SHEET_RANGE_MEMORY_PCS),
+  };
 }
 
 function isWeekendDate(dateKey: string): boolean {
@@ -791,10 +876,16 @@ async function fetchDepartmentSheetRosterSnapshot(input: {
   const row = dataRows[targetRowIndex];
   const rowNumber = rowOffset + targetRowIndex + 1;
   const activeNames = activeNameIndexes.flatMap((index) => splitNames(row[index]));
-  const leaveNames = leaveIndexes.flatMap((index) => splitNames(row[index]));
-  const rawReferencedNames = new Set([...activeNames, ...leaveNames]);
+  const specialCaseEntries = leaveIndexes.flatMap((index) => parseMonthlyMatrixSpecialCases(row[index]));
+  const specialCaseNames = specialCaseEntries.map((entry) => entry.name);
+  const rawReferencedNames = new Set([...activeNames, ...specialCaseNames]);
   const activeNameSet = new Set(activeNames.map((name) => normalizeName(name)));
-  const leaveNameSet = new Set(leaveNames.map((name) => normalizeName(name)));
+  const specialCaseMap = new Map(
+    specialCaseEntries.map((entry) => [normalizeName(entry.name), {
+      reasonCode: entry.reasonCode,
+      reasonMessage: entry.reasonMessage,
+    }]),
+  );
   const knownUserMap = buildKnownUserMap(input.knownUsers);
   const unmatchedNames = [...rawReferencedNames]
     .filter((name) => !knownUserMap.has(normalizeName(name)))
@@ -804,20 +895,20 @@ async function fetchDepartmentSheetRosterSnapshot(input: {
   const assignments = input.knownUsers.map((user) => {
     const keys = [normalizeName(user.username), normalizeName(user.displayName)];
     const isActiveName = keys.some((key) => activeNameSet.has(key));
-    const isLeave = keys.some((key) => leaveNameSet.has(key));
+    const specialCase = keys.map((key) => specialCaseMap.get(key)).find(Boolean) ?? null;
     const sourceKeyBase = `department:${input.config.departmentCode}:${input.config.tabName}:${rowNumber}:${user.username}`;
 
-    if (isLeave) {
+    if (specialCase) {
       return {
-        sourceKey: encodeRosterSourceKey(sourceKeyBase, "leave"),
+        sourceKey: encodeRosterSourceKey(sourceKeyBase, specialCase.reasonCode),
         workDate: input.targetDate,
         username: user.username,
         matchedName: user.displayName,
         isScheduled: false,
         shiftType: "day",
         allowLunchOut: false,
-        scheduleReasonCode: "leave",
-        scheduleReason: getRosterReasonMessage("leave"),
+        scheduleReasonCode: specialCase.reasonCode,
+        scheduleReason: specialCase.reasonMessage,
       } satisfies SheetRosterAssignment;
     }
 
@@ -1030,7 +1121,7 @@ export async function fetchSheetRosterSnapshot(
   const baseSnapshot = baseUsers.length > 0 || departmentConfigs.length === 0
     ? await fetchBaseSheetRosterSnapshot({
         sheets,
-        spreadsheetId: getRequiredEnv("GOOGLE_SHEET_ID"),
+        spreadsheetId: getRequiredMemoryPcsSpreadsheetId(),
         targetDate,
         knownUsers: baseUsers,
       })
@@ -1064,7 +1155,7 @@ export async function fetchSheetRosterSnapshot(
 
 export async function fetchSheetUserCandidates(): Promise<SheetUserCandidateSnapshot> {
   const sheets = await createSheetsClient();
-  const spreadsheetId = getRequiredEnv("GOOGLE_SHEET_ID");
+  const spreadsheetId = getRequiredMemoryPcsSpreadsheetId();
   const titles = await listSheetTitles(sheets, spreadsheetId);
 
   if (titles.includes("늦조인원")) {
@@ -1088,106 +1179,155 @@ export async function fetchSheetUserCandidates(): Promise<SheetUserCandidateSnap
   });
 }
 
-export async function writeShiftTypeToSheet(input: {
-  workDate: string;
-  displayName: string;
-  shiftType: ShiftType;
-}): Promise<void> {
-  const sheets = await createSheetsWriteClient();
-  const spreadsheetId = getRequiredEnv("GOOGLE_SHEET_ID");
-  const titles = await listSheetTitles(sheets, spreadsheetId);
-  const monthTitle = getTargetMonthTitle(input.workDate);
+interface SheetWriteRowContext {
+  spreadsheetId: string;
+  tabName: string;
+  row: unknown[];
+  rowNumber: number;
+  rangeStartColumn: number;
+}
 
-  if (!titles.includes(monthTitle)) {
-    return;
+function getSheetWriteDepartmentLabel(departmentCode: SheetDepartmentCode): string {
+  if (departmentCode === "memory") return "메모리";
+  if (departmentCode === "foundry_pcs") return "파운드리PCS";
+  return "메모리PCS";
+}
+
+function getWriteSpreadsheetId(config: DepartmentSheetWriteConfig): string {
+  if (config.spreadsheetId) {
+    return config.spreadsheetId;
   }
 
-  const targetYear = getTargetYear(input.workDate);
-  const response = await sheets.spreadsheets.values.get({
+  throw new Error(`${getSheetWriteDepartmentLabel(config.departmentCode)} Google Sheet ID 환경 변수가 설정되지 않았습니다.`);
+}
+
+function shouldWriteActiveName(config: DepartmentSheetWriteConfig, input: { isScheduled: boolean; shiftType: ShiftType }): boolean {
+  if (!input.isScheduled) {
+    return false;
+  }
+
+  if (config.mode === "weekend_only") {
+    return input.shiftType === "weekend";
+  }
+
+  return input.shiftType === "late";
+}
+
+async function getSheetWriteRowContext(input: {
+  sheets: ReturnType<typeof google.sheets>;
+  config: DepartmentSheetWriteConfig;
+  workDate: string;
+}): Promise<SheetWriteRowContext> {
+  const spreadsheetId = getWriteSpreadsheetId(input.config);
+  const titles = await listSheetTitles(input.sheets, spreadsheetId);
+  const tabName = input.config.tabNameCandidates.find((candidate) => titles.includes(candidate));
+
+  if (!tabName) {
+    throw new Error(
+      `${getSheetWriteDepartmentLabel(input.config.departmentCode)} Google Sheet 탭을 찾을 수 없습니다: ${input.config.tabNameCandidates.join(", ")}`,
+    );
+  }
+
+  const range = input.config.range ?? buildDepartmentSheetRange(input.config);
+  const rangeStartColumn = getRangeStartColumn(range);
+  const dateIndex = columnToIndex(input.config.dateColumn) - rangeStartColumn;
+  const dataStartRow = Number.isFinite(input.config.dataStartRow) && input.config.dataStartRow > 0
+    ? input.config.dataStartRow
+    : 2;
+  const response = await input.sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${monthTitle}!B:L`,
+    range: `${quoteSheetName(tabName)}!${range}`,
   });
   const values = response.data.values ?? [];
+  const targetYear = getTargetYear(input.workDate);
+  const rowOffset = dataStartRow - 1;
+  const dataRows = values.slice(rowOffset);
+  const targetRowIndex = dataRows.findIndex((row) => normalizeDateValue(String(row[dateIndex] ?? ""), targetYear) === input.workDate);
 
-  const rowIndex = values.findIndex((row, index) => {
-    if (index === 0) return false;
-    return normalizeDateValue(String(row[0] ?? ""), targetYear) === input.workDate;
-  });
+  if (targetRowIndex < 0) {
+    throw new Error(`${getSheetWriteDepartmentLabel(input.config.departmentCode)} Google Sheet에서 ${input.workDate} 날짜 행을 찾을 수 없습니다.`);
+  }
 
-  if (rowIndex < 0) {
+  return {
+    spreadsheetId,
+    tabName,
+    row: dataRows[targetRowIndex],
+    rowNumber: rowOffset + targetRowIndex + 1,
+    rangeStartColumn,
+  };
+}
+
+async function updateActiveNameSlots(input: {
+  sheets: ReturnType<typeof google.sheets>;
+  context: SheetWriteRowContext;
+  config: DepartmentSheetWriteConfig;
+  displayName: string;
+  isActiveName: boolean;
+}) {
+  const activeColumnIndexes = parseColumnList(input.config.activeNameColumns);
+
+  if (activeColumnIndexes.length === 0) {
     return;
   }
 
-  const row = values[rowIndex];
-  const sheetRowNumber = rowIndex + 1;
+  const activeSlotIndexes = activeColumnIndexes.map((columnIndex) => columnIndex - input.context.rangeStartColumn);
   const normalizedTarget = normalizeName(input.displayName);
-
-  // Indices 2-9 in the B:L range correspond to sheet columns D-K (late shift name slots)
-  const nameColumns = ["D", "E", "F", "G", "H", "I", "J", "K"];
-  const lateSlotIndices = [2, 3, 4, 5, 6, 7, 8, 9];
-
-  const existingSlotArrayIndex = lateSlotIndices.findIndex((slotIndex) => {
-    const cellValue = cleanName(String(row[slotIndex] ?? ""));
+  const existingSlotPosition = activeSlotIndexes.findIndex((slotIndex) => {
+    const cellValue = cleanName(String(input.context.row[slotIndex] ?? ""));
     return normalizeName(cellValue) === normalizedTarget;
   });
 
-  if (input.shiftType === "late") {
-    if (existingSlotArrayIndex >= 0) return;
-    const emptySlotArrayIndex = lateSlotIndices.findIndex((slotIndex) => String(row[slotIndex] ?? "").trim() === "");
-    if (emptySlotArrayIndex < 0) return;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${monthTitle}!${nameColumns[emptySlotArrayIndex]}${sheetRowNumber}`,
+  if (input.isActiveName) {
+    if (existingSlotPosition >= 0) {
+      return;
+    }
+
+    const emptySlotPosition = activeSlotIndexes.findIndex((slotIndex) => String(input.context.row[slotIndex] ?? "").trim() === "");
+    if (emptySlotPosition < 0) {
+      throw new Error(`${getSheetWriteDepartmentLabel(input.config.departmentCode)} Google Sheet에 빈 근무자 칸이 없습니다.`);
+    }
+
+    await input.sheets.spreadsheets.values.update({
+      spreadsheetId: input.context.spreadsheetId,
+      range: `${quoteSheetName(input.context.tabName)}!${indexToColumn(activeColumnIndexes[emptySlotPosition])}${input.context.rowNumber}`,
       valueInputOption: "RAW",
       requestBody: { values: [[input.displayName]] },
     });
-  } else {
-    if (existingSlotArrayIndex < 0) return;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${monthTitle}!${nameColumns[existingSlotArrayIndex]}${sheetRowNumber}`,
-      valueInputOption: "RAW",
-      requestBody: { values: [[""]] },
-    });
+    return;
   }
+
+  if (existingSlotPosition < 0) {
+    return;
+  }
+
+  await input.sheets.spreadsheets.values.update({
+    spreadsheetId: input.context.spreadsheetId,
+    range: `${quoteSheetName(input.context.tabName)}!${indexToColumn(activeColumnIndexes[existingSlotPosition])}${input.context.rowNumber}`,
+    valueInputOption: "RAW",
+    requestBody: { values: [[""]] },
+  });
 }
 
-export async function writeSpecialStatusToSheet(input: {
-  workDate: string;
+async function updateSpecialStatusCell(input: {
+  sheets: ReturnType<typeof google.sheets>;
+  context: SheetWriteRowContext;
+  config: DepartmentSheetWriteConfig;
   displayName: string;
   reasonCode: RosterReasonCode | null;
-}): Promise<void> {
-  const sheets = await createSheetsWriteClient();
-  const spreadsheetId = getRequiredEnv("GOOGLE_SHEET_ID");
-  const titles = await listSheetTitles(sheets, spreadsheetId);
-  const monthTitle = getTargetMonthTitle(input.workDate);
+}) {
+  const leaveColumnIndexes = parseColumnList(input.config.leaveColumns);
 
-  if (!titles.includes(monthTitle)) {
+  if (leaveColumnIndexes.length === 0) {
     return;
   }
 
-  const targetYear = getTargetYear(input.workDate);
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${monthTitle}!B:L`,
-  });
-  const values = response.data.values ?? [];
-
-  const rowIndex = values.findIndex((row, index) => {
-    if (index === 0) return false;
-    return normalizeDateValue(String(row[0] ?? ""), targetYear) === input.workDate;
-  });
-
-  if (rowIndex < 0) {
-    return;
-  }
-
-  const currentCell = String(values[rowIndex][10] ?? "");
+  const primaryLeaveColumnIndex = leaveColumnIndexes[0];
+  const primaryLeaveSlotIndex = primaryLeaveColumnIndex - input.context.rangeStartColumn;
+  const currentCell = String(input.context.row[primaryLeaveSlotIndex] ?? "");
   const normalizedTarget = normalizeName(input.displayName);
-
   const filtered = currentCell
     .split(/\s+/)
-    .map((t) => t.trim())
+    .map((token) => token.trim())
     .filter(Boolean)
     .filter((token) => {
       const namePart = token.replace(/\((오전|오후|예)\)$/, "").trim();
@@ -1195,17 +1335,56 @@ export async function writeSpecialStatusToSheet(input: {
     });
 
   const newToken = buildStatusToken(input.displayName, input.reasonCode);
-  if (newToken) filtered.push(newToken);
+  if (newToken) {
+    filtered.push(newToken);
+  }
 
-  const sheetRowNumber = rowIndex + 1;
-
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${monthTitle}!L${sheetRowNumber}`,
+  await input.sheets.spreadsheets.values.update({
+    spreadsheetId: input.context.spreadsheetId,
+    range: `${quoteSheetName(input.context.tabName)}!${indexToColumn(primaryLeaveColumnIndex)}${input.context.rowNumber}`,
     valueInputOption: "RAW",
     requestBody: {
       values: [[filtered.join(" ")]],
     },
+  });
+}
+
+export async function writeShiftTypeToSheet(input: {
+  workDate: string;
+  displayName: string;
+  departmentCode?: string | null;
+  isScheduled: boolean;
+  shiftType: ShiftType;
+}): Promise<void> {
+  const sheets = await createSheetsWriteClient();
+  const config = getDepartmentSheetWriteConfig(input.departmentCode, input.workDate);
+  const context = await getSheetWriteRowContext({ sheets, config, workDate: input.workDate });
+
+  await updateActiveNameSlots({
+    sheets,
+    context,
+    config,
+    displayName: input.displayName,
+    isActiveName: shouldWriteActiveName(config, input),
+  });
+}
+
+export async function writeSpecialStatusToSheet(input: {
+  workDate: string;
+  displayName: string;
+  departmentCode?: string | null;
+  reasonCode: RosterReasonCode | null;
+}): Promise<void> {
+  const sheets = await createSheetsWriteClient();
+  const config = getDepartmentSheetWriteConfig(input.departmentCode, input.workDate);
+  const context = await getSheetWriteRowContext({ sheets, config, workDate: input.workDate });
+
+  await updateSpecialStatusCell({
+    sheets,
+    context,
+    config,
+    displayName: input.displayName,
+    reasonCode: input.reasonCode,
   });
 }
 

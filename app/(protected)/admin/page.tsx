@@ -62,7 +62,7 @@ function buildAdminNextPath(searchParams?: { section?: string; focus?: string; a
   return query ? `/admin?${query}` : "/admin";
 }
 
-const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military", "blocked"];
+const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military"];
 function getSpecialCaseLabel(code: RosterReasonCode): string {
   switch (code) {
     case "leave":
@@ -343,25 +343,26 @@ export default async function AdminPage({
               <AdminRefreshButton />
             </div>
 
+            {!showAllPeriods && specialCaseGroups.length > 0 ? (
+              <div className="notice small admin-special-case-notice">
+                <div className="stack admin-special-case-stack">
+                  <strong className="admin-special-case-title">오늘 특이사항 인원</strong>
+                  <div className="stack admin-special-case-groups">
+                    {specialCaseGroups.map((group) => (
+                      <div key={group.reasonCode} className="admin-special-case-group">
+                        <span className="badge admin-special-case-badge">{group.label}</span>
+                        <span>{group.names.join(", ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {showAllPeriods ? (
               <AllPeriodsExpanded rows={allPeriodsRows} isPreview={allPeriodsIsPreview} />
             ) : periodTableRows.length > 0 && periodTableLabels.length > 0 ? (
               <>
-                {specialCaseGroups.length > 0 ? (
-                  <div className="notice small admin-special-case-notice">
-                    <div className="stack admin-special-case-stack">
-                      <strong className="admin-special-case-title">오늘 특이사항 인원</strong>
-                      <div className="stack admin-special-case-groups">
-                        {specialCaseGroups.map((group) => (
-                          <div key={group.reasonCode} className="admin-special-case-group">
-                            <span className="badge admin-special-case-badge">{group.label}</span>
-                            <span>{group.names.join(", ")}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
                 <div className="table-head admin-period-table-head" style={{ gridTemplateColumns: currentPeriodGridTemplate }}>
                   <span>이름</span>
                   {periodTableLabels.map((label) => (
