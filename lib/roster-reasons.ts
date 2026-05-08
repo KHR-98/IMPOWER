@@ -29,6 +29,12 @@ export function getRosterReasonMessage(code: RosterReasonCode): string {
   }
 }
 
+export function isHalfDayReasonCode(
+  code: RosterReasonCode | null | undefined,
+): code is "half_day_am" | "half_day_pm" {
+  return code === "half_day_am" || code === "half_day_pm";
+}
+
 export function encodeRosterSourceKey(base: string | null, reasonCode: RosterReasonCode | null): string | null {
   if (!base && !reasonCode) {
     return null;

@@ -19,7 +19,7 @@ import {
   isAttendanceActionAllowedForDepartment,
 } from "@/lib/department-feature-policy";
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
-import { encodeRosterSourceKey, getRosterReasonMessage, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
+import { encodeRosterSourceKey, getRosterReasonMessage, isHalfDayReasonCode, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
 import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
@@ -205,7 +205,7 @@ function mapRosterEntry(row: Record<string, unknown>, displayName: string): Rost
     workDate: String(row.work_date),
     username: String(row.username),
     displayName,
-    isScheduled: Boolean(row.is_scheduled),
+    isScheduled: Boolean(row.is_scheduled) || isHalfDayReasonCode(scheduleReasonCode),
     shiftType: parseRosterShiftType(row.shift_type),
     allowLunchOut: Boolean(row.allow_lunch_out),
     scheduleReasonCode,
@@ -2033,7 +2033,7 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
     dateKey: workDate,
     dateLabel: getKoreaDateLabel(),
     user,
-    isScheduled: rosterEntry.isScheduled,
+    isScheduled: rosterEntry.isScheduled || isHalfDayReasonCode(rosterEntry.scheduleReasonCode),
     shiftType,
     currentPeriod,
     record,

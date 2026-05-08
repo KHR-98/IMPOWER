@@ -238,6 +238,10 @@ function getMdmGuideMessage(state: AttendanceEventState | null, deviceKind: Devi
       : "입문 전 MDM 활성화 확인 후 출근 버튼을 눌러주세요.";
   }
 
+  if (state.action === "tbm") {
+    return "TBM 전 MDM 확인 후 TBM 버튼을 눌러주세요.";
+  }
+
   if (state.action === "lunch-register" || state.action === "lunch-out" || state.action === "lunch-in") {
     return "입·출문 전 MDM 확인 후 버튼을 눌러주세요.";
   }

@@ -1,4 +1,5 @@
 import { isWithinWindow } from "@/lib/time";
+import { isHalfDayReasonCode } from "@/lib/roster-reasons";
 import type {
   ActionAvailability,
   AppSettings,
@@ -63,11 +64,56 @@ function getZoneFailureMessage(code: AttendanceEventCode, zoneType: ZoneType): s
 }
 
 const DAY_TBM_CODES: AttendanceEventCode[] = ["tbm_morning", "tbm_afternoon", "tbm_checkout"];
+const HALF_DAY_AM_TBM_CODES: AttendanceEventCode[] = ["tbm_afternoon", "tbm_checkout"];
+const HALF_DAY_PM_TBM_CODES: AttendanceEventCode[] = ["tbm_morning"];
 const WEEKEND_UNAVAILABLE_CODES: AttendanceEventCode[] = [
   "tbm_morning",
   "tbm_afternoon",
   "tbm_checkout",
 ];
+const HALF_DAY_LUNCH_WINDOW = { start: "11:40", end: "13:40" };
+
+function getHalfDayReason(rosterEntry: RosterEntry | null): "half_day_am" | "half_day_pm" | null {
+  if (isHalfDayReasonCode(rosterEntry?.scheduleReasonCode)) {
+    return rosterEntry.scheduleReasonCode;
+  }
+
+  return null;
+}
+
+function isEffectivelyScheduled(rosterEntry: RosterEntry | null): boolean {
+  return Boolean(rosterEntry?.isScheduled || getHalfDayReason(rosterEntry));
+}
+
+function isHalfDayAllowedEvent(code: AttendanceEventCode, halfDayReason: "half_day_am" | "half_day_pm" | null): boolean {
+  if (!halfDayReason) {
+    return true;
+  }
+
+  if (code === "check_in" || code === "check_out") {
+    return true;
+  }
+
+  const tbmCodes = halfDayReason === "half_day_am"
+    ? HALF_DAY_AM_TBM_CODES
+    : HALF_DAY_PM_TBM_CODES;
+
+  return tbmCodes.includes(code);
+}
+
+function getTbmCandidateCodes(rosterEntry: RosterEntry | null): AttendanceEventCode[] {
+  const halfDayReason = getHalfDayReason(rosterEntry);
+
+  if (halfDayReason === "half_day_am") {
+    return HALF_DAY_AM_TBM_CODES;
+  }
+
+  if (halfDayReason === "half_day_pm") {
+    return HALF_DAY_PM_TBM_CODES;
+  }
+
+  return rosterEntry?.shiftType === "day" ? DAY_TBM_CODES : [];
+}
 
 function getShiftSettings(
   settings: AppSettings,
@@ -149,6 +195,39 @@ function getEventWindow(settings: AppSettings, shiftType: RosterEntry["shiftType
     case "check_out":
       return shift.checkOutWindow;
   }
+}
+
+function getEffectiveEventWindow(
+  rosterEntry: RosterEntry,
+  settings: AppSettings,
+  code: AttendanceEventCode,
+) {
+  const halfDayReason = getHalfDayReason(rosterEntry);
+
+  if (halfDayReason === "half_day_am" && code === "check_in") {
+    return HALF_DAY_LUNCH_WINDOW;
+  }
+
+  if (halfDayReason === "half_day_pm" && code === "check_out") {
+    return HALF_DAY_LUNCH_WINDOW;
+  }
+
+  return getEventWindow(settings, rosterEntry.shiftType, code);
+}
+
+function getOutsideWindowReason(
+  code: AttendanceEventCode,
+  halfDayReason: "half_day_am" | "half_day_pm" | null,
+): string {
+  if (halfDayReason === "half_day_am" && code === "check_in") {
+    return "오전반차 출근 가능 시간은 11:40 ~ 13:40입니다.";
+  }
+
+  if (halfDayReason === "half_day_pm" && code === "check_out") {
+    return "오후반차 퇴근 가능 시간은 11:40 ~ 13:40입니다.";
+  }
+
+  return "출결 시간이 아닙니다.";
 }
 
 function getCompletedReason(code: AttendanceEventCode): string {
@@ -238,7 +317,7 @@ export function resolveAttendanceEventCode(
   }
 
   const shiftType = rosterEntry?.shiftType ?? "day";
-  const candidates = shiftType === "day" ? DAY_TBM_CODES : ([] as AttendanceEventCode[]);
+  const candidates = getTbmCandidateCodes(rosterEntry);
 
   for (const code of candidates) {
     if (!getRecordPoint(record, code) && isWindowActive(getEventWindow(settings, shiftType, code), now)) {
@@ -260,8 +339,14 @@ export function buildEventAvailability(
   const action = mapEventCodeToAction(code);
   const label = EVENT_LABELS[code];
 
-  if (!rosterEntry?.isScheduled) {
+  const halfDayReason = getHalfDayReason(rosterEntry);
+
+  if (!rosterEntry || !isEffectivelyScheduled(rosterEntry)) {
     return buildUnavailableState(code, rosterEntry?.scheduleReason ?? "오늘 근무 대상자가 아닙니다.", occurredAt);
+  }
+
+  if (!isHalfDayAllowedEvent(code, halfDayReason)) {
+    return buildHiddenPendingState(code, "반차 대상자가 사용할 수 없는 출결 버튼입니다.");
   }
 
   if (rosterEntry.shiftType === "late" && (code === "tbm_morning" || code === "tbm_afternoon" || code === "tbm_checkout")) {
@@ -284,7 +369,11 @@ export function buildEventAvailability(
     return buildHiddenPendingState(code, "점심 출문 후 점심 입문을 할 수 있습니다.");
   }
 
-  const window = getEventWindow(settings, rosterEntry.shiftType, code);
+  if (code === "check_out" && halfDayReason && !record?.checkIn) {
+    return buildHiddenPendingState(code, "출근 기록 후 퇴근할 수 있습니다.");
+  }
+
+  const window = getEffectiveEventWindow(rosterEntry, settings, code);
   const windowText = formatWindow(window);
 
   if (!window) {
@@ -292,7 +381,7 @@ export function buildEventAvailability(
   }
 
   if (!isWindowActive(window, now)) {
-    return buildHiddenPendingState(code, "출결 시간이 아닙니다.");
+    return buildHiddenPendingState(code, getOutsideWindowReason(code, halfDayReason));
   }
 
   return {

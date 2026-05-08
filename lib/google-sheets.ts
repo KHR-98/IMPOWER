@@ -3,7 +3,7 @@ import "server-only";
 import { google } from "googleapis";
 
 import { getRequiredEnv } from "@/lib/env";
-import { encodeRosterSourceKey, getRosterReasonMessage } from "@/lib/roster-reasons";
+import { encodeRosterSourceKey, getRosterReasonMessage, isHalfDayReasonCode } from "@/lib/roster-reasons";
 import { getKoreaDateKey } from "@/lib/time";
 import type { RosterReasonCode, RosterSyncUser, SheetRosterAssignment, SheetRosterSnapshot, SheetUserCandidateSnapshot, ShiftType } from "@/lib/types";
 
@@ -206,7 +206,15 @@ function parseScheduledInfo(value: string | undefined): { isScheduled: boolean; 
     return { isScheduled: false, reasonCode: "leave" };
   }
 
-  if (["반차", "오전반차", "오후반차"].includes(normalized)) {
+  if (["오전반차"].includes(normalized)) {
+    return { isScheduled: true, reasonCode: "half_day_am" };
+  }
+
+  if (["오후반차"].includes(normalized)) {
+    return { isScheduled: true, reasonCode: "half_day_pm" };
+  }
+
+  if (["반차"].includes(normalized)) {
     return { isScheduled: false, reasonCode: "half_day" };
   }
 
@@ -700,12 +708,13 @@ async function fetchMonthlyMatrixSnapshot(input: {
       }
 
       if (specialCase) {
+        const isHalfDay = isHalfDayReasonCode(specialCase.reasonCode);
         return {
           sourceKey: encodeRosterSourceKey(`${monthTitle}:${rowIndex + 1}:${user.username}`, specialCase.reasonCode),
           workDate: input.targetDate,
           username: user.username,
           matchedName: user.displayName,
-          isScheduled: false,
+          isScheduled: isHalfDay,
           shiftType: "day",
           allowLunchOut: false,
           scheduleReasonCode: specialCase.reasonCode,
@@ -899,12 +908,13 @@ async function fetchDepartmentSheetRosterSnapshot(input: {
     const sourceKeyBase = `department:${input.config.departmentCode}:${input.config.tabName}:${rowNumber}:${user.username}`;
 
     if (specialCase) {
+      const isHalfDay = isHalfDayReasonCode(specialCase.reasonCode);
       return {
         sourceKey: encodeRosterSourceKey(sourceKeyBase, specialCase.reasonCode),
         workDate: input.targetDate,
         username: user.username,
         matchedName: user.displayName,
-        isScheduled: false,
+        isScheduled: isHalfDay,
         shiftType: "day",
         allowLunchOut: false,
         scheduleReasonCode: specialCase.reasonCode,

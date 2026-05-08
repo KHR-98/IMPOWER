@@ -14,7 +14,7 @@ import {
   isAttendanceActionAllowedForDepartment,
 } from "@/lib/department-feature-policy";
 import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
-import { getRosterReasonMessage } from "@/lib/roster-reasons";
+import { getRosterReasonMessage, isHalfDayReasonCode } from "@/lib/roster-reasons";
 import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
 import type {
   AppSettings,
@@ -822,7 +822,7 @@ export function getUserTodayView(username: string): UserTodayView {
     dateKey: workDate,
     dateLabel: getKoreaDateLabel(),
     user: sessionUser,
-    isScheduled: rosterEntry?.isScheduled ?? false,
+    isScheduled: Boolean(rosterEntry?.isScheduled || isHalfDayReasonCode(rosterEntry?.scheduleReasonCode)),
     shiftType,
     currentPeriod,
     record,

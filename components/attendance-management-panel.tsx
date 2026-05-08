@@ -18,8 +18,8 @@ const WORK_TYPES: WorkTypeOption[] = [
   { label: "주말근무", isScheduled: true, shiftType: "weekend", reasonCode: null },
   { label: "연차", isScheduled: false, shiftType: "day", reasonCode: "leave" },
   { label: "예비군", isScheduled: false, shiftType: "day", reasonCode: "military" },
-  { label: "오후반차", isScheduled: false, shiftType: "day", reasonCode: "half_day_pm" },
-  { label: "오전반차", isScheduled: false, shiftType: "day", reasonCode: "half_day_am" },
+  { label: "오후반차", isScheduled: true, shiftType: "day", reasonCode: "half_day_pm" },
+  { label: "오전반차", isScheduled: true, shiftType: "day", reasonCode: "half_day_am" },
 ];
 
 function currentWorkTypeLabel(entry: RosterEntry | undefined): string {
@@ -33,6 +33,8 @@ function currentWorkTypeLabel(entry: RosterEntry | undefined): string {
       default: return "미근무";
     }
   }
+  if (entry.scheduleReasonCode === "half_day_am") return "오전반차";
+  if (entry.scheduleReasonCode === "half_day_pm") return "오후반차";
   if (entry.shiftType === "late") return "늦조";
   if (entry.shiftType === "weekend") return "주말근무";
   return "주간조";
@@ -91,13 +93,13 @@ export function AttendanceManagementPanel({
 
   function getSortPriority(entry: RosterEntry | undefined): number {
     if (!entry) return 8;
+    if (entry.scheduleReasonCode === "half_day_pm") return 6;
+    if (entry.scheduleReasonCode === "half_day_am") return 7;
     if (entry.isScheduled && entry.shiftType === "day") return 1;
     if (entry.isScheduled && entry.shiftType === "late") return 2;
     if (entry.isScheduled && entry.shiftType === "weekend") return 3;
     if (entry.scheduleReasonCode === "leave") return 4;
     if (entry.scheduleReasonCode === "military") return 5;
-    if (entry.scheduleReasonCode === "half_day_pm") return 6;
-    if (entry.scheduleReasonCode === "half_day_am") return 7;
     return 8;
   }
 

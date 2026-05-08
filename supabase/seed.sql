@@ -13,12 +13,12 @@ on conflict (code) do update set
 insert into attendance_event_types (code, label_ko, sort_order, requires_location, requires_mdm, is_active)
 values
   ('check_in', '출근', 10, true, true, true),
-  ('tbm_morning', '오전 TBM', 20, true, false, true),
+  ('tbm_morning', '오전 TBM', 20, true, true, true),
   ('lunch_register', '점심 등록', 30, true, true, true),
   ('lunch_out', '점심 출문', 40, true, false, true),
   ('lunch_in', '점심 입문', 50, true, true, true),
-  ('tbm_afternoon', '오후 TBM', 60, true, false, true),
-  ('tbm_checkout', '퇴근 전 TBM', 70, true, false, true),
+  ('tbm_afternoon', '오후 TBM', 60, true, true, true),
+  ('tbm_checkout', '퇴근 전 TBM', 70, true, true, true),
   ('check_out', '퇴근', 80, true, true, true)
 on conflict (code) do update set
   label_ko = excluded.label_ko,

@@ -1,4 +1,5 @@
 import { buildEventAvailability } from "@/lib/attendance-rules";
+import { isHalfDayReasonCode } from "@/lib/roster-reasons";
 import type {
   AppSettings,
   AttendanceEventCode,
@@ -39,6 +40,26 @@ const SHIFT_EVENT_DEFINITIONS: Record<ShiftType, EventDefinition[]> = {
     { code: "check_out", label: "퇴근" },
   ],
 };
+const HALF_DAY_AM_EVENT_DEFINITIONS: EventDefinition[] = [
+  { code: "check_in", label: "출근" },
+  { code: "tbm_afternoon", label: "TBM" },
+  { code: "tbm_checkout", label: "TBM" },
+  { code: "check_out", label: "퇴근" },
+];
+
+const HALF_DAY_PM_EVENT_DEFINITIONS: EventDefinition[] = [
+  { code: "check_in", label: "출근" },
+  { code: "tbm_morning", label: "TBM" },
+  { code: "check_out", label: "퇴근" },
+];
+
+function getHalfDayEventDefinitions(
+  reasonCode: "half_day_am" | "half_day_pm",
+): EventDefinition[] {
+  return reasonCode === "half_day_am"
+    ? HALF_DAY_AM_EVENT_DEFINITIONS
+    : HALF_DAY_PM_EVENT_DEFINITIONS;
+}
 
 export function getShiftLabel(shiftType: ShiftType): string {
   if (shiftType === "late") {
@@ -63,7 +84,13 @@ export function buildEventStates(input: {
   settings: AppSettings;
   now?: Date;
 }): AttendanceEventState[] {
-  return getShiftEventDefinitions(input.shiftType).map((definition) =>
+  const halfDayReasonCode = input.rosterEntry?.scheduleReasonCode;
+  const definitions =
+    isHalfDayReasonCode(halfDayReasonCode)
+      ? getHalfDayEventDefinitions(halfDayReasonCode)
+      : getShiftEventDefinitions(input.shiftType);
+
+  return definitions.map((definition) =>
     buildEventAvailability(definition.code, input.rosterEntry, input.record, input.settings, input.now),
   );
 }
