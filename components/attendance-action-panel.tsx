@@ -128,6 +128,27 @@ function isOverconstrainedCameraError(error: unknown): boolean {
   return getCameraErrorName(error) === "OverconstrainedError";
 }
 
+function isPolicyBlockedCameraStartFailure(errorCode: string, error: unknown): boolean {
+  if (errorCode !== "NotReadableError" && errorCode !== "TrackStartError" && errorCode !== "AbortError") {
+    return false;
+  }
+
+  const message = getCameraErrorMessage(error)?.toLowerCase() ?? "";
+
+  return (
+    message.includes("could not start video source") ||
+    message.includes("could not start video") ||
+    message.includes("starting videoinput failed") ||
+    message.includes("security") ||
+    message.includes("policy") ||
+    message.includes("blocked") ||
+    message.includes("보안") ||
+    message.includes("정책") ||
+    message.includes("차단") ||
+    message.includes("사용할 수 없습니다")
+  );
+}
+
 async function tryOpenCameraForPolicyCheck(): Promise<MediaStream> {
   try {
     return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -213,6 +234,13 @@ async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> 
     }
 
     if (code === "NotReadableError" || code === "TrackStartError" || code === "AbortError") {
+      if (isPolicyBlockedCameraStartFailure(code, err)) {
+        return {
+          ok: true,
+          cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
+        };
+      }
+
       return {
         ok: false,
         cameraTestResult: "CAMERA_TEST_ERROR",
