@@ -129,56 +129,64 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   }
 
-  const rawBody = (await request.json()) as unknown;
-  const parsed = adminSettingsSchema.safeParse(rawBody);
+  try {
+    const rawBody = (await request.json()) as unknown;
+    const parsed = adminSettingsSchema.safeParse(rawBody);
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
-  }
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
+    }
 
-  const baseSettings = buildOperationalSettings(parsed.data.settings.maxGpsAccuracyM);
-  const currentSettings = await getSettings();
-  const departmentSettings = preserveDisabledDepartmentLunchTbmSettings(
-    parsed.data.settings.departmentSettings,
-    currentSettings.departmentSettings,
-    currentSettings,
-  );
-  const result = await saveAdminConfiguration(
-    {
-      settings: {
-        ...baseSettings,
-        checkInWindow: parsed.data.settings.checkInWindow,
-        tbmWindow: parsed.data.settings.tbmWindow,
-        tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
-        tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
-        checkOutWindow: parsed.data.settings.checkOutWindow,
-        lateCheckInWindow: parsed.data.settings.lateCheckInWindow,
-        lateCheckOutWindow: parsed.data.settings.lateCheckOutWindow,
-        departmentSettings,
-        maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
-        dayShift: {
-          ...baseSettings.dayShift,
+    const baseSettings = buildOperationalSettings(parsed.data.settings.maxGpsAccuracyM);
+    const currentSettings = await getSettings();
+    const departmentSettings = preserveDisabledDepartmentLunchTbmSettings(
+      parsed.data.settings.departmentSettings,
+      currentSettings.departmentSettings,
+      currentSettings,
+    );
+    const result = await saveAdminConfiguration(
+      {
+        settings: {
+          ...baseSettings,
           checkInWindow: parsed.data.settings.checkInWindow,
-          tbmMorningWindow: parsed.data.settings.tbmWindow,
+          tbmWindow: parsed.data.settings.tbmWindow,
           tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
           tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
           checkOutWindow: parsed.data.settings.checkOutWindow,
+          lateCheckInWindow: parsed.data.settings.lateCheckInWindow,
+          lateCheckOutWindow: parsed.data.settings.lateCheckOutWindow,
+          departmentSettings,
+          maxGpsAccuracyM: parsed.data.settings.maxGpsAccuracyM,
+          dayShift: {
+            ...baseSettings.dayShift,
+            checkInWindow: parsed.data.settings.checkInWindow,
+            tbmMorningWindow: parsed.data.settings.tbmWindow,
+            tbmAfternoonWindow: parsed.data.settings.tbmAfternoonWindow,
+            tbmCheckoutWindow: parsed.data.settings.tbmCheckoutWindow,
+            checkOutWindow: parsed.data.settings.checkOutWindow,
+          },
+          lateShift: {
+            ...baseSettings.lateShift,
+            checkInWindow: parsed.data.settings.lateCheckInWindow,
+            checkOutWindow: parsed.data.settings.lateCheckOutWindow,
+          },
         },
-        lateShift: {
-          ...baseSettings.lateShift,
-          checkInWindow: parsed.data.settings.lateCheckInWindow,
-          checkOutWindow: parsed.data.settings.lateCheckOutWindow,
-        },
+        zones: parsed.data.zones,
       },
-      zones: parsed.data.zones,
-    },
-    session.role,
-    session.departmentId,
-  );
+      session.role,
+      session.departmentId,
+    );
 
-  if (!result.ok) {
-    return NextResponse.json({ error: result.message }, { status: 400 });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.message }, { status: 400 });
+    }
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("[admin settings]", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "운영 설정을 저장하지 못했습니다." },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json(result);
 }

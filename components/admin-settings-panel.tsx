@@ -327,6 +327,24 @@ function WeekendTimeSettingsPicker({
   );
 }
 
+async function readJsonResponse(response: Response): Promise<{ error?: string; message?: string }> {
+  const body = await response.text();
+
+  if (!body.trim()) {
+    return {
+      error: response.ok ? undefined : "서버 응답이 비어 있습니다. 잠시 후 다시 시도하세요.",
+    };
+  }
+
+  try {
+    return JSON.parse(body) as { error?: string; message?: string };
+  } catch {
+    return {
+      error: response.ok ? undefined : "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도하세요.",
+    };
+  }
+}
+
 export function AdminSettingsPanel({
   initialSettings,
   initialZones,
@@ -483,7 +501,7 @@ export function AdminSettingsPanel({
         },
         body: JSON.stringify({ settings, zones }),
       });
-      const data = (await response.json()) as { error?: string; message?: string };
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         setMessage(data.error ?? "설정 저장에 실패했습니다.");

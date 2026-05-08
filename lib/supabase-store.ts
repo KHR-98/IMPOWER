@@ -593,6 +593,17 @@ function isUniqueViolation(error: unknown): boolean {
   return code === "23505" || /duplicate key/i.test(message);
 }
 
+function isForeignKeyViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message = "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+
+  return code === "23503" || /foreign key/i.test(message);
+}
+
 async function persistAttendanceEvent(input: {
   workDate: string;
   username: string;
@@ -2837,7 +2848,23 @@ export async function saveSupabaseAdminConfiguration(
     .not("id", "in", `(${savedIds.join(",")})`);
 
   if (deleteError) {
-    throw deleteError;
+    if (!isForeignKeyViolation(deleteError)) {
+      throw deleteError;
+    }
+
+    const { error: deactivateError } = await client
+      .from(TABLES.zones)
+      .update({ is_active: false })
+      .not("id", "in", `(${savedIds.join(",")})`);
+
+    if (deactivateError) {
+      throw deactivateError;
+    }
+
+    return {
+      ok: true,
+      message: "운영 설정과 지점 정보를 저장했습니다. 사용 이력이 있는 삭제 지점은 비활성화했습니다.",
+    };
   }
 
   return {
