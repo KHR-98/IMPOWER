@@ -97,6 +97,7 @@ const TABLES = {
   zones: "geo_zones",
   rosters: "work_rosters",
   attendanceDailyRecords: "attendance_daily_records",
+  attendanceEvents: "attendance_events",
   auditAttendanceLogs: "audit_attendance_logs",
   globalSettings: "config_global_settings",
   departmentSettings: "config_department_settings",
@@ -591,17 +592,6 @@ function isUniqueViolation(error: unknown): boolean {
   const message = "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
 
   return code === "23505" || /duplicate key/i.test(message);
-}
-
-function isForeignKeyViolation(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
-  const message = "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
-
-  return code === "23503" || /foreign key/i.test(message);
 }
 
 async function persistAttendanceEvent(input: {
@@ -2842,29 +2832,55 @@ export async function saveSupabaseAdminConfiguration(
   }
 
   const savedIds = zonePayload.map((z) => z.id);
-  const { error: deleteError } = await client
+  const { data: removedZoneRows, error: removedZoneLookupError } = await client
     .from(TABLES.zones)
-    .delete()
+    .select("id")
     .not("id", "in", `(${savedIds.join(",")})`);
 
-  if (deleteError) {
-    if (!isForeignKeyViolation(deleteError)) {
+  if (removedZoneLookupError) {
+    throw removedZoneLookupError;
+  }
+
+  const removedZoneIds = (removedZoneRows ?? []).map((row) => String(row.id)).filter(Boolean);
+
+  if (removedZoneIds.length > 0) {
+    const dailyRecordZoneColumns = [
+      "check_in_zone_id",
+      "tbm_zone_id",
+      "tbm_morning_zone_id",
+      "lunch_register_zone_id",
+      "lunch_out_zone_id",
+      "lunch_in_zone_id",
+      "tbm_afternoon_zone_id",
+      "tbm_checkout_zone_id",
+      "check_out_zone_id",
+    ];
+
+    for (const column of dailyRecordZoneColumns) {
+      const { error } = await client
+        .from(TABLES.attendanceDailyRecords)
+        .update({ [column]: null })
+        .in(column, removedZoneIds);
+
+      if (error) {
+        throw error;
+      }
+    }
+
+    const { error: eventClearError } = await client
+      .from(TABLES.attendanceEvents)
+      .update({ zone_id: null })
+      .in("zone_id", removedZoneIds);
+
+    if (eventClearError) {
+      throw eventClearError;
+    }
+
+    const { error: deleteError } = await client.from(TABLES.zones).delete().in("id", removedZoneIds);
+
+    if (deleteError) {
       throw deleteError;
     }
-
-    const { error: deactivateError } = await client
-      .from(TABLES.zones)
-      .update({ is_active: false })
-      .not("id", "in", `(${savedIds.join(",")})`);
-
-    if (deactivateError) {
-      throw deactivateError;
-    }
-
-    return {
-      ok: true,
-      message: "운영 설정과 지점 정보를 저장했습니다. 사용 이력이 있는 삭제 지점은 비활성화했습니다.",
-    };
   }
 
   return {
