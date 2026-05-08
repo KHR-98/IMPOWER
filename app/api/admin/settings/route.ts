@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getSettings, saveAdminConfiguration } from "@/lib/app-data";
+import { getSettings, getZones, saveAdminConfiguration } from "@/lib/app-data";
 import { buildOperationalSettings } from "@/lib/attendance-schedule";
 import { getSession } from "@/lib/auth";
 import { preserveDisabledDepartmentLunchTbmSettings } from "@/lib/department-feature-policy";
@@ -181,7 +181,9 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: result.message }, { status: 400 });
     }
 
-    return NextResponse.json(result);
+    const [savedSettings, savedZones] = await Promise.all([getSettings(), getZones()]);
+
+    return NextResponse.json({ ...result, settings: savedSettings, zones: savedZones });
   } catch (error) {
     console.error("[admin settings]", error);
     return NextResponse.json(

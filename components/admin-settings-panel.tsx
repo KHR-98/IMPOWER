@@ -28,6 +28,13 @@ interface AdminSettingsPanelProps {
   actorDepartmentId?: string | null;
 }
 
+interface SettingsSaveResponse {
+  error?: string;
+  message?: string;
+  settings?: AppSettings;
+  zones?: Zone[];
+}
+
 type TimeSettingsMode = "weekday" | "weekend";
 type WeekendSettingsKey = "checkInWindow" | "lunchOutWindow" | "lunchInWindow" | "checkOutWindow";
 
@@ -327,7 +334,7 @@ function WeekendTimeSettingsPicker({
   );
 }
 
-async function readJsonResponse(response: Response): Promise<{ error?: string; message?: string }> {
+async function readJsonResponse(response: Response): Promise<SettingsSaveResponse> {
   const body = await response.text();
 
   if (!body.trim()) {
@@ -337,7 +344,7 @@ async function readJsonResponse(response: Response): Promise<{ error?: string; m
   }
 
   try {
-    return JSON.parse(body) as { error?: string; message?: string };
+    return JSON.parse(body) as SettingsSaveResponse;
   } catch {
     return {
       error: response.ok ? undefined : "서버 응답을 처리하지 못했습니다. 잠시 후 다시 시도하세요.",
@@ -509,6 +516,13 @@ export function AdminSettingsPanel({
       }
 
       setMessage(data.message ?? "운영 설정을 저장했습니다.");
+      if (data.settings) {
+        setSettings(data.settings);
+        setMaxGpsAccuracyInput(String(data.settings.maxGpsAccuracyM));
+      }
+      if (data.zones) {
+        setZones(data.zones);
+      }
       setIsEditing(false);
       setIsMapEditing(false);
       startTransition(() => router.refresh());
