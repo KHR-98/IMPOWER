@@ -124,6 +124,25 @@ async function getCameraPermissionProbe(): Promise<CameraPermissionProbe> {
   };
 }
 
+function isOverconstrainedCameraError(error: unknown): boolean {
+  return getCameraErrorName(error) === "OverconstrainedError";
+}
+
+async function tryOpenCameraForPolicyCheck(): Promise<MediaStream> {
+  try {
+    return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+  } catch (error) {
+    if (!isOverconstrainedCameraError(error)) {
+      throw error;
+    }
+
+    // Some mobile/MDM browser stacks report the broad `{ video: true, audio: false }`
+    // request as overconstrained. Retry with the simplest valid camera request before
+    // deciding whether the camera is genuinely available.
+    return navigator.mediaDevices.getUserMedia({ video: true });
+  }
+}
+
 async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> {
   if (!navigator.mediaDevices?.getUserMedia) {
     const isSecureContext = window.isSecureContext;
@@ -158,7 +177,7 @@ async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> 
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    const stream = await tryOpenCameraForPolicyCheck();
     stream.getTracks().forEach((t) => t.stop());
     return {
       ok: false,
@@ -188,14 +207,8 @@ async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> 
 
     if (code === "OverconstrainedError") {
       return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 조건을 만족하는 장치를 찾지 못했습니다.",
-          diagnosis: "브라우저가 요청한 영상 입력 조건을 만족하는 카메라를 선택하지 못했습니다.",
-          action: "다른 브라우저로 열거나 기기 카메라 설정을 확인한 뒤 다시 시도하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
+        ok: true,
+        cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
       };
     }
 
