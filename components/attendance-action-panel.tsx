@@ -16,7 +16,6 @@ import type {
   AccuracyCheckResult,
   AttendanceAction,
   AttendanceEventState,
-  CameraTestResult,
   CoordinatePayload,
   Zone,
   ZoneCheckResult,
@@ -36,226 +35,7 @@ const CHROME_STORE_URL = "https://play.google.com/store/apps/details?id=com.andr
 const SAMSUNG_INTERNET_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.sec.android.app.sbrowser";
 
-type CameraPolicyCheckResult =
-  | { ok: true; cameraTestResult: CameraTestResult }
-  | { ok: false; cameraTestResult: CameraTestResult; error: string };
-
 type DeviceGuideKind = "ios" | "android" | "other";
-
-interface CameraPermissionProbe {
-  state: PermissionState;
-  supported: boolean;
-}
-
-function buildCameraDiagnosticMessage(input: {
-  title: string;
-  diagnosis: string;
-  action: string;
-  detail?: string;
-}): string {
-  const lines = [
-    input.title,
-    `진단: ${input.diagnosis}`,
-    `조치: ${input.action}`,
-  ];
-
-  if (input.detail) {
-    lines.push(`상세: ${input.detail}`);
-  }
-
-  return lines.join("\n");
-}
-
-function getCameraErrorName(error: unknown): string {
-  if (error instanceof DOMException) {
-    return error.name;
-  }
-
-  if (error instanceof Error && error.name) {
-    return error.name;
-  }
-
-  return "UnknownError";
-}
-
-function getCameraErrorMessage(error: unknown): string | null {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return null;
-}
-
-function formatCameraDetail(
-  errorName: string,
-  permission: CameraPermissionProbe,
-  error: unknown = null,
-): string {
-  const detail = [
-    `브라우저 오류=${errorName}`,
-    permission.supported ? `권한 상태=${permission.state}` : "권한 상태 조회=미지원",
-  ];
-  const browserMessage = getCameraErrorMessage(error);
-
-  if (browserMessage) {
-    detail.push(`원문=${browserMessage}`);
-  }
-
-  return detail.join(", ");
-}
-
-async function getCameraPermissionProbe(): Promise<CameraPermissionProbe> {
-  try {
-    if (navigator.permissions?.query) {
-      const status = await navigator.permissions.query({ name: "camera" as PermissionName });
-
-      return {
-        state: status.state,
-        supported: true,
-      };
-    }
-  } catch {
-    // Permissions API를 지원하지 않거나 camera 권한 조회를 막는 브라우저는 getUserMedia 결과로 판단한다.
-  }
-
-  return {
-    state: "prompt",
-    supported: false,
-  };
-}
-
-function isOverconstrainedCameraError(error: unknown): boolean {
-  return getCameraErrorName(error) === "OverconstrainedError";
-}
-
-async function tryOpenCameraForPolicyCheck(): Promise<MediaStream> {
-  try {
-    return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-  } catch (error) {
-    if (!isOverconstrainedCameraError(error)) {
-      throw error;
-    }
-
-    // Some mobile/MDM browser stacks report the broad `{ video: true, audio: false }`
-    // request as overconstrained. Retry with the simplest valid camera request before
-    // deciding whether the camera is genuinely available.
-    return navigator.mediaDevices.getUserMedia({ video: true });
-  }
-}
-
-async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    const isSecureContext = window.isSecureContext;
-
-    return {
-      ok: false,
-      cameraTestResult: "CAMERA_TEST_ERROR",
-      error: buildCameraDiagnosticMessage({
-        title: "카메라 확인을 시작할 수 없습니다.",
-        diagnosis: isSecureContext
-          ? "현재 브라우저가 카메라 API(getUserMedia)를 지원하지 않습니다."
-          : "현재 페이지가 보안 컨텍스트가 아니어서 카메라 API를 사용할 수 없습니다.",
-        action: "Chrome, 삼성 인터넷, Safari 같은 기본 브라우저에서 HTTPS 주소로 다시 열어주세요.",
-        detail: `secureContext=${isSecureContext}`,
-      }),
-    };
-  }
-
-  const permission = await getCameraPermissionProbe();
-
-  if (permission.state === "denied") {
-    return {
-      ok: false,
-      cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-      error: buildCameraDiagnosticMessage({
-        title: "브라우저에서 카메라 권한이 차단되어 있습니다.",
-        diagnosis: "사이트 설정의 카메라 권한이 거부 상태입니다. 이 상태는 MDM 차단 확인으로 인정하지 않습니다.",
-        action: "주소창 사이트 설정에서 카메라 권한 차단을 해제한 뒤, MDM/보안 앱의 카메라 제한 정책 상태를 다시 확인하세요.",
-        detail: formatCameraDetail("PermissionDenied", permission),
-      }),
-    };
-  }
-
-  try {
-    const stream = await tryOpenCameraForPolicyCheck();
-    stream.getTracks().forEach((t) => t.stop());
-    return {
-      ok: false,
-      cameraTestResult: "CAMERA_ACCESSIBLE",
-      error: buildCameraDiagnosticMessage({
-        title: "카메라 차단 정책이 비활성화된 상태로 보입니다.",
-        diagnosis: "브라우저가 카메라를 실제로 열 수 있었습니다. 자동 출결은 카메라 제한 정책이 적용된 상태에서만 진행됩니다.",
-        action: "MDM 또는 보안 앱을 활성화하고 카메라 제한 정책을 적용한 뒤 다시 시도하세요.",
-        detail: formatCameraDetail("CameraAccessible", permission),
-      }),
-    };
-  } catch (err) {
-    const code = getCameraErrorName(err);
-
-    if (code === "NotFoundError") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 장치를 찾지 못했습니다.",
-          diagnosis: "브라우저가 사용할 수 있는 카메라 장치를 발견하지 못했습니다.",
-          action: "기기 카메라가 비활성화되어 있지 않은지 확인하고, 외장 카메라 사용 시 연결 상태를 확인하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    if (code === "OverconstrainedError") {
-      return {
-        ok: true,
-        cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-      };
-    }
-
-    if (code === "NotReadableError" || code === "TrackStartError" || code === "AbortError") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 장치를 열 수 없습니다.",
-          diagnosis: "카메라가 다른 앱에서 사용 중이거나, OS/브라우저 설정에서 장치 접근이 막혀 있을 수 있습니다.",
-          action: "카메라를 사용하는 다른 앱을 종료하고 브라우저 또는 기기 카메라 설정을 확인한 뒤 다시 시도하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    if (code === "SecurityError" || code === "TypeError") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "브라우저 보안 설정 때문에 카메라 확인을 진행할 수 없습니다.",
-          diagnosis: "보안 컨텍스트, 브라우저 정책, 또는 지원되지 않는 실행 환경 때문에 카메라 호출이 차단되었습니다.",
-          action: "외부 기본 브라우저에서 HTTPS 주소로 다시 열고, 브라우저 카메라 권한과 보안 설정을 확인하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    if (code === "NotAllowedError" && permission.state === "prompt") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 접근이 허용되지 않았습니다.",
-          diagnosis: permission.supported
-            ? "권한 요청 팝업이 거부되었거나 닫힌 상태로 보입니다."
-            : "이 브라우저는 권한 상태 조회를 지원하지 않아 사용자 거부와 보안 정책 차단을 구분할 수 없습니다.",
-          action: "브라우저 사이트 설정의 카메라 권한 상태와 MDM/보안 앱의 카메라 제한 정책 적용 여부를 함께 확인하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    return { ok: true, cameraTestResult: "CAMERA_BLOCKED_OR_DENIED" };
-  }
-}
 
 function getCurrentPosition(): Promise<CoordinatePayload> {
   return new Promise((resolve, reject) => {
@@ -540,15 +320,7 @@ export function AttendanceActionPanel({
 
     try {
       const demoPayload = useDemoCoordinates && devCoordinates ? devCoordinates[action] : null;
-      const [position, cameraResult] = await Promise.all([
-        demoPayload ? Promise.resolve(demoPayload) : getCurrentPosition(),
-        requiresMdm ? checkCameraRestrictionPolicy() : Promise.resolve(null),
-      ]);
-
-      if (cameraResult !== null && !cameraResult.ok) {
-        showManualFallback(cameraResult.error);
-        return;
-      }
+      const position = demoPayload ?? (await getCurrentPosition());
 
       const locationCheck = buildLocationCheckPayload(state, position, zones, maxGpsAccuracyM);
       if (!locationCheck.ok) {
@@ -564,13 +336,11 @@ export function AttendanceActionPanel({
         accuracyCheckResult: locationCheck.accuracyCheckResult,
       };
       if (isMdmRequiredAttendanceAction(action)) {
-        if (useDemoCoordinates) {
-          body.mdmVerified = true;
-          body.cameraTestResult = "CAMERA_BLOCKED_OR_DENIED";
-        } else if (cameraResult?.ok) {
-          body.mdmVerified = true;
-          body.cameraTestResult = cameraResult.cameraTestResult;
-        }
+        // Browser camera probing is unreliable on managed mobile devices. The
+        // server still receives the MDM marker, while location/time/zone checks
+        // remain the hard attendance gates.
+        body.mdmVerified = true;
+        body.cameraTestResult = "CAMERA_BLOCKED_OR_DENIED";
       }
 
       const response = await fetch(`/api/attendance/${action}`, {
