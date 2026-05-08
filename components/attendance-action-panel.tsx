@@ -42,28 +42,118 @@ type CameraPolicyCheckResult =
 
 type DeviceGuideKind = "ios" | "android" | "other";
 
+interface CameraPermissionProbe {
+  state: PermissionState;
+  supported: boolean;
+}
+
+function buildCameraDiagnosticMessage(input: {
+  title: string;
+  diagnosis: string;
+  action: string;
+  detail?: string;
+}): string {
+  const lines = [
+    input.title,
+    `진단: ${input.diagnosis}`,
+    `조치: ${input.action}`,
+  ];
+
+  if (input.detail) {
+    lines.push(`상세: ${input.detail}`);
+  }
+
+  return lines.join("\n");
+}
+
+function getCameraErrorName(error: unknown): string {
+  if (error instanceof DOMException) {
+    return error.name;
+  }
+
+  if (error instanceof Error && error.name) {
+    return error.name;
+  }
+
+  return "UnknownError";
+}
+
+function getCameraErrorMessage(error: unknown): string | null {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return null;
+}
+
+function formatCameraDetail(
+  errorName: string,
+  permission: CameraPermissionProbe,
+  error: unknown = null,
+): string {
+  const detail = [
+    `브라우저 오류=${errorName}`,
+    permission.supported ? `권한 상태=${permission.state}` : "권한 상태 조회=미지원",
+  ];
+  const browserMessage = getCameraErrorMessage(error);
+
+  if (browserMessage) {
+    detail.push(`원문=${browserMessage}`);
+  }
+
+  return detail.join(", ");
+}
+
+async function getCameraPermissionProbe(): Promise<CameraPermissionProbe> {
+  try {
+    if (navigator.permissions?.query) {
+      const status = await navigator.permissions.query({ name: "camera" as PermissionName });
+
+      return {
+        state: status.state,
+        supported: true,
+      };
+    }
+  } catch {
+    // Permissions API를 지원하지 않거나 camera 권한 조회를 막는 브라우저는 getUserMedia 결과로 판단한다.
+  }
+
+  return {
+    state: "prompt",
+    supported: false,
+  };
+}
+
 async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> {
   if (!navigator.mediaDevices?.getUserMedia) {
+    const isSecureContext = window.isSecureContext;
+
     return {
       ok: false,
       cameraTestResult: "CAMERA_TEST_ERROR",
-      error: "이 브라우저는 카메라 API를 지원하지 않습니다.",
+      error: buildCameraDiagnosticMessage({
+        title: "카메라 확인을 시작할 수 없습니다.",
+        diagnosis: isSecureContext
+          ? "현재 브라우저가 카메라 API(getUserMedia)를 지원하지 않습니다."
+          : "현재 페이지가 보안 컨텍스트가 아니어서 카메라 API를 사용할 수 없습니다.",
+        action: "Chrome, 삼성 인터넷, Safari 같은 기본 브라우저에서 HTTPS 주소로 다시 열어주세요.",
+        detail: `secureContext=${isSecureContext}`,
+      }),
     };
   }
 
-  let permState: PermissionState = "prompt";
-  try {
-    const status = await navigator.permissions.query({ name: "camera" as PermissionName });
-    permState = status.state;
-  } catch {
-    // Permissions API를 지원하지 않는 브라우저 — getUserMedia로 진행
-  }
+  const permission = await getCameraPermissionProbe();
 
-  if (permState === "denied") {
+  if (permission.state === "denied") {
     return {
       ok: false,
       cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-      error: "카메라 권한 상태를 확인할 수 없습니다.",
+      error: buildCameraDiagnosticMessage({
+        title: "브라우저에서 카메라 권한이 차단되어 있습니다.",
+        diagnosis: "사이트 설정의 카메라 권한이 거부 상태입니다. 이 상태는 MDM 차단 확인으로 인정하지 않습니다.",
+        action: "주소창 사이트 설정에서 카메라 권한 차단을 해제한 뒤, MDM/보안 앱의 카메라 제한 정책 상태를 다시 확인하세요.",
+        detail: formatCameraDetail("PermissionDenied", permission),
+      }),
     };
   }
 
@@ -73,23 +163,80 @@ async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> 
     return {
       ok: false,
       cameraTestResult: "CAMERA_ACCESSIBLE",
-      error: "카메라가 열려 자동 보안 정책 간접 확인을 완료할 수 없습니다.",
+      error: buildCameraDiagnosticMessage({
+        title: "카메라 차단 정책이 비활성화된 상태로 보입니다.",
+        diagnosis: "브라우저가 카메라를 실제로 열 수 있었습니다. 자동 출결은 카메라 제한 정책이 적용된 상태에서만 진행됩니다.",
+        action: "MDM 또는 보안 앱을 활성화하고 카메라 제한 정책을 적용한 뒤 다시 시도하세요.",
+        detail: formatCameraDetail("CameraAccessible", permission),
+      }),
     };
   } catch (err) {
-    const code = err instanceof DOMException ? err.name : "UnknownError";
-    if (code === "NotFoundError" || code === "OverconstrainedError" || code === "TypeError") {
+    const code = getCameraErrorName(err);
+
+    if (code === "NotFoundError") {
       return {
         ok: false,
         cameraTestResult: "CAMERA_TEST_ERROR",
-        error: "카메라 테스트를 완료할 수 없습니다.",
+        error: buildCameraDiagnosticMessage({
+          title: "카메라 장치를 찾지 못했습니다.",
+          diagnosis: "브라우저가 사용할 수 있는 카메라 장치를 발견하지 못했습니다.",
+          action: "기기 카메라가 비활성화되어 있지 않은지 확인하고, 외장 카메라 사용 시 연결 상태를 확인하세요.",
+          detail: formatCameraDetail(code, permission, err),
+        }),
       };
     }
 
-    if (permState === "prompt" && code === "NotAllowedError") {
+    if (code === "OverconstrainedError") {
+      return {
+        ok: false,
+        cameraTestResult: "CAMERA_TEST_ERROR",
+        error: buildCameraDiagnosticMessage({
+          title: "카메라 조건을 만족하는 장치를 찾지 못했습니다.",
+          diagnosis: "브라우저가 요청한 영상 입력 조건을 만족하는 카메라를 선택하지 못했습니다.",
+          action: "다른 브라우저로 열거나 기기 카메라 설정을 확인한 뒤 다시 시도하세요.",
+          detail: formatCameraDetail(code, permission, err),
+        }),
+      };
+    }
+
+    if (code === "NotReadableError" || code === "TrackStartError" || code === "AbortError") {
+      return {
+        ok: false,
+        cameraTestResult: "CAMERA_TEST_ERROR",
+        error: buildCameraDiagnosticMessage({
+          title: "카메라 장치를 열 수 없습니다.",
+          diagnosis: "카메라가 다른 앱에서 사용 중이거나, OS/브라우저 설정에서 장치 접근이 막혀 있을 수 있습니다.",
+          action: "카메라를 사용하는 다른 앱을 종료하고 브라우저 또는 기기 카메라 설정을 확인한 뒤 다시 시도하세요.",
+          detail: formatCameraDetail(code, permission, err),
+        }),
+      };
+    }
+
+    if (code === "SecurityError" || code === "TypeError") {
+      return {
+        ok: false,
+        cameraTestResult: "CAMERA_TEST_ERROR",
+        error: buildCameraDiagnosticMessage({
+          title: "브라우저 보안 설정 때문에 카메라 확인을 진행할 수 없습니다.",
+          diagnosis: "보안 컨텍스트, 브라우저 정책, 또는 지원되지 않는 실행 환경 때문에 카메라 호출이 차단되었습니다.",
+          action: "외부 기본 브라우저에서 HTTPS 주소로 다시 열고, 브라우저 카메라 권한과 보안 설정을 확인하세요.",
+          detail: formatCameraDetail(code, permission, err),
+        }),
+      };
+    }
+
+    if (code === "NotAllowedError" && permission.state === "prompt") {
       return {
         ok: false,
         cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-        error: "카메라 권한 요청이 완료되지 않았습니다.",
+        error: buildCameraDiagnosticMessage({
+          title: "카메라 접근이 허용되지 않았습니다.",
+          diagnosis: permission.supported
+            ? "권한 요청 팝업이 거부되었거나 닫힌 상태로 보입니다."
+            : "이 브라우저는 권한 상태 조회를 지원하지 않아 사용자 거부와 보안 정책 차단을 구분할 수 없습니다.",
+          action: "브라우저 사이트 설정의 카메라 권한 상태와 MDM/보안 앱의 카메라 제한 정책 적용 여부를 함께 확인하세요.",
+          detail: formatCameraDetail(code, permission, err),
+        }),
       };
     }
 
@@ -512,7 +659,9 @@ export function AttendanceActionPanel({
         </div>
       ) : null}
 
-      <div className="check-message">{displayMessage}</div>
+      <div className={`check-message${manualFallbackReason ? " check-message-diagnostic" : ""}`}>
+        {displayMessage}
+      </div>
       {manualFallbackReason ? (
         <div className="notice small manual-fallback-box">
           <strong>자동 앱 기반 입·출문을 사용할 수 없습니다. 아래 수동 입·출문 절차를 진행하세요.</strong>

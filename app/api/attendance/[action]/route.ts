@@ -71,7 +71,11 @@ export async function POST(
     (parsed.data.mdmVerified !== true || parsed.data.cameraTestResult !== "CAMERA_BLOCKED_OR_DENIED")
   ) {
     return NextResponse.json(
-      { error: "보안 앱/카메라 제한 정책 간접 확인이 필요합니다. 자동 앱 기반 입·출문을 사용할 수 없습니다." },
+      {
+        error:
+          "보안 앱/카메라 제한 정책 확인 결과가 누락되었거나 '차단됨' 상태가 아닙니다. " +
+          "MDM/보안 앱 활성화 여부와 브라우저 카메라 권한 상태를 확인한 뒤 다시 시도하세요.",
+      },
       { status: 403 },
     );
   }

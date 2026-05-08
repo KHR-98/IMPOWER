@@ -2582,6 +2582,12 @@ html.kakao-auth-leaving .login-shell {
   font-size: 1rem;
   font-weight: 700;
   text-align: center;
+  white-space: pre-line;
+}
+
+.check-message-diagnostic {
+  line-height: 1.55;
+  text-align: left;
 }
 
 .check-browser-warning {
