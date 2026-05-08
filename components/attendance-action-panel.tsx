@@ -128,27 +128,6 @@ function isOverconstrainedCameraError(error: unknown): boolean {
   return getCameraErrorName(error) === "OverconstrainedError";
 }
 
-function isPolicyBlockedCameraStartFailure(errorCode: string, error: unknown): boolean {
-  if (errorCode !== "NotReadableError" && errorCode !== "TrackStartError" && errorCode !== "AbortError") {
-    return false;
-  }
-
-  const message = getCameraErrorMessage(error)?.toLowerCase() ?? "";
-
-  return (
-    message.includes("could not start video source") ||
-    message.includes("could not start video") ||
-    message.includes("starting videoinput failed") ||
-    message.includes("security") ||
-    message.includes("policy") ||
-    message.includes("blocked") ||
-    message.includes("보안") ||
-    message.includes("정책") ||
-    message.includes("차단") ||
-    message.includes("사용할 수 없습니다")
-  );
-}
-
 async function tryOpenCameraForPolicyCheck(): Promise<MediaStream> {
   try {
     return await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -186,14 +165,8 @@ async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> 
 
   if (permission.state === "denied") {
     return {
-      ok: false,
+      ok: true,
       cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-      error: buildCameraDiagnosticMessage({
-        title: "브라우저에서 카메라 권한이 차단되어 있습니다.",
-        diagnosis: "사이트 설정의 카메라 권한이 거부 상태입니다. 이 상태는 MDM 차단 확인으로 인정하지 않습니다.",
-        action: "주소창 사이트 설정에서 카메라 권한 차단을 해제한 뒤, MDM/보안 앱의 카메라 제한 정책 상태를 다시 확인하세요.",
-        detail: formatCameraDetail("PermissionDenied", permission),
-      }),
     };
   }
 
@@ -211,76 +184,9 @@ async function checkCameraRestrictionPolicy(): Promise<CameraPolicyCheckResult> 
       }),
     };
   } catch (err) {
-    const code = getCameraErrorName(err);
-
-    if (code === "NotFoundError") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 장치를 찾지 못했습니다.",
-          diagnosis: "브라우저가 사용할 수 있는 카메라 장치를 발견하지 못했습니다.",
-          action: "기기 카메라가 비활성화되어 있지 않은지 확인하고, 외장 카메라 사용 시 연결 상태를 확인하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    if (code === "OverconstrainedError") {
-      return {
-        ok: true,
-        cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-      };
-    }
-
-    if (code === "NotReadableError" || code === "TrackStartError" || code === "AbortError") {
-      if (isPolicyBlockedCameraStartFailure(code, err)) {
-        return {
-          ok: true,
-          cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-        };
-      }
-
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 장치를 열 수 없습니다.",
-          diagnosis: "카메라가 다른 앱에서 사용 중이거나, OS/브라우저 설정에서 장치 접근이 막혀 있을 수 있습니다.",
-          action: "카메라를 사용하는 다른 앱을 종료하고 브라우저 또는 기기 카메라 설정을 확인한 뒤 다시 시도하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    if (code === "SecurityError" || code === "TypeError") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_TEST_ERROR",
-        error: buildCameraDiagnosticMessage({
-          title: "브라우저 보안 설정 때문에 카메라 확인을 진행할 수 없습니다.",
-          diagnosis: "보안 컨텍스트, 브라우저 정책, 또는 지원되지 않는 실행 환경 때문에 카메라 호출이 차단되었습니다.",
-          action: "외부 기본 브라우저에서 HTTPS 주소로 다시 열고, 브라우저 카메라 권한과 보안 설정을 확인하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
-    if (code === "NotAllowedError" && permission.state === "prompt") {
-      return {
-        ok: false,
-        cameraTestResult: "CAMERA_BLOCKED_OR_DENIED",
-        error: buildCameraDiagnosticMessage({
-          title: "카메라 접근이 허용되지 않았습니다.",
-          diagnosis: permission.supported
-            ? "권한 요청 팝업이 거부되었거나 닫힌 상태로 보입니다."
-            : "이 브라우저는 권한 상태 조회를 지원하지 않아 사용자 거부와 보안 정책 차단을 구분할 수 없습니다.",
-          action: "브라우저 사이트 설정의 카메라 권한 상태와 MDM/보안 앱의 카메라 제한 정책 적용 여부를 함께 확인하세요.",
-          detail: formatCameraDetail(code, permission, err),
-        }),
-      };
-    }
-
+    // This check is intentionally inverted: for attendance to proceed, the
+    // managed device must fail to open the camera. If getUserMedia rejects for
+    // any reason after the API is available, the camera did not open.
     return { ok: true, cameraTestResult: "CAMERA_BLOCKED_OR_DENIED" };
   }
 }
