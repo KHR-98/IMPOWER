@@ -203,19 +203,7 @@ export default async function AdminPage({
     buildAllPeriodsRow(u, dashboard.rows.find((r) => r.username === u.username))
   );
 
-  const allPeriodsIsPreview = liveAllPeriodsRows.length === 0;
-  const allPeriodsRowsSource: AllPeriodsRow[] = allPeriodsIsPreview
-    ? dashboard.scheduledUsers.length > 0
-      ? dashboard.scheduledUsers.slice(0, 8).map((u) =>
-          buildAllPeriodsRow(u, dashboard.rows.find((r) => r.username === u.username))
-        )
-      : [
-          { username: "ex-day-1", displayName: "김현장", shiftType: "day", items: [{ label: "출근", done: true, occurredAt: null }, { label: "오전 TBM", done: true, occurredAt: null }, { label: "오후 TBM", done: false, occurredAt: null }, { label: "퇴근 TBM", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
-          { username: "ex-day-2", displayName: "박작업", shiftType: "day", items: [{ label: "출근", done: true, occurredAt: null }, { label: "오전 TBM", done: false, occurredAt: null }, { label: "오후 TBM", done: false, occurredAt: null }, { label: "퇴근 TBM", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
-          { username: "ex-late-1", displayName: "이늦조", shiftType: "late", items: [{ label: "출근", done: false, occurredAt: null }, { label: "퇴근", done: false, occurredAt: null }] },
-        ]
-    : liveAllPeriodsRows;
-  const allPeriodsRows: AllPeriodsRow[] = allPeriodsRowsSource.map((row) => ({
+  const allPeriodsRows: AllPeriodsRow[] = liveAllPeriodsRows.map((row) => ({
     ...row,
     items: filterLunchTbmLabels(row.items, dashboardDepartmentCode),
   }));
@@ -360,7 +348,11 @@ export default async function AdminPage({
             ) : null}
 
             {showAllPeriods ? (
-              <AllPeriodsExpanded rows={allPeriodsRows} isPreview={allPeriodsIsPreview} />
+              allPeriodsRows.length > 0 ? (
+                <AllPeriodsExpanded rows={allPeriodsRows} />
+              ) : (
+                <div className="notice small">표시할 출결 대상자가 없습니다.</div>
+              )
             ) : periodTableRows.length > 0 && periodTableLabels.length > 0 ? (
               <>
                 <div className="table-head admin-period-table-head" style={{ gridTemplateColumns: currentPeriodGridTemplate }}>
