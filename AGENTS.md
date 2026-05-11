@@ -7,10 +7,11 @@
 Mobile-first attendance web app for a secure worksite. Core stack is Next.js App Router + TypeScript + Supabase, with Google Sheet used as a read-only roster source.
 
 ## SOURCE OF TRUTH
-- Product plan: `app-development-plan.md`
-- Redevelopment execution table: `redevelopment-priority-table.md`
-- This file defines repository-wide defaults.
-- If this file and the plan conflict, stop and confirm before changing behavior.
+- Current operating standard: `CURRENT_STANDARD.md`
+- Implementation audit and verification priorities: `IMPLEMENTATION_AUDIT.md`
+- This file defines repository-wide defaults for code navigation and engineering boundaries.
+- Historical planning references live under `archive/project-docs/`.
+- If this file and `CURRENT_STANDARD.md` conflict, stop and confirm before changing behavior.
 
 ## STRUCTURE
 ```text
@@ -20,7 +21,9 @@ Mobile-first attendance web app for a secure worksite. Core stack is Next.js App
 ├── lib/           # business rules, auth, data-source switching, integrations
 ├── supabase/      # schema, seed, migrations
 ├── tests/         # Playwright e2e smoke coverage
-└── app-development-plan.md
+├── CURRENT_STANDARD.md
+├── IMPLEMENTATION_AUDIT.md
+└── archive/project-docs/  # historical planning references
 ```
 
 ## WHERE TO LOOK
@@ -42,7 +45,7 @@ Mobile-first attendance web app for a secure worksite. Core stack is Next.js App
 - Keep route handlers thin; parse input and delegate to `lib/`.
 - Prefer one attendance record per user per work date.
 - Time zone is always `Asia/Seoul`; date boundaries are business-critical.
-- Google Sheet is an input source only in phase 1. Attendance writes stay in app storage.
+- Google Sheet is the operational roster source. Roster-related reads and writes are allowed; attendance event results stay in app storage unless a future requirement approves otherwise.
 - ASCII-first files unless Korean text materially improves UX or product meaning.
 
 ## DOMAIN BOUNDARIES
@@ -55,7 +58,7 @@ Mobile-first attendance web app for a secure worksite. Core stack is Next.js App
 ## ANTI-PATTERNS (THIS PROJECT)
 - Do not put business rules directly in route handlers.
 - Do not fork attendance validation between client and server.
-- Do not write attendance results back to Google Sheet in phase 1.
+- Do not write attendance event results back to Google Sheet unless explicitly approved.
 - Do not add multi-site, department-specific, or arbitrary new shift systems without explicit scope change.
 - Do not replace custom credentials auth with email/social auth unless explicitly requested.
 
@@ -64,7 +67,7 @@ Mobile-first attendance web app for a secure worksite. Core stack is Next.js App
 - Admin UX is split by task group (`overview`, `users`, `operations`, `accounts`, `system`) instead of one long console.
 - Settings UI currently treats time windows as fixed operational defaults; GPS and zone management are the editable focus.
 - Demo mode is first-class and should stay runnable when infra is incomplete.
-- Current code already models lunch and multiple TBM sub-events beyond the original 3-action phase-1 plan; treat that as current implementation reality and confirm scope before expanding it further.
+- Current code models lunch and multiple TBM sub-events. Treat that as accepted current operating scope.
 - Redevelopment should preserve the original GAS app's purpose and operator experience while redesigning storage, validation, and concurrency behavior for stable multi-user operation.
 
 ## MCP DEFAULTS
