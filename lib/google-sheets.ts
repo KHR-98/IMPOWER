@@ -700,7 +700,7 @@ async function fetchMonthlyMatrixSnapshot(input: {
           username: user.username,
           matchedName: isExplicit ? user.displayName : null,
           isScheduled: isExplicit,
-          shiftType: "day",
+          shiftType: isExplicit ? "weekend" : "day",
           allowLunchOut: false,
           scheduleReasonCode: isExplicit ? null : "holiday",
           scheduleReason: isExplicit ? null : getRosterReasonMessage("holiday"),
