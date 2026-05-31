@@ -1,5 +1,35 @@
 import "server-only";
 
+export interface TelegramAlertConfig {
+  alertsEnabled: boolean;
+  botToken: string | null;
+  chatId: string | null;
+  messageThreadId: string | null;
+}
+
+function parseBooleanEnv(value: string | undefined, defaultValue: boolean): boolean {
+  if (!value) {
+    return defaultValue;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "false" || normalized === "0" || normalized === "no" || normalized === "off") {
+    return false;
+  }
+
+  if (normalized === "true" || normalized === "1" || normalized === "yes" || normalized === "on") {
+    return true;
+  }
+
+  return defaultValue;
+}
+
+function getOptionalTrimmedEnv(...names: string[]): string | null {
+  const value = getOptionalEnv(...names)?.trim();
+  return value ? value : null;
+}
+
 export function getRequiredEnv(name: string): string {
   const value = process.env[name];
 
@@ -51,4 +81,13 @@ export function hasGoogleSheetEnv(): boolean {
       process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
       process.env.GOOGLE_PRIVATE_KEY,
   );
+}
+
+export function getTelegramAlertConfig(): TelegramAlertConfig {
+  return {
+    alertsEnabled: parseBooleanEnv(process.env.TELEGRAM_ALERTS_ENABLED, true),
+    botToken: getOptionalTrimmedEnv("TELEGRAM_BOT_TOKEN"),
+    chatId: getOptionalTrimmedEnv("TELEGRAM_CHAT_ID"),
+    messageThreadId: getOptionalTrimmedEnv("TELEGRAM_MESSAGE_THREAD_ID", "TELEGRAM_THREAD_ID"),
+  };
 }

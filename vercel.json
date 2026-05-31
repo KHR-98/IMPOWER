@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/roster-sync",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/attendance-alerts/check-in",
+      "schedule": "40 22 * * *"
+    },
+    {
+      "path": "/api/cron/attendance-alerts/check-out",
+      "schedule": "10 8 * * *"
     }
   ]
 }
