@@ -30,6 +30,7 @@ const ignoredNameTokens = new Set([
   "오전반차",
   "오후반차",
   "예비군",
+  "경조사",
   "휴가",
   "공휴일",
   "휴일",
@@ -165,7 +166,7 @@ function parseMonthlyMatrixSpecialCases(value: unknown): Array<{
     .split(/\s+/)
     .map((part) => part.trim())
     .filter(Boolean)) {
-    const suffixMatch = rawToken.match(/^(.*?)(?:\((오전|오후|예)\))?$/);
+    const suffixMatch = rawToken.match(/^(.*?)(?:\((오전|오후|예|교|경|휴)\))?$/);
     const rawName = suffixMatch?.[1] ?? rawToken;
     const marker = suffixMatch?.[2] ?? null;
     const name = cleanName(rawName);
@@ -174,7 +175,14 @@ function parseMonthlyMatrixSpecialCases(value: unknown): Array<{
       continue;
     }
 
-    const reasonCode = marker === "오전" ? "half_day_am" : marker === "오후" ? "half_day_pm" : marker === "예" ? "military" : "leave";
+    const reasonCode =
+      marker === "오전" ? "half_day_am" :
+      marker === "오후" ? "half_day_pm" :
+      marker === "예" ? "military" :
+      marker === "교" ? "education" :
+      marker === "경" ? "family_event" :
+      marker === "휴" ? "vacation" :
+      "leave";
     const dedupeKey = `${normalizeName(name)}:${reasonCode}`;
 
     if (seen.has(dedupeKey)) {
@@ -202,8 +210,20 @@ function parseScheduledInfo(value: string | undefined): { isScheduled: boolean; 
 
   const normalized = value.trim().toLowerCase();
 
-  if (["휴가", "연차"].includes(normalized)) {
+  if (["연차"].includes(normalized)) {
     return { isScheduled: false, reasonCode: "leave" };
+  }
+
+  if (["교육"].includes(normalized)) {
+    return { isScheduled: false, reasonCode: "education" };
+  }
+
+  if (["경조사"].includes(normalized)) {
+    return { isScheduled: false, reasonCode: "family_event" };
+  }
+
+  if (["휴가"].includes(normalized)) {
+    return { isScheduled: false, reasonCode: "vacation" };
   }
 
   if (["오전반차"].includes(normalized)) {
@@ -555,6 +575,9 @@ function buildStatusToken(displayName: string, reasonCode: RosterReasonCode | nu
   if (reasonCode === "half_day_am") return `${displayName}(오전)`;
   if (reasonCode === "half_day_pm") return `${displayName}(오후)`;
   if (reasonCode === "military") return `${displayName}(예)`;
+  if (reasonCode === "education") return `${displayName}(교)`;
+  if (reasonCode === "family_event") return `${displayName}(경)`;
+  if (reasonCode === "vacation") return `${displayName}(휴)`;
   return null;
 }
 
@@ -1340,7 +1363,7 @@ async function updateSpecialStatusCell(input: {
     .map((token) => token.trim())
     .filter(Boolean)
     .filter((token) => {
-      const namePart = token.replace(/\((오전|오후|예)\)$/, "").trim();
+      const namePart = token.replace(/\((오전|오후|예|교|경|휴)\)$/, "").trim();
       return normalizeName(namePart) !== normalizedTarget;
     });
 

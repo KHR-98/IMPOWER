@@ -18,6 +18,9 @@ const WORK_TYPES: WorkTypeOption[] = [
   { label: "주말근무", isScheduled: true, shiftType: "weekend", reasonCode: null },
   { label: "연차", isScheduled: false, shiftType: "day", reasonCode: "leave" },
   { label: "예비군", isScheduled: false, shiftType: "day", reasonCode: "military" },
+  { label: "교육", isScheduled: false, shiftType: "day", reasonCode: "education" },
+  { label: "경조사", isScheduled: false, shiftType: "day", reasonCode: "family_event" },
+  { label: "휴가", isScheduled: false, shiftType: "day", reasonCode: "vacation" },
   { label: "오후반차", isScheduled: true, shiftType: "day", reasonCode: "half_day_pm" },
   { label: "오전반차", isScheduled: true, shiftType: "day", reasonCode: "half_day_am" },
 ];
@@ -28,6 +31,9 @@ function currentWorkTypeLabel(entry: RosterEntry | undefined): string {
     switch (entry.scheduleReasonCode) {
       case "leave": return "연차";
       case "military": return "예비군";
+      case "education": return "교육";
+      case "family_event": return "경조사";
+      case "vacation": return "휴가";
       case "half_day_am": return "오전반차";
       case "half_day_pm": return "오후반차";
       default: return "미근무";
@@ -92,15 +98,18 @@ export function AttendanceManagementPanel({
   }
 
   function getSortPriority(entry: RosterEntry | undefined): number {
-    if (!entry) return 8;
-    if (entry.scheduleReasonCode === "half_day_pm") return 6;
-    if (entry.scheduleReasonCode === "half_day_am") return 7;
+    if (!entry) return 11;
+    if (entry.scheduleReasonCode === "half_day_pm") return 9;
+    if (entry.scheduleReasonCode === "half_day_am") return 10;
     if (entry.isScheduled && entry.shiftType === "day") return 1;
     if (entry.isScheduled && entry.shiftType === "late") return 2;
     if (entry.isScheduled && entry.shiftType === "weekend") return 3;
     if (entry.scheduleReasonCode === "leave") return 4;
     if (entry.scheduleReasonCode === "military") return 5;
-    return 8;
+    if (entry.scheduleReasonCode === "education") return 6;
+    if (entry.scheduleReasonCode === "family_event") return 7;
+    if (entry.scheduleReasonCode === "vacation") return 8;
+    return 11;
   }
 
   const activeUsers = users
