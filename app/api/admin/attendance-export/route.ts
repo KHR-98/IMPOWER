@@ -101,8 +101,14 @@ function buildRows(
         checkOut = "";
       }
     } else if (rosterRaw) {
-      checkIn = "(미체크)";
-      checkOut = "(미체크)";
+      const holidayLabel = getKoreanHolidayLabel(date);
+      if (holidayLabel) {
+        checkIn = holidayLabel;
+        checkOut = holidayLabel;
+      } else {
+        checkIn = "(미체크)";
+        checkOut = "(미체크)";
+      }
     } else {
       continue;
     }
