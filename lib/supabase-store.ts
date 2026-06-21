@@ -1946,26 +1946,49 @@ async function getSupabaseAttendanceRecords(workDate: string) {
   return data ?? [];
 }
 
+async function fetchAllPages<T>(
+  queryFn: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  const all: T[] = [];
+  let offset = 0;
+  while (true) {
+    const result = await queryFn(offset, offset + PAGE_SIZE - 1);
+    if (result.error) throw result.error;
+    const rows = result.data ?? [];
+    all.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return all;
+}
+
 export async function getSupabaseMonthlyExportData(startDate: string, endDate: string, departmentId?: string | null) {
   const client = getSupabaseAdminClient();
   let usersQuery = client.from(TABLES.users).select("username, display_name, department_id, is_active").eq("is_active", true);
   if (departmentId) {
     usersQuery = usersQuery.eq("department_id", departmentId);
   }
-  const [usersResult, recordsResult, rostersResult, departmentsResult] = await Promise.all([
+  const [usersResult, departmentsResult] = await Promise.all([
     usersQuery,
-    client.from(TABLES.attendanceDailyRecords).select("*").gte("work_date", startDate).lte("work_date", endDate).limit(10000),
-    client.from(TABLES.rosters).select("*").gte("work_date", startDate).lte("work_date", endDate).limit(10000),
     client.from(TABLES.departments).select("*"),
   ]);
   if (usersResult.error) throw usersResult.error;
-  if (recordsResult.error) throw recordsResult.error;
-  if (rostersResult.error) throw rostersResult.error;
   if (departmentsResult.error) throw departmentsResult.error;
+
+  const [allRecords, allRosters] = await Promise.all([
+    fetchAllPages<Record<string, unknown>>((from, to) =>
+      client.from(TABLES.attendanceDailyRecords).select("*").gte("work_date", startDate).lte("work_date", endDate).order("work_date").range(from, to),
+    ),
+    fetchAllPages<Record<string, unknown>>((from, to) =>
+      client.from(TABLES.rosters).select("*").gte("work_date", startDate).lte("work_date", endDate).order("work_date").range(from, to),
+    ),
+  ]);
+
   return {
     users: usersResult.data ?? [],
-    records: (recordsResult.data ?? []).map(mapAttendanceRecord),
-    rosters: rostersResult.data ?? [],
+    records: allRecords.map(mapAttendanceRecord),
+    rosters: allRosters,
     departments: departmentsResult.data ?? [],
   };
 }
