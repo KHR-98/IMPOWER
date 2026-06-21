@@ -22,6 +22,7 @@ import {
   registerKakaoUserWithInvite as registerDemoKakaoUserWithInvite,
   saveAdminConfiguration as saveDemoAdminConfiguration,
   saveAdminUser as saveDemoAdminUser,
+  getDemoMonthlyExportData,
 } from "@/lib/demo-store";
 import { hasGoogleSheetEnv, hasSupabaseEnv } from "@/lib/env";
 import { writeShiftTypeToSheet, writeSpecialStatusToSheet } from "@/lib/google-sheets";
@@ -54,6 +55,7 @@ import {
   saveSupabaseRosterEntry,
   saveSupabaseAdminUser,
   syncSupabaseRoster,
+  getSupabaseMonthlyExportData,
 } from "@/lib/supabase-store";
 import type {
   AdminAttendanceCorrectionInput,
@@ -396,6 +398,13 @@ export async function saveAdminAttendanceCorrection(
 
 export async function getDevCoordinatesForTesting(): Promise<Partial<Record<AttendanceAction, CoordinatePayload>> | null> {
   return resolveDataSource().dataSource === "demo" ? getDevCoordinates() : null;
+}
+
+export async function getMonthlyAttendanceExportData(startDate: string, endDate: string, departmentId?: string | null) {
+  if (resolveDataSource().dataSource !== "supabase") {
+    return getDemoMonthlyExportData(startDate, endDate, departmentId);
+  }
+  return getSupabaseMonthlyExportData(startDate, endDate, departmentId);
 }
 
 
