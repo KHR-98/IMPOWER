@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { getMonthlyAttendanceExportData } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { getKoreanHolidayLabel } from "@/lib/korean-holidays";
 import { parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { formatKoreaDateTime, getKoreaDateKey } from "@/lib/time";
 import type { AttendancePoint, AttendanceRecord } from "@/lib/types";
@@ -91,7 +92,7 @@ function buildRows(
         checkOut = record.checkOut ? "17:00" : "(미체크)";
       }
     } else if (isScheduled === false) {
-      const label = absenceLabel(reasonCode);
+      const label = absenceLabel(reasonCode) ?? getKoreanHolidayLabel(date);
       if (label) {
         checkIn = label;
         checkOut = label;
