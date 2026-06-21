@@ -9,17 +9,11 @@ import type { AttendancePoint, AttendanceRecord } from "@/lib/types";
 
 function getDefaultExportMonth(): string {
   const today = getKoreaDateKey(); // YYYY-MM-DD (KST)
-  const day = parseInt(today.slice(8, 10), 10);
   const year = parseInt(today.slice(0, 4), 10);
   const month = parseInt(today.slice(5, 7), 10);
-  if (day < 5) {
-    // 1~4일: 지난달 출력
-    return month === 1
-      ? `${year - 1}-12`
-      : `${year}-${String(month - 1).padStart(2, "0")}`;
-  }
-  // 5일 이후: 이번달 출력
-  return `${year}-${String(month).padStart(2, "0")}`;
+  return month === 1
+    ? `${year - 1}-12`
+    : `${year}-${String(month - 1).padStart(2, "0")}`;
 }
 
 function timeCell(point: AttendancePoint | null, fallback = "(미체크)"): string {
