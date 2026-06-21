@@ -1954,8 +1954,8 @@ export async function getSupabaseMonthlyExportData(startDate: string, endDate: s
   }
   const [usersResult, recordsResult, rostersResult, departmentsResult] = await Promise.all([
     usersQuery,
-    client.from(TABLES.attendanceDailyRecords).select("*").gte("work_date", startDate).lte("work_date", endDate),
-    client.from(TABLES.rosters).select("*").gte("work_date", startDate).lte("work_date", endDate),
+    client.from(TABLES.attendanceDailyRecords).select("*").gte("work_date", startDate).lte("work_date", endDate).limit(10000),
+    client.from(TABLES.rosters).select("*").gte("work_date", startDate).lte("work_date", endDate).limit(10000),
     client.from(TABLES.departments).select("*"),
   ]);
   if (usersResult.error) throw usersResult.error;
