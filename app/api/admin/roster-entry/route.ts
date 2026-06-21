@@ -14,7 +14,7 @@ const schema = z.object({
   isScheduled: z.boolean(),
   shiftType: z.enum(["day", "late", "weekend"]),
   reasonCode: z
-    .enum(["leave", "half_day_am", "half_day_pm", "half_day", "military", "holiday", "blocked", "not_synced", "not_scheduled", "not_listed", "sheet_missing"])
+    .enum(["leave", "half_day_am", "half_day_pm", "half_day", "military", "education", "family_event", "vacation", "holiday", "blocked", "not_synced", "not_scheduled", "not_listed", "sheet_missing"])
     .nullable(),
 });
 

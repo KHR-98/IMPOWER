@@ -1946,6 +1946,30 @@ async function getSupabaseAttendanceRecords(workDate: string) {
   return data ?? [];
 }
 
+export async function getSupabaseMonthlyExportData(startDate: string, endDate: string, departmentId?: string | null) {
+  const client = getSupabaseAdminClient();
+  let usersQuery = client.from(TABLES.users).select("username, display_name, department_id, is_active").eq("is_active", true);
+  if (departmentId) {
+    usersQuery = usersQuery.eq("department_id", departmentId);
+  }
+  const [usersResult, recordsResult, rostersResult, departmentsResult] = await Promise.all([
+    usersQuery,
+    client.from(TABLES.attendanceDailyRecords).select("*").gte("work_date", startDate).lte("work_date", endDate),
+    client.from(TABLES.rosters).select("*").gte("work_date", startDate).lte("work_date", endDate),
+    client.from(TABLES.departments).select("*"),
+  ]);
+  if (usersResult.error) throw usersResult.error;
+  if (recordsResult.error) throw recordsResult.error;
+  if (rostersResult.error) throw rostersResult.error;
+  if (departmentsResult.error) throw departmentsResult.error;
+  return {
+    users: usersResult.data ?? [],
+    records: (recordsResult.data ?? []).map(mapAttendanceRecord),
+    rosters: rostersResult.data ?? [],
+    departments: departmentsResult.data ?? [],
+  };
+}
+
 async function getSupabaseActiveUsers(departmentId?: string | null) {
   const client = getSupabaseAdminClient();
   let query = client

@@ -18,6 +18,12 @@ export function getRosterReasonMessage(code: RosterReasonCode): string {
       return "반차 일정은 운영 기준 확인이 필요합니다.";
     case "military":
       return "예비군 일정으로 일반 출결 대상이 아닙니다.";
+    case "education":
+      return "교육 일정으로 근무 대상이 아닙니다.";
+    case "family_event":
+      return "경조사 일정으로 근무 대상이 아닙니다.";
+    case "vacation":
+      return "휴가로 근무 대상이 아닙니다.";
     case "holiday":
       return "주말/공휴일은 명시된 인원만 근무 대상입니다.";
     case "blocked":
@@ -62,6 +68,9 @@ export function parseRosterReasonCodeFromSourceKey(sourceKey: string | null | un
     case "half_day_pm":
     case "half_day":
     case "military":
+    case "education":
+    case "family_event":
+    case "vacation":
     case "holiday":
     case "blocked":
     case "not_synced":

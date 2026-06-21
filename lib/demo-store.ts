@@ -1023,3 +1023,131 @@ export function performAttendanceAction(input: {
     ),
   };
 }
+
+// ── 월별 출결 엑셀 샘플 데이터 ──────────────────────────────────────────────
+
+function simpleHash(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+const DEMO_EXPORT_USERS = [
+  { username: "memory_admin",    display_name: "메모리 부서장",     department_id: "dept-memory" },
+  { username: "choi",            display_name: "최유진",            department_id: "dept-memory" },
+  { username: "memory_pcs_admin",display_name: "메모리PCS 부서장",  department_id: "dept-memory-pcs" },
+  { username: "kim",             display_name: "김민수",            department_id: "dept-memory-pcs" },
+  { username: "park",            display_name: "박지훈",            department_id: "dept-memory-pcs" },
+  { username: "foundry_pcs_admin",display_name: "파운드리PCS 부서장",department_id: "dept-foundry-pcs" },
+  { username: "lee",             display_name: "이서준",            department_id: "dept-foundry-pcs" },
+  { username: "han",             display_name: "한지아",            department_id: "dept-foundry-pcs" },
+];
+
+const ABSENCE_REASONS = ["leave", "military", "education", "vacation", "family_event"] as const;
+
+export function getDemoMonthlyExportData(
+  startDate: string,
+  endDate: string,
+  departmentId?: string | null,
+) {
+  const filteredUsers = departmentId
+    ? DEMO_EXPORT_USERS.filter((u) => u.department_id === departmentId)
+    : DEMO_EXPORT_USERS;
+
+  // 평일(월~금)만 수집
+  const [sy, sm, sd] = startDate.split("-").map(Number);
+  const [ey, em, ed] = endDate.split("-").map(Number);
+  const workDays: string[] = [];
+  for (let d = new Date(sy, sm - 1, sd); d <= new Date(ey, em - 1, ed); d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    workDays.push(`${yyyy}-${mm}-${dd}`);
+  }
+
+  const records: AttendanceRecord[] = [];
+  const rosters: Record<string, unknown>[] = [];
+
+  for (const dateStr of workDays) {
+    for (const user of filteredUsers) {
+      const seed = simpleHash(`${dateStr}-${user.username}`);
+
+      // 약 1/10 확률로 결근 사유 부여
+      const absenceMod = seed % 10;
+      const isScheduled = absenceMod > 0;
+      const reasonCode = isScheduled ? null : ABSENCE_REASONS[seed % ABSENCE_REASONS.length];
+
+      rosters.push({
+        id: `demo-roster-${dateStr}-${user.username}`,
+        work_date: dateStr,
+        username: user.username,
+        display_name: user.display_name,
+        is_scheduled: isScheduled,
+        shift_type: "day",
+        allow_lunch_out: false,
+        source_row_key: reasonCode ? `auto|reason=${reasonCode}` : null,
+      });
+
+      if (!isScheduled) continue;
+
+      // 출근 시각: 07:50 ~ 08:19
+      const ciTotalMin = 7 * 60 + 50 + (seed % 30);
+      const ciH = Math.floor(ciTotalMin / 60);
+      const ciM = ciTotalMin % 60;
+      const ciStr = `${dateStr}T${String(ciH).padStart(2, "0")}:${String(ciM).padStart(2, "0")}:00+09:00`;
+
+      // 1/8 확률로 퇴근 미체크
+      const hasCheckOut = (seed % 8) !== 3;
+      let coStr: string | null = null;
+      if (hasCheckOut) {
+        // 퇴근 시각: 17:50 ~ 18:29
+        const coTotalMin = 17 * 60 + 50 + ((seed * 7) % 40);
+        const coH = Math.floor(coTotalMin / 60);
+        const coM = coTotalMin % 60;
+        coStr = `${dateStr}T${String(coH).padStart(2, "0")}:${String(coM).padStart(2, "0")}:00+09:00`;
+      }
+
+      const makePoint = (iso: string) => ({
+        occurredAt: iso,
+        latitude: 37.56652,
+        longitude: 126.97802,
+        accuracyM: 5 + (seed % 15),
+        zoneId: "entry-main",
+      });
+
+      records.push({
+        id: `demo-rec-${dateStr}-${user.username}`,
+        workDate: dateStr,
+        username: user.username,
+        displayName: user.display_name,
+        checkIn: makePoint(ciStr),
+        tbm: null,
+        tbmMorning: null,
+        lunchRegister: null,
+        lunchOut: null,
+        lunchIn: null,
+        tbmAfternoon: null,
+        tbmCheckout: null,
+        checkOut: coStr ? makePoint(coStr) : null,
+        correctedByAdmin: false,
+        correctionNote: null,
+        updatedAt: ciStr,
+      });
+    }
+  }
+
+  return {
+    users: filteredUsers,
+    records,
+    rosters,
+    departments: [
+      { id: "dept-memory",      name: "메모리" },
+      { id: "dept-memory-pcs",  name: "메모리PCS" },
+      { id: "dept-foundry-pcs", name: "파운드리PCS" },
+    ],
+  };
+}

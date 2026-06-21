@@ -62,7 +62,7 @@ function buildAdminNextPath(searchParams?: { section?: string; focus?: string; a
   return query ? `/admin?${query}` : "/admin";
 }
 
-const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military"];
+const SPECIAL_CASE_ORDER: RosterReasonCode[] = ["leave", "half_day_am", "half_day_pm", "half_day", "military", "education", "family_event", "vacation"];
 function getSpecialCaseLabel(code: RosterReasonCode): string {
   switch (code) {
     case "leave":
@@ -75,6 +75,12 @@ function getSpecialCaseLabel(code: RosterReasonCode): string {
       return "반차";
     case "military":
       return "예비군";
+    case "education":
+      return "교육";
+    case "family_event":
+      return "경조사";
+    case "vacation":
+      return "휴가";
     case "blocked":
       return "예외/제외";
     case "holiday":
