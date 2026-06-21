@@ -213,7 +213,14 @@ export async function GET(request: Request) {
   const [year, mon] = month.split("-").map(Number);
   const startDate = `${month}-01`;
   const lastDay = new Date(year, mon, 0).getDate();
-  const endDate = `${month}-${String(lastDay).padStart(2, "0")}`;
+  const lastDayStr = `${month}-${String(lastDay).padStart(2, "0")}`;
+
+  // 다운로드 시점 기준 전날(KST)까지만 출력
+  const todayKst = getKoreaDateKey();
+  const [ty, tm, td] = todayKst.split("-").map(Number);
+  const yDate = new Date(ty, tm - 1, td - 1);
+  const yesterdayStr = `${yDate.getFullYear()}-${String(yDate.getMonth() + 1).padStart(2, "0")}-${String(yDate.getDate()).padStart(2, "0")}`;
+  const endDate = yesterdayStr < lastDayStr ? yesterdayStr : lastDayStr;
 
   const { users, records, rosters, departments } = await getMonthlyAttendanceExportData(startDate, endDate, departmentId);
 
