@@ -135,7 +135,7 @@ function formatDateLabel(dateStr: string): string {
   return `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}(${WEEKDAY_KO[dow]})`;
 }
 
-function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[]) {
+function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], holidayMap: Map<string, string>) {
   const ws = wb.addWorksheet(sheetName);
 
   // 날짜 목록 (정렬)
@@ -147,6 +147,17 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[]) {
 
   // (날짜|이름) → 출퇴근 조회 맵
   const lookup = new Map(rows.map((r) => [`${r.date}|${r.name}`, r]));
+
+  // 전원 공휴일인 날짜 계산 (한 명이라도 실제 출근 기록 있으면 제외)
+  const mergedHolidayDates = new Map<string, string>();
+  for (const date of dates) {
+    const holidayName = holidayMap.get(date);
+    if (!holidayName) continue;
+    const entries = persons.map((name) => lookup.get(`${date}|${name}`)).filter(Boolean) as ExportRow[];
+    if (entries.length > 0 && entries.every((e) => e.checkIn === holidayName && e.checkOut === holidayName)) {
+      mergedHolidayDates.set(date, holidayName);
+    }
+  }
 
   // 열 너비 설정: 1열 이름(10), 이후 날짜마다 출근(7)+퇴근(7)
   ws.getColumn(1).width = 10;
@@ -195,11 +206,14 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[]) {
   };
   const isLeaveCell = (v: string) => v.includes("연차") || v.includes("반차");
 
-  // 데이터 행: 인원 × 날짜
+  const firstDataRow = 3;
+
+  // 데이터 행: 인원 × 날짜 (공휴일 병합 대상 날짜는 셀 비워둠)
   for (const name of persons) {
     const dataRow = ws.addRow([]);
     dataRow.getCell(1).value = name;
     for (let i = 0; i < dates.length; i++) {
+      if (mergedHolidayDates.has(dates[i])) continue;
       const entry = lookup.get(`${dates[i]}|${name}`);
       const col = 2 + i * 2;
       const ciVal = entry?.checkIn ?? "";
@@ -212,6 +226,20 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[]) {
       if (isLeaveCell(coVal)) coCell.fill = orangeFill;
     }
     dataRow.commit();
+  }
+
+  // 공휴일 날짜: 전체 인원 행 × 출근+퇴근 2열 병합 후 공휴일명 중앙 표시
+  if (persons.length > 0) {
+    const lastDataRow = firstDataRow + persons.length - 1;
+    for (let i = 0; i < dates.length; i++) {
+      const holidayName = mergedHolidayDates.get(dates[i]);
+      if (!holidayName) continue;
+      const col = 2 + i * 2;
+      ws.mergeCells(firstDataRow, col, lastDataRow, col + 1);
+      const cell = ws.getCell(firstDataRow, col);
+      cell.value = holidayName;
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+    }
   }
 }
 
@@ -256,7 +284,7 @@ export async function GET(request: Request) {
 
   const wb = new ExcelJS.Workbook();
   for (const deptName of deptNames) {
-    addSheet(wb, deptName, allRows.filter((r) => r.dept === deptName));
+    addSheet(wb, deptName, allRows.filter((r) => r.dept === deptName), holidayMap);
   }
 
   const buffer = await wb.xlsx.writeBuffer();
