@@ -230,13 +230,11 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       ciCell.value = ciVal;
       coCell.value = coVal;
 
-      // 오전반차: 출근셀에 (반차) 표시
+      // 오전반차: 출근셀에만 색상
       if (ciVal === "(반차)") {
         ciCell.fill = halfDayAmFill;
-        coCell.fill = halfDayAmFill;
-      // 오후반차: 퇴근셀에 (반차) 표시
+      // 오후반차: 퇴근셀에만 색상
       } else if (coVal === "(반차)") {
-        ciCell.fill = halfDayPmFill;
         coCell.fill = halfDayPmFill;
       // 전일 부재: 출근=퇴근=부재사유
       } else if (ciVal === coVal && absenceFillMap[ciVal]) {
