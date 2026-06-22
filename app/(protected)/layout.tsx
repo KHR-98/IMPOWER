@@ -40,7 +40,7 @@ export default async function ProtectedLayout({
             <div className="brand-kicker-row">
               <span className="brand-kicker">아임파워(주)</span>
               {session.role === "master" ? (
-                <AdminExportPanel departments={departments} />
+                <AdminExportPanel />
               ) : null}
             </div>
             <span className="brand-title">IM-ON</span>
