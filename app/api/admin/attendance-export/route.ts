@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 
 import { getMonthlyAttendanceExportData } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
-import { getKoreanHolidayLabel } from "@/lib/korean-holidays";
+import { loadHolidayMap } from "@/lib/korean-holidays";
 import { parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
+import { getSupabaseAdminClient } from "@/lib/supabase";
 import { formatKoreaDateTime, getKoreaDateKey } from "@/lib/time";
 import type { AttendancePoint, AttendanceRecord } from "@/lib/types";
 
@@ -17,7 +18,7 @@ function getDefaultExportMonth(): string {
     : `${year}-${String(month - 1).padStart(2, "0")}`;
 }
 
-function timeCell(point: AttendancePoint | null, fallback = "(미체크)"): string {
+function timeCell(point: AttendancePoint | null, fallback = "x"): string {
   return point ? formatKoreaDateTime(point.occurredAt) : fallback;
 }
 
@@ -45,6 +46,7 @@ function buildRows(
   records: AttendanceRecord[],
   rosters: Array<Record<string, unknown>>,
   departmentsById: Map<string, string>,
+  holidayMap: Map<string, string>,
 ): ExportRow[] {
   const recordMap = new Map<string, AttendanceRecord>();
   for (const r of records) {
@@ -83,16 +85,16 @@ function buildRows(
     if (record) {
       if (reasonCode === "half_day_am") {
         checkIn = "(반차)";
-        checkOut = record.checkOut ? "17:00" : "(미체크)";
+        checkOut = record.checkOut ? "17:00" : "x";
       } else if (reasonCode === "half_day_pm") {
         checkIn = timeCell(record.checkIn);
         checkOut = "(반차)";
       } else {
         checkIn = timeCell(record.checkIn);
-        checkOut = record.checkOut ? "17:00" : "(미체크)";
+        checkOut = record.checkOut ? "17:00" : "x";
       }
     } else if (isScheduled === false) {
-      const label = absenceLabel(reasonCode) ?? getKoreanHolidayLabel(date);
+      const label = absenceLabel(reasonCode) ?? holidayMap.get(date) ?? null;
       if (label) {
         checkIn = label;
         checkOut = label;
@@ -101,13 +103,13 @@ function buildRows(
         checkOut = "";
       }
     } else if (rosterRaw) {
-      const holidayLabel = getKoreanHolidayLabel(date);
+      const holidayLabel = holidayMap.get(date) ?? null;
       if (holidayLabel) {
         checkIn = holidayLabel;
         checkOut = holidayLabel;
       } else {
-        checkIn = "(미체크)";
-        checkOut = "(미체크)";
+        checkIn = "x";
+        checkOut = "x";
       }
     } else {
       continue;
@@ -186,6 +188,13 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[]) {
   // 이름 열 + 2행 고정
   ws.views = [{ state: "frozen", xSplit: 1, ySplit: 2 }];
 
+  const orangeFill: ExcelJS.Fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFFF8C00" },
+  };
+  const isLeaveCell = (v: string) => v.includes("연차") || v.includes("반차");
+
   // 데이터 행: 인원 × 날짜
   for (const name of persons) {
     const dataRow = ws.addRow([]);
@@ -193,8 +202,14 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[]) {
     for (let i = 0; i < dates.length; i++) {
       const entry = lookup.get(`${dates[i]}|${name}`);
       const col = 2 + i * 2;
-      dataRow.getCell(col).value = entry?.checkIn ?? "";
-      dataRow.getCell(col + 1).value = entry?.checkOut ?? "";
+      const ciVal = entry?.checkIn ?? "";
+      const coVal = entry?.checkOut ?? "";
+      const ciCell = dataRow.getCell(col);
+      const coCell = dataRow.getCell(col + 1);
+      ciCell.value = ciVal;
+      coCell.value = coVal;
+      if (isLeaveCell(ciVal)) ciCell.fill = orangeFill;
+      if (isLeaveCell(coVal)) coCell.fill = orangeFill;
     }
     dataRow.commit();
   }
@@ -227,11 +242,14 @@ export async function GET(request: Request) {
 
   const departmentsById = new Map(departments.map((d: Record<string, unknown>) => [String(d.id), String(d.name)]));
 
+  const holidayMap = await loadHolidayMap(getSupabaseAdminClient(), year);
+
   const allRows = buildRows(
     users as Array<{ username: string; display_name: string; department_id: string | null }>,
     records,
     rosters,
     departmentsById,
+    holidayMap,
   );
 
   const deptNames = [...new Set(allRows.map((r) => r.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));

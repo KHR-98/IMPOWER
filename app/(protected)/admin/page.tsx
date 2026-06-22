@@ -6,6 +6,7 @@ import { AdminInviteLinkPanel } from "@/components/admin-invite-link-panel";
 import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-drawer";
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
+import { AdminHolidaySyncPanel } from "@/components/admin-holiday-sync-panel";
 import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
@@ -447,6 +448,7 @@ export default async function AdminPage({
                 <p className="section-subtitle">지점, GPS 기준, 운영 설정을 점검하고 수정합니다.</p>
               </div>
             </div>
+            <AdminHolidaySyncPanel />
             <AdminSettingsPanel
               enabled={adminDataMutationEnabled}
               canEdit={session.role !== "sub_admin" && (session.role === "master" || Boolean(session.departmentId))}

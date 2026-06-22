@@ -1,51 +1,31 @@
-// 한국 법정 공휴일 목록 (연도별 수동 관리 — 매년 초 업데이트 필요)
-// 대체공휴일 포함. 공식 확인: https://www.moleg.go.kr
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const HOLIDAYS: Record<string, string> = {
-  // 2025
-  "2025-01-01": "신정",
-  "2025-01-28": "설날 연휴",
-  "2025-01-29": "설날",
-  "2025-01-30": "설날 연휴",
-  "2025-03-01": "삼일절",
-  "2025-03-03": "대체공휴일",
-  "2025-05-05": "어린이날·부처님오신날",
-  "2025-05-06": "대체공휴일",
-  "2025-06-06": "현충일",
-  "2025-08-15": "광복절",
-  "2025-10-03": "개천절",
-  "2025-10-05": "추석 연휴",
-  "2025-10-06": "추석",
-  "2025-10-07": "추석 연휴",
-  "2025-10-08": "대체공휴일",
-  "2025-10-09": "한글날",
-  "2025-12-25": "성탄절",
+import { fetchGoogleHolidays } from "@/lib/korean-holidays-api";
 
-  // 2026 (출처: publicholidays.co.kr/ko/2026-dates/)
-  "2026-01-01": "신정",
-  "2026-02-16": "설날 연휴",
-  "2026-02-17": "설날",
-  "2026-02-18": "설날 연휴",
-  "2026-03-01": "삼일절",
-  "2026-03-02": "대체공휴일",
-  "2026-05-01": "노동절",
-  "2026-05-05": "어린이날",
-  "2026-05-24": "부처님오신날",
-  "2026-05-25": "대체공휴일",
-  "2026-06-06": "현충일",
-  "2026-07-17": "제헌절",
-  "2026-08-15": "광복절",
-  "2026-08-17": "대체공휴일",
-  "2026-09-24": "추석 연휴",
-  "2026-09-25": "추석",
-  "2026-09-26": "추석 연휴",
-  "2026-10-03": "개천절",
-  "2026-10-05": "대체공휴일",
-  "2026-10-09": "한글날",
-  "2026-12-25": "성탄절",
-};
+export async function loadHolidayMap(supabase: SupabaseClient, year: number): Promise<Map<string, string>> {
+  const { data } = await supabase
+    .from("korean_holidays")
+    .select("date, name")
+    .eq("year", year);
 
-/** YYYY-MM-DD 형식의 날짜가 공휴일이면 이름 반환, 아니면 null */
-export function getKoreanHolidayLabel(dateStr: string): string | null {
-  return HOLIDAYS[dateStr] ?? null;
+  if (data && data.length > 0) {
+    return new Map(data.map((r: { date: string; name: string }) => [r.date, r.name]));
+  }
+
+  // Supabase에 해당 연도 데이터 없으면 Google Calendar에서 자동 fetch 후 저장
+  const holidays = await fetchGoogleHolidays(year);
+
+  if (holidays.length > 0) {
+    await supabase.from("korean_holidays").upsert(
+      holidays.map((h) => ({
+        date: h.date,
+        name: h.name,
+        year,
+        synced_at: new Date().toISOString(),
+      })),
+      { onConflict: "date" },
+    );
+  }
+
+  return new Map(holidays.map((h) => [h.date, h.name]));
 }
