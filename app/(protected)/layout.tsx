@@ -60,6 +60,7 @@ export default async function ProtectedLayout({
             </Suspense>
           ) : null}
           <div className="topbar-action-stack">
+            <span className="watermark-text">© 2026 권순범 · 김형래. All rights reserved.</span>
             <form action={logoutAction}>
               <button type="submit" className="button-ghost logout-icon-btn" aria-label="로그아웃" title="로그아웃">
                 <LogoutIcon />

@@ -2901,6 +2901,14 @@ html.kakao-auth-leaving .login-shell {
   gap: 8px;
 }
 
+.watermark-text {
+  font-size: 0.62rem;
+  color: var(--muted);
+  opacity: 0.55;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .topbar-export-actions {
   position: relative;
   width: auto;
