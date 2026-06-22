@@ -199,13 +199,19 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
   // 이름 열 + 2행 고정
   ws.views = [{ state: "frozen", xSplit: 1, ySplit: 2 }];
 
-  const peachFill: ExcelJS.Fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFFCC8A8" },
+  const mkFill = (argb: string): ExcelJS.Fill => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+
+  // 부재 유형별 색상
+  const absenceFillMap: Record<string, ExcelJS.Fill> = {
+    "연차":   mkFill("FFC6EFCE"), // 연두
+    "예비군": mkFill("FF9DC3E6"), // 하늘
+    "교육":   mkFill("FFD9B8E8"), // 연보라
+    "경조사": mkFill("FFFFD966"), // 노랑
+    "휴가":   mkFill("FF82C0CC"), // 청록
   };
-  const isLeaveCell = (v: string) =>
-    ["연차", "반차", "예비군", "교육", "경조사", "휴가"].some((t) => v.includes(t));
+  const halfDayAmFill = mkFill("FFF4B183"); // 오전반차 — 주황
+  const halfDayPmFill = mkFill("FFFF9999"); // 오후반차 — 분홍
+  const holidayFill   = mkFill("FFFCC8A8"); // 공휴일 — 복숭아
 
   const firstDataRow = 3;
 
@@ -223,8 +229,20 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       const coCell = dataRow.getCell(col + 1);
       ciCell.value = ciVal;
       coCell.value = coVal;
-      if (isLeaveCell(ciVal)) ciCell.fill = peachFill;
-      if (isLeaveCell(coVal)) coCell.fill = peachFill;
+
+      // 오전반차: 출근셀에 (반차) 표시
+      if (ciVal === "(반차)") {
+        ciCell.fill = halfDayAmFill;
+        coCell.fill = halfDayAmFill;
+      // 오후반차: 퇴근셀에 (반차) 표시
+      } else if (coVal === "(반차)") {
+        ciCell.fill = halfDayPmFill;
+        coCell.fill = halfDayPmFill;
+      // 전일 부재: 출근=퇴근=부재사유
+      } else if (ciVal === coVal && absenceFillMap[ciVal]) {
+        ciCell.fill = absenceFillMap[ciVal];
+        coCell.fill = absenceFillMap[ciVal];
+      }
     }
     dataRow.commit();
   }
@@ -240,7 +258,7 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       const cell = ws.getCell(firstDataRow, col);
       cell.value = holidayName;
       cell.alignment = { vertical: "middle", horizontal: "center" };
-      cell.fill = peachFill;
+      cell.fill = holidayFill;
     }
   }
 }

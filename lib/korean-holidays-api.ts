@@ -26,8 +26,9 @@ export async function fetchGoogleHolidays(year: number): Promise<Array<{ date: s
 
   return (res.data.items ?? [])
     .filter((e) => e.start?.date)
-    .map((e) => ({
-      date: e.start!.date!,
-      name: e.summary ?? "",
-    }));
+    .map((e) => {
+      const raw = e.summary ?? "";
+      const name = raw.includes("대체") ? "대체공휴일" : raw;
+      return { date: e.start!.date!, name };
+    });
 }
