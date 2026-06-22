@@ -22,11 +22,13 @@ export function getKoreaDateLabel(date: Date = new Date()): string {
 }
 
 export function getKoreaDateSlashLabel(date: Date = new Date()): string {
-  const kst = new Intl.DateTimeFormat("en-CA", {
+  const raw = new Intl.DateTimeFormat("en-CA", {
     timeZone: KOREA_TIME_ZONE,
     month: "2-digit",
     day: "2-digit",
   }).format(date).replace(/-/g, "/");
+
+  const kst = raw.split("/").map((s) => String(parseInt(s, 10))).join("/");
 
   const weekday = new Intl.DateTimeFormat("ko-KR", {
     timeZone: KOREA_TIME_ZONE,

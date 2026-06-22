@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AttendanceActionPanel } from "@/components/attendance-action-panel";
+import { CheckDateStatusRow } from "@/components/check-date-status-row";
 import { UserLocationMap } from "@/components/user-location-map";
 import { getShiftLabel } from "@/lib/attendance-events";
 import { getDevCoordinatesForTesting, getRuntimeInfo, getSettings, getUserTodayView, getZones } from "@/lib/app-data";
@@ -38,7 +39,7 @@ export default async function DashboardPage({
         <div className="check-card-head">
           <div>
             <h1 className="check-title">출석체크</h1>
-            <div className="check-date">{view.dateLabel}</div>
+            <CheckDateStatusRow dateLabel={view.dateLabel} initialEventStates={view.eventStates} />
           </div>
           <div className="check-chip-stack">
             <span className={`status-pill ${view.isScheduled ? "status-ready" : "status-locked"}`}>

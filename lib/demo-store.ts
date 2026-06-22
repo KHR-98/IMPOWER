@@ -15,7 +15,7 @@ import {
 } from "@/lib/department-feature-policy";
 import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
 import { getRosterReasonMessage, isHalfDayReasonCode } from "@/lib/roster-reasons";
-import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
+import { getKoreaDateKey, getKoreaDateSlashLabel } from "@/lib/time";
 import type {
   AppSettings,
   AdminUserListItem,
@@ -820,7 +820,7 @@ export function getUserTodayView(username: string): UserTodayView {
 
   return {
     dateKey: workDate,
-    dateLabel: getKoreaDateLabel(),
+    dateLabel: getKoreaDateSlashLabel(),
     user: sessionUser,
     isScheduled: Boolean(rosterEntry?.isScheduled || isHalfDayReasonCode(rosterEntry?.scheduleReasonCode)),
     shiftType,
@@ -854,7 +854,7 @@ export function getDashboardView(departmentId?: string | null) {
 
   return {
     dateKey: workDate,
-    dateLabel: getKoreaDateLabel(),
+    dateLabel: getKoreaDateSlashLabel(),
     currentPeriod,
     currentPeriodStats: buildCurrentPeriodStats({
       period: currentPeriod,

@@ -21,7 +21,7 @@ import {
 import { fetchSheetRosterSnapshot, fetchSheetUserCandidates } from "@/lib/google-sheets";
 import { encodeRosterSourceKey, getRosterReasonMessage, isHalfDayReasonCode, parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
-import { getKoreaDateKey, getKoreaDateLabel } from "@/lib/time";
+import { getKoreaDateKey, getKoreaDateSlashLabel } from "@/lib/time";
 import { decryptInviteToken, encryptInviteToken, generateInviteToken, hashInviteToken } from "@/lib/invite-links";
 import type {
   AdminAttendanceCorrectionInput,
@@ -2078,7 +2078,7 @@ export async function getSupabaseUserTodayView(username: string, sessionUser?: S
 
   return {
     dateKey: workDate,
-    dateLabel: getKoreaDateLabel(),
+    dateLabel: getKoreaDateSlashLabel(),
     user,
     isScheduled: rosterEntry.isScheduled || isHalfDayReasonCode(rosterEntry.scheduleReasonCode),
     shiftType,
@@ -2138,7 +2138,7 @@ export async function getSupabaseDashboardView(departmentId?: string | null): Pr
 
   return {
     dateKey: workDate,
-    dateLabel: getKoreaDateLabel(),
+    dateLabel: getKoreaDateSlashLabel(),
     currentPeriod,
     currentPeriodStats: buildCurrentPeriodStats({
       period: currentPeriod,

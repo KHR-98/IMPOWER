@@ -526,6 +526,7 @@ export function AttendanceActionPanel({
       setManualFallbackReason(null);
       if (data.eventStates) {
         setEventStates(data.eventStates);
+        window.dispatchEvent(new CustomEvent("attendance-state-updated", { detail: { eventStates: data.eventStates } }));
       }
     } catch (error) {
       showManualFallback(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");

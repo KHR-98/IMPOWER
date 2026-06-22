@@ -2510,10 +2510,38 @@ html.kakao-auth-leaving .login-shell {
   letter-spacing: -0.05em;
 }
 
-.check-date {
+.check-date-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.check-date {
   color: var(--muted);
   font-size: 0.98rem;
+}
+
+.check-status-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 6px;
+}
+
+.check-status-badge-inactive {
+  background: rgba(16, 32, 51, 0.08);
+  color: var(--muted);
+}
+
+.check-status-badge-checkin {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.check-status-badge-checkout {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .check-chip-stack {
