@@ -204,7 +204,8 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
     pattern: "solid",
     fgColor: { argb: "FFFCC8A8" },
   };
-  const isLeaveCell = (v: string) => v.includes("연차") || v.includes("반차");
+  const isLeaveCell = (v: string) =>
+    ["연차", "반차", "예비군", "교육", "경조사", "휴가"].some((t) => v.includes(t));
 
   const firstDataRow = 3;
 
