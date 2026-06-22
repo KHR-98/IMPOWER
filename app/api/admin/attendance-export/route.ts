@@ -199,10 +199,10 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
   // 이름 열 + 2행 고정
   ws.views = [{ state: "frozen", xSplit: 1, ySplit: 2 }];
 
-  const orangeFill: ExcelJS.Fill = {
+  const peachFill: ExcelJS.Fill = {
     type: "pattern",
     pattern: "solid",
-    fgColor: { argb: "FFFF8C00" },
+    fgColor: { argb: "FFFCC8A8" },
   };
   const isLeaveCell = (v: string) => v.includes("연차") || v.includes("반차");
 
@@ -222,8 +222,8 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       const coCell = dataRow.getCell(col + 1);
       ciCell.value = ciVal;
       coCell.value = coVal;
-      if (isLeaveCell(ciVal)) ciCell.fill = orangeFill;
-      if (isLeaveCell(coVal)) coCell.fill = orangeFill;
+      if (isLeaveCell(ciVal)) ciCell.fill = peachFill;
+      if (isLeaveCell(coVal)) coCell.fill = peachFill;
     }
     dataRow.commit();
   }
@@ -239,6 +239,7 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       const cell = ws.getCell(firstDataRow, col);
       cell.value = holidayName;
       cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.fill = peachFill;
     }
   }
 }
