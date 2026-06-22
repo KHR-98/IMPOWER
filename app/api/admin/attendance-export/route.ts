@@ -258,20 +258,6 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       cell.alignment = { vertical: "middle", horizontal: "center" };
       cell.fill = holidayFill;
 
-      // 바깥쪽 테두리: 경계 셀마다 해당 방향 border 지정
-      const bMedium = { style: "medium" as const };
-      for (let r = firstDataRow; r <= lastDataRow; r++) {
-        ws.getCell(r, col).border = {
-          left: bMedium,
-          ...(r === firstDataRow ? { top: bMedium } : {}),
-          ...(r === lastDataRow  ? { bottom: bMedium } : {}),
-        };
-        ws.getCell(r, col + 1).border = {
-          right: bMedium,
-          ...(r === firstDataRow ? { top: bMedium } : {}),
-          ...(r === lastDataRow  ? { bottom: bMedium } : {}),
-        };
-      }
     }
   }
 }
