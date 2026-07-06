@@ -1965,7 +1965,9 @@ async function fetchAllPages<T>(
 
 export async function getSupabaseMonthlyExportData(startDate: string, endDate: string, departmentId?: string | null) {
   const client = getSupabaseAdminClient();
-  let usersQuery = client.from(TABLES.users).select("username, display_name, department_id, is_active").eq("is_active", true);
+  // 비활성 계정도 포함: 비활성화 후에는 로그인/체크인이 막혀 새 기록이 생기지 않으므로,
+  // 남아있는 기록은 모두 비활성화 이전 것이라 엑셀에 그대로 노출한다.
+  let usersQuery = client.from(TABLES.users).select("username, display_name, department_id, is_active");
   if (departmentId) {
     usersQuery = usersQuery.eq("department_id", departmentId);
   }
