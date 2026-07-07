@@ -71,7 +71,7 @@ const WEEKEND_UNAVAILABLE_CODES: AttendanceEventCode[] = [
   "tbm_afternoon",
   "tbm_checkout",
 ];
-const HALF_DAY_LUNCH_WINDOW = { start: "11:40", end: "13:40" };
+const HALF_DAY_LUNCH_WINDOW = { start: "11:30", end: "13:40" };
 
 function getHalfDayReason(rosterEntry: RosterEntry | null): "half_day_am" | "half_day_pm" | null {
   if (isHalfDayReasonCode(rosterEntry?.scheduleReasonCode)) {
@@ -220,11 +220,11 @@ function getOutsideWindowReason(
   halfDayReason: "half_day_am" | "half_day_pm" | null,
 ): string {
   if (halfDayReason === "half_day_am" && code === "check_in") {
-    return "오전반차 출근 가능 시간은 11:40 ~ 13:40입니다.";
+    return "오전반차 출근 가능 시간은 11:30 ~ 13:40입니다.";
   }
 
   if (halfDayReason === "half_day_pm" && code === "check_out") {
-    return "오후반차 퇴근 가능 시간은 11:40 ~ 13:40입니다.";
+    return "오후반차 퇴근 가능 시간은 11:30 ~ 13:40입니다.";
   }
 
   return "출결 시간이 아닙니다.";

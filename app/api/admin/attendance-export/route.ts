@@ -104,7 +104,7 @@ function buildRows(
         checkOut = "17:00";
       } else if (reasonCode === "half_day_pm") {
         checkIn = timeCell(record.checkIn);
-        checkOut = "11:30";
+        checkOut = "(반차)";
       } else {
         checkIn = timeCell(record.checkIn);
         checkOut = "17:00";
@@ -250,7 +250,7 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       if (ciVal === "(반차)") {
         ciCell.fill = halfDayAmFill;
       // 오후반차: 퇴근셀에만 색상
-      } else if (coVal === "11:30") {
+      } else if (coVal === "(반차)") {
         coCell.fill = halfDayPmFill;
       // 전일 부재: 출근=퇴근=부재사유
       } else if (ciVal === coVal && absenceFillMap[ciVal]) {
