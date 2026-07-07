@@ -1446,6 +1446,7 @@ export async function saveSupabaseAdminUser(
       role: input.role,
       is_active: input.isActive,
       department_id: input.departmentId ?? null,
+      deactivated_at: input.isActive ? null : new Date().toISOString(),
     });
 
     if (insertError) {
@@ -1521,6 +1522,7 @@ export async function saveSupabaseAdminUser(
     is_active: boolean;
     department_id: string | null;
     password_hash?: string;
+    deactivated_at?: string | null;
   } = {
     display_name: input.displayName,
     role: input.role,
@@ -1530,6 +1532,12 @@ export async function saveSupabaseAdminUser(
 
   if (input.password) {
     updatePayload.password_hash = hashSync(input.password, 10);
+  }
+
+  if (currentUser.is_active && !input.isActive) {
+    updatePayload.deactivated_at = new Date().toISOString();
+  } else if (!currentUser.is_active && input.isActive) {
+    updatePayload.deactivated_at = null;
   }
 
   const { error: updateError } = await client.from(TABLES.users).update(updatePayload).eq("username", input.username);
@@ -1624,7 +1632,7 @@ export async function deleteSupabaseAdminUser(
 
   const { error: updateError } = await client
     .from(TABLES.users)
-    .update({ is_active: false })
+    .update({ is_active: false, deactivated_at: new Date().toISOString() })
     .eq("username", username);
 
   if (updateError) {
@@ -1967,7 +1975,7 @@ export async function getSupabaseMonthlyExportData(startDate: string, endDate: s
   const client = getSupabaseAdminClient();
   // 비활성 계정도 포함: 비활성화 후에는 로그인/체크인이 막혀 새 기록이 생기지 않으므로,
   // 남아있는 기록은 모두 비활성화 이전 것이라 엑셀에 그대로 노출한다.
-  let usersQuery = client.from(TABLES.users).select("username, display_name, department_id, is_active");
+  let usersQuery = client.from(TABLES.users).select("username, display_name, department_id, is_active, deactivated_at");
   if (departmentId) {
     usersQuery = usersQuery.eq("department_id", departmentId);
   }

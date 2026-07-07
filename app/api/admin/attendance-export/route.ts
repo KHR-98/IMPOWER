@@ -42,7 +42,9 @@ interface ExportRow {
 }
 
 function buildRows(
-  users: Array<{ username: string; display_name: string; department_id: string | null }>,
+  startDate: string,
+  endDate: string,
+  users: Array<{ username: string; display_name: string; department_id: string | null; deactivated_at?: string | null }>,
   records: AttendanceRecord[],
   rosters: Array<Record<string, unknown>>,
   departmentsById: Map<string, string>,
@@ -60,9 +62,17 @@ function buildRows(
 
   const userMap = new Map(users.map((u) => [u.username, u]));
 
+  const deactivationDateByUser = new Map<string, string>();
+  for (const u of users) {
+    if (!u.deactivated_at) continue;
+    const d = getKoreaDateKey(new Date(u.deactivated_at));
+    if (d >= startDate && d <= endDate) deactivationDateByUser.set(u.username, d);
+  }
+
   const keys = new Set<string>();
   for (const r of records) keys.add(`${r.workDate}|${r.username}`);
   for (const r of rosters) keys.add(`${r.work_date}|${r.username}`);
+  for (const [username, d] of deactivationDateByUser) keys.add(`${d}|${username}`);
 
   const rows: ExportRow[] = [];
 
@@ -70,6 +80,12 @@ function buildRows(
     const [date, username] = key.split("|");
     const user = userMap.get(username);
     if (!user) continue;
+
+    if (deactivationDateByUser.get(username) === date) {
+      const dept = user.department_id ? (departmentsById.get(user.department_id) ?? "") : "";
+      rows.push({ date, dept, name: user.display_name, checkIn: "퇴사", checkOut: "퇴사" });
+      continue;
+    }
 
     const dept = user.department_id ? (departmentsById.get(user.department_id) ?? "") : "";
     const record = recordMap.get(key) ?? null;
@@ -85,13 +101,13 @@ function buildRows(
     if (record) {
       if (reasonCode === "half_day_am") {
         checkIn = "(반차)";
-        checkOut = record.checkOut ? "17:00" : "x";
+        checkOut = "17:00";
       } else if (reasonCode === "half_day_pm") {
         checkIn = timeCell(record.checkIn);
-        checkOut = "(반차)";
+        checkOut = "11:30";
       } else {
         checkIn = timeCell(record.checkIn);
-        checkOut = record.checkOut ? "17:00" : "x";
+        checkOut = "17:00";
       }
     } else if (isScheduled === false) {
       const label = absenceLabel(reasonCode) ?? holidayMap.get(date) ?? null;
@@ -234,7 +250,7 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
       if (ciVal === "(반차)") {
         ciCell.fill = halfDayAmFill;
       // 오후반차: 퇴근셀에만 색상
-      } else if (coVal === "(반차)") {
+      } else if (coVal === "11:30") {
         coCell.fill = halfDayPmFill;
       // 전일 부재: 출근=퇴근=부재사유
       } else if (ciVal === coVal && absenceFillMap[ciVal]) {
@@ -292,7 +308,9 @@ export async function GET(request: Request) {
   const holidayMap = await loadHolidayMap(getSupabaseAdminClient(), year);
 
   const allRows = buildRows(
-    users as Array<{ username: string; display_name: string; department_id: string | null }>,
+    startDate,
+    endDate,
+    users as Array<{ username: string; display_name: string; department_id: string | null; deactivated_at?: string | null }>,
     records,
     rosters,
     departmentsById,

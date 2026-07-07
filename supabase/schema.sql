@@ -25,6 +25,7 @@ create table if not exists account_users (
   role text not null references account_roles(code),
   department_id uuid not null references org_departments(id),
   is_active boolean not null default true,
+  deactivated_at timestamptz,
   created_at timestamptz not null default now()
 );
 
