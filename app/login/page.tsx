@@ -18,6 +18,7 @@ const KAKAO_ERROR_MESSAGES: Record<string, string> = {
   kakao_profile: "카카오 프로필 정보를 가져오지 못했습니다. 다시 시도해주세요.",
   invite_required: "가입은 초대링크로만 가능합니다. 전달받은 초대링크로 다시 접속해주세요.",
   invite_invalid: "초대링크가 유효하지 않거나 만료되었습니다.",
+  department_locked: "메모리 부서는 현재 이용할 수 없습니다. 관리자에게 문의하세요.",
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {

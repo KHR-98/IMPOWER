@@ -482,6 +482,11 @@ export function getSessionUser(username: string): SessionUser | null {
   };
 }
 
+export function getDemoUserDepartmentCode(username: string): string | null {
+  const user = users.find((entry) => entry.username === username && entry.isActive);
+  return user?.departmentCode ?? null;
+}
+
 function mapAdminUser(user: UserAccount): AdminUserListItem {
   return {
     id: user.id,

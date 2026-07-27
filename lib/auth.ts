@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth-config";
-import { getSessionUserByUsername } from "@/lib/app-data";
+import { getSessionUserByUsername, getUserDepartmentCode } from "@/lib/app-data";
+import { isDepartmentLocked } from "@/lib/department-lock";
 import { encodeSessionToken, verifySessionToken } from "@/lib/session-token";
 import type { SessionUser } from "@/lib/types";
 
@@ -43,6 +44,13 @@ export async function getSession(): Promise<SessionUser | null> {
   const freshUser = await getSessionUserByUsername(payload.username);
 
   if (!freshUser) {
+    return null;
+  }
+
+  // Locked departments cannot use the app: treat any session for a locked
+  // department as absent so protected pages and APIs reject it immediately,
+  // even for sessions issued before the lock. See lib/department-lock.ts.
+  if (isDepartmentLocked(await getUserDepartmentCode(freshUser.username))) {
     return null;
   }
 

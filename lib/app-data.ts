@@ -16,6 +16,7 @@ import {
   getInviteLinks as getDemoInviteLinks,
   getInviteRegistrationContext as getDemoInviteRegistrationContext,
   getSessionUser as getDemoSessionUser,
+  getDemoUserDepartmentCode,
   getUserTodayView as getDemoUserTodayView,
   getZones as getDemoZones,
   performAttendanceAction as performDemoAttendanceAction,
@@ -132,6 +133,12 @@ export async function getSessionUserByUsername(username: string): Promise<Sessio
   return resolveDataSource().dataSource === "supabase"
     ? getSupabaseSessionUser(username)
     : getDemoSessionUser(username);
+}
+
+export async function getUserDepartmentCode(username: string): Promise<string | null> {
+  return resolveDataSource().dataSource === "supabase"
+    ? getSupabaseUserDepartmentCode(username)
+    : getDemoUserDepartmentCode(username);
 }
 
 export async function findUserByKakaoId(kakaoId: string): Promise<SessionUser | null> {

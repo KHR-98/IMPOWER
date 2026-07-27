@@ -3,9 +3,10 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { authenticateUser, changePassword, getDepartments } from "@/lib/app-data";
+import { authenticateUser, changePassword, getDepartments, getUserDepartmentCode } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
 import { hasCurrentConsent } from "@/lib/consent-store";
+import { DEPARTMENT_LOCKED_MESSAGE, isDepartmentLocked } from "@/lib/department-lock";
 import { isAdminRole } from "@/lib/permissions";
 import type { SessionUser, UserRole } from "@/lib/types";
 
@@ -108,6 +109,12 @@ export async function loginAction(_previousState: LoginState, formData: FormData
   if (!user) {
     return {
       error: "아이디 또는 비밀번호가 올바르지 않습니다.",
+    };
+  }
+
+  if (isDepartmentLocked(await getUserDepartmentCode(user.username))) {
+    return {
+      error: DEPARTMENT_LOCKED_MESSAGE,
     };
   }
 

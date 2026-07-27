@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { findUserByKakaoId, getInviteRegistrationContext } from "@/lib/app-data";
+import { findUserByKakaoId, getInviteRegistrationContext, getUserDepartmentCode } from "@/lib/app-data";
 import { createSession } from "@/lib/auth";
+import { isDepartmentLocked } from "@/lib/department-lock";
 import { hasCurrentConsent } from "@/lib/consent-store";
 import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
@@ -105,6 +106,9 @@ export async function GET(request: Request) {
 
   if (existingUser) {
     store.delete(INVITE_LINK_COOKIE);
+    if (isDepartmentLocked(await getUserDepartmentCode(existingUser.username))) {
+      redirect("/login?error=department_locked");
+    }
     await createSession(existingUser);
     redirect(await getPostLoginPath(existingUser));
   }
