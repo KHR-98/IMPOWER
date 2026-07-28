@@ -503,7 +503,7 @@ function getDepartmentSheetWriteConfig(
       normalizeEnvValue(process.env.GOOGLE_SHEET_TAB_NAME),
     ]),
     dateColumn: normalizeEnvValue(process.env.GOOGLE_SHEET_DATE_COL_MEMORY_PCS) ?? "B",
-    activeNameColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_MEMORY_PCS) ?? "D:K",
+    activeNameColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LATE_COLS_MEMORY_PCS) ?? "D:I",
     leaveColumns: normalizeEnvValue(process.env.GOOGLE_SHEET_LEAVE_COLS_MEMORY_PCS) ?? "L",
     dataStartRow: Number(normalizeEnvValue(process.env.GOOGLE_SHEET_DATA_START_ROW_MEMORY_PCS) ?? "2"),
     range: normalizeEnvValue(process.env.GOOGLE_SHEET_RANGE_MEMORY_PCS),
