@@ -4,8 +4,8 @@ import "./globals.css";
 import "./design-v3.css";
 
 export const metadata: Metadata = {
-  title: "IM-ON",
-  applicationName: "IM-ON",
+  title: "JY-ON",
+  applicationName: "JY-ON",
   description: "보안 사업장 출퇴근 및 TBM 출문 관리 웹앱",
   manifest: "/manifest.webmanifest",
   icons: {

@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "IM-ON",
-    short_name: "IM-ON",
+    name: "JY-ON",
+    short_name: "JY-ON",
     description: "보안 사업장 출퇴근 및 TBM 출문 관리 웹앱",
     start_url: "/",
     scope: "/",
