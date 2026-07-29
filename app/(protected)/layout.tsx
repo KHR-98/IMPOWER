@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 
 import { AdminExportPanel } from "@/components/admin-export-panel";
 import { ViewToggle } from "@/components/view-toggle";
@@ -37,13 +38,17 @@ export default async function ProtectedLayout({
       <div className="container">
         <header className="topbar">
           <div className="brand">
-            <div className="brand-kicker-row">
-              <span className="brand-kicker">아임파워(주)</span>
-              {session.role === "master" ? (
-                <AdminExportPanel />
-              ) : null}
+            <div className="brand-kicker-row brand-logo-row">
+              <Image
+                src="/brand/jyon-logo.png"
+                alt="JY:ON"
+                className="brand-logo"
+                width={1934}
+                height={504}
+                sizes="(max-width: 400px) 128px, (max-width: 780px) 148px, 168px"
+                priority
+              />
             </div>
-            <span className="brand-title">IM-ON</span>
             {deptName && (
               <span className="brand-department-chip" title={`소속 부서: ${deptName}`}>
                 <span className="brand-department-dot" aria-hidden="true" />
@@ -65,6 +70,9 @@ export default async function ProtectedLayout({
                 <LogoutIcon />
               </button>
             </form>
+            {session.role === "master" ? (
+              <AdminExportPanel />
+            ) : null}
           </div>
         </div>
         <span className="watermark-text">© 2026 권순범 · 김형래. All rights reserved.</span>

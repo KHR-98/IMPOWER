@@ -26,6 +26,10 @@ import {
   getDemoMonthlyExportData,
 } from "@/lib/demo-store";
 import { hasGoogleSheetEnv, hasSupabaseEnv } from "@/lib/env";
+import {
+  applyDepartmentOverrides,
+  applyDepartmentSettingsOverrides,
+} from "@/lib/frontend-department-overrides";
 import { writeShiftTypeToSheet, writeSpecialStatusToSheet } from "@/lib/google-sheets";
 import { getKoreaDateKey } from "@/lib/time";
 import {
@@ -166,13 +170,23 @@ export async function getUserTodayView(username: string, sessionUser?: SessionUs
 }
 
 export async function getDashboardView(departmentId?: string | null): Promise<DashboardView> {
-  return resolveDataSource().dataSource === "supabase"
-    ? getSupabaseDashboardView(departmentId)
-    : getDemoDashboardView(departmentId);
+  const view = resolveDataSource().dataSource === "supabase"
+    ? await getSupabaseDashboardView(departmentId)
+    : await getDemoDashboardView(departmentId);
+  return {
+    ...view,
+    settings: {
+      ...view.settings,
+      departmentSettings: applyDepartmentSettingsOverrides(view.settings.departmentSettings),
+    },
+  };
 }
 
 export async function getDepartments(): Promise<Department[]> {
-  return resolveDataSource().dataSource === "supabase" ? getSupabaseDepartments() : getDemoDepartments();
+  const departments = resolveDataSource().dataSource === "supabase"
+    ? await getSupabaseDepartments()
+    : await getDemoDepartments();
+  return applyDepartmentOverrides(departments);
 }
 
 export async function getZones(): Promise<Zone[]> {
@@ -180,7 +194,13 @@ export async function getZones(): Promise<Zone[]> {
 }
 
 export async function getSettings(): Promise<AppSettings> {
-  return resolveDataSource().dataSource === "supabase" ? getSupabaseSettings() : getDemoSettings();
+  const settings = resolveDataSource().dataSource === "supabase"
+    ? await getSupabaseSettings()
+    : await getDemoSettings();
+  return {
+    ...settings,
+    departmentSettings: applyDepartmentSettingsOverrides(settings.departmentSettings),
+  };
 }
 
 export async function getAdminUserList(departmentId?: string | null): Promise<AdminUserListItem[]> {

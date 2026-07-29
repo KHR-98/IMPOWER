@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import "./design-v3.css";
 
 export const metadata: Metadata = {
   title: "IM-ON",
@@ -23,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body className="design-v3">{children}</body>
     </html>
   );
 }

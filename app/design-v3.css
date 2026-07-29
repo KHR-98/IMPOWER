@@ -1,0 +1,572 @@
+/* IM-ON design v3: Soft Blue Glass. Visual skin only. */
+
+.design-v3 {
+  --design-bg: #eaf1ff;
+  --design-bg-deep: #dce7fb;
+  --design-surface: rgba(255, 255, 255, 0.68);
+  --design-surface-strong: rgba(255, 255, 255, 0.86);
+  --design-surface-solid: #ffffff;
+  --design-text: #172044;
+  --design-muted: #66739b;
+  --design-line: rgba(86, 105, 170, 0.16);
+  --design-brand: #3d5eb7;
+  --design-brand-strong: #293986;
+  --design-brand-soft: rgba(92, 119, 206, 0.11);
+  --design-success: #247965;
+  --design-success-soft: rgba(72, 174, 145, 0.13);
+  --design-warning: #9e671d;
+  --design-warning-soft: rgba(233, 178, 83, 0.16);
+  --design-danger: #b43f55;
+  --design-danger-soft: rgba(180, 63, 85, 0.12);
+  --design-shadow-card: 0 10px 26px rgba(71, 91, 148, 0.08);
+  --design-shadow-action: 0 18px 38px rgba(46, 70, 145, 0.2);
+  --design-shadow-shell: 0 28px 76px rgba(47, 66, 125, 0.22);
+
+  /* Map the existing semantic tokens so current components keep their logic. */
+  --bg: var(--design-bg);
+  --panel: var(--design-surface);
+  --panel-solid: var(--design-surface-solid);
+  --surface: var(--design-surface-strong);
+  --text: var(--design-text);
+  --fg: var(--design-text);
+  --muted: var(--design-muted);
+  --fg-muted: var(--design-muted);
+  --line: var(--design-line);
+  --brand: var(--design-brand);
+  --brand-strong: var(--design-brand-strong);
+  --brand-soft: var(--design-brand-soft);
+  --accent: var(--design-brand-soft);
+  --success: var(--design-success);
+  --success-soft: var(--design-success-soft);
+  --warning: var(--design-warning);
+  --warning-soft: var(--design-warning-soft);
+  --danger: var(--design-danger);
+  --danger-soft: var(--design-danger-soft);
+  --shadow: var(--design-shadow-card);
+  --radius-lg: 24px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  color: var(--design-text);
+  accent-color: var(--design-brand);
+}
+
+body.design-v3 {
+  background:
+    radial-gradient(circle at 12% 4%, rgba(255, 255, 255, 0.94), transparent 27%),
+    radial-gradient(circle at 92% 34%, rgba(122, 154, 235, 0.24), transparent 29%),
+    linear-gradient(160deg, #eef5ff 0%, #e7efff 48%, #dfe9ff 100%);
+  color: var(--design-text);
+}
+
+.design-v3 ::selection {
+  background: rgba(61, 94, 183, 0.22);
+  color: var(--design-brand-strong);
+}
+
+/* Common surfaces */
+.design-v3 .card,
+.design-v3 .glass-panel,
+.design-v3 .metric-card,
+.design-v3 .table-panel,
+.design-v3 .check-card,
+.design-v3 .admin-disclosure-summary {
+  background: var(--design-surface);
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--design-shadow-card);
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.design-v3 .glass-panel,
+.design-v3 .table-panel,
+.design-v3 .check-card {
+  border-radius: 24px;
+}
+
+.design-v3 .metric-card,
+.design-v3 .admin-hero-stat,
+.design-v3 .admin-focus-stat-card,
+.design-v3 .admin-period-stat-box,
+.design-v3 .check-focus-card,
+.design-v3 .check-summary-panel,
+.design-v3 .zone-editor-card,
+.design-v3 .mgmt-user-row,
+.design-v3 .consent-item-row {
+  background: var(--design-surface-strong);
+  border-color: var(--design-line);
+  box-shadow: 0 8px 20px rgba(71, 91, 148, 0.05);
+}
+
+.design-v3 .section-subtitle,
+.design-v3 .caption,
+.design-v3 .muted,
+.design-v3 .metric-label,
+.design-v3 .check-date,
+.design-v3 .admin-special-case-hint,
+.design-v3 .admin-period-stat-label,
+.design-v3 .wheel-picker-lbl,
+.design-v3 .wheel-section-title {
+  color: var(--design-muted);
+}
+
+/* Shell and controls retain the current layout and placement. */
+.design-v3 .shell {
+  background: transparent;
+}
+
+.design-v3 .topbar {
+  color: var(--design-text);
+}
+
+.design-v3 .brand-kicker {
+  color: var(--design-brand);
+}
+
+.design-v3 .brand-logo-row {
+  min-height: 79px;
+  align-items: flex-start;
+}
+
+.design-v3 .brand-logo {
+  display: block;
+  width: clamp(144px, 13.5vw, 188px);
+  height: auto;
+  margin-top: 14px;
+  object-fit: contain;
+  object-position: left top;
+}
+
+@media (max-width: 400px) {
+  .design-v3 .brand-logo {
+    width: 144px;
+  }
+}
+
+.design-v3 .brand-title,
+.design-v3 .admin-page-title,
+.design-v3 .check-title {
+  color: var(--design-brand-strong);
+}
+
+.design-v3 .brand-department-chip {
+  background: rgba(255, 255, 255, 0.66);
+  border-color: rgba(61, 94, 183, 0.18);
+  color: var(--design-brand-strong);
+  box-shadow: 0 6px 16px rgba(61, 94, 183, 0.09);
+}
+
+.design-v3 .brand-department-dot {
+  background: var(--design-brand);
+  box-shadow: 0 0 0 3px rgba(61, 94, 183, 0.12);
+}
+
+.design-v3 .watermark-text {
+  color: var(--design-muted);
+}
+
+.design-v3 .view-toggle,
+.design-v3 .topbar-export-actions .admin-export-options,
+.design-v3 .brand-export-actions .admin-export-options {
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 34px rgba(47, 66, 125, 0.13);
+  backdrop-filter: blur(22px) saturate(1.08);
+}
+
+.design-v3 .view-toggle-option {
+  color: var(--design-muted);
+}
+
+/* Buttons and navigation */
+.design-v3 .button,
+.design-v3 .nav-link-active,
+.design-v3 .view-toggle-option-active,
+.design-v3 .admin-section-link-active,
+.design-v3 .admin-export-icon,
+.design-v3 .admin-export-dept-btn-active,
+.design-v3 .admin-overview-focus-button-active,
+.design-v3 .account-department-filter-button.button,
+.design-v3 .admin-settings-stack .button-subtle,
+.design-v3 .admin-settings-stack .admin-settings-choice-button-selected,
+.design-v3 .admin-settings-department-button-selected {
+  background: linear-gradient(145deg, #273786 0%, #4867b5 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: var(--design-shadow-action);
+}
+
+.design-v3 .nav-link,
+.design-v3 .button-ghost,
+.design-v3 .button-subtle,
+.design-v3 .admin-section-link,
+.design-v3 .admin-export-link,
+.design-v3 .admin-export-dept-btn,
+.design-v3 .admin-overview-focus-button,
+.design-v3 .all-periods-trigger,
+.design-v3 .account-department-filter-button.button-subtle,
+.design-v3 .admin-settings-stack .admin-settings-choice-button,
+.design-v3 .admin-settings-department-button,
+.design-v3 .admin-settings-time-mode-button,
+.design-v3 .name-chip-button {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(86, 105, 170, 0.2);
+  color: var(--design-text);
+  box-shadow: 0 8px 20px rgba(71, 91, 148, 0.07);
+  backdrop-filter: blur(14px);
+}
+
+.design-v3 .nav-link:hover,
+.design-v3 .button-ghost:hover,
+.design-v3 .button-subtle:hover,
+.design-v3 .admin-section-link:hover,
+.design-v3 .admin-export-link:hover,
+.design-v3 .admin-export-dept-btn:hover,
+.design-v3 .admin-overview-focus-button:hover,
+.design-v3 .name-chip-button:hover {
+  background: var(--design-brand-soft);
+  border-color: rgba(61, 94, 183, 0.32);
+  color: var(--design-brand-strong);
+  box-shadow: 0 12px 24px rgba(46, 70, 145, 0.12);
+}
+
+.design-v3 .admin-section-link-active:hover,
+.design-v3 .view-toggle-option-active,
+.design-v3 .view-toggle-option-active:hover,
+.design-v3 .admin-overview-focus-button-active:hover {
+  background: linear-gradient(145deg, #273786 0%, #4867b5 100%);
+  color: #ffffff;
+}
+
+.design-v3 .button:disabled,
+.design-v3 .button-ghost:disabled,
+.design-v3 .button-subtle:disabled,
+.design-v3 .check-button-disabled {
+  box-shadow: none;
+}
+
+.design-v3 .button-danger {
+  background: linear-gradient(145deg, #b43f55 0%, #8f3045 100%);
+  border-color: transparent;
+  box-shadow: 0 14px 30px rgba(180, 63, 85, 0.2);
+}
+
+/* Login and account entry screens */
+.design-v3 .login-shell {
+  background:
+    radial-gradient(circle at 15% 8%, rgba(255, 255, 255, 0.96), transparent 30%),
+    radial-gradient(circle at 88% 86%, rgba(105, 139, 224, 0.25), transparent 34%),
+    linear-gradient(160deg, #eef5ff 0%, #e7efff 48%, #dfe9ff 100%);
+}
+
+.design-v3 .login-card {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--design-shadow-shell);
+}
+
+.design-v3 .login-brand-strip {
+  background: linear-gradient(145deg, rgba(39, 55, 134, 0.97), rgba(72, 103, 181, 0.92));
+}
+
+.design-v3 .login-brand-strip::before {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.design-v3 .login-brand-strip::after {
+  background: rgba(143, 174, 242, 0.11);
+}
+
+.design-v3 .login-subtitle {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.design-v3 .login-body {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.design-v3 .login-guide {
+  color: var(--design-muted);
+}
+
+.design-v3 .dev-login-button,
+.design-v3 .login-submit-button {
+  background: linear-gradient(145deg, #3d5eb7 0%, #293986 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 12px 26px rgba(46, 70, 145, 0.2);
+}
+
+.design-v3 .dev-login-button:hover,
+.design-v3 .login-submit-button:hover {
+  background: linear-gradient(145deg, #486bc4 0%, #2e418f 100%);
+  box-shadow: 0 16px 30px rgba(46, 70, 145, 0.25);
+}
+
+.design-v3 .kakao-login-button {
+  background: #fee500;
+  border-color: rgba(25, 25, 25, 0.12);
+  color: #191919;
+}
+
+.design-v3 .login-password-panel {
+  border-color: var(--design-line);
+}
+
+/* Fields, messages, and consent */
+.design-v3 .field input,
+.design-v3 .field select,
+.design-v3 .field textarea,
+.design-v3 .map-search-input,
+.design-v3 .invite-link-fixed-department,
+.design-v3 .wheel-picker,
+.design-v3 .combined-time-picker {
+  background: rgba(255, 255, 255, 0.84);
+  border-color: var(--design-line);
+  color: var(--design-text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
+}
+
+.design-v3 .field input:focus,
+.design-v3 .field select:focus,
+.design-v3 .field textarea:focus,
+.design-v3 .map-search-input:focus {
+  outline: 3px solid rgba(61, 94, 183, 0.16);
+  border-color: rgba(61, 94, 183, 0.46);
+}
+
+.design-v3 .notice,
+.design-v3 .info-box {
+  background: var(--design-brand-soft);
+  color: var(--design-brand-strong);
+}
+
+.design-v3 .error-box {
+  background: var(--design-danger-soft);
+  color: var(--design-danger);
+}
+
+.design-v3 .consent-all-row,
+.design-v3 .consent-item-row label {
+  color: var(--design-text);
+}
+
+.design-v3 .consent-detail-button {
+  color: var(--design-brand-strong);
+}
+
+.design-v3 .consent-modal-backdrop {
+  background: rgba(23, 32, 68, 0.48);
+  backdrop-filter: blur(8px);
+}
+
+.design-v3 .consent-modal {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--design-text);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: var(--design-shadow-shell);
+}
+
+/* User attendance */
+.design-v3 .check-card {
+  background: rgba(255, 255, 255, 0.79);
+  box-shadow: var(--design-shadow-shell);
+}
+
+.design-v3 .check-status-badge-inactive {
+  background: rgba(102, 115, 155, 0.11);
+  color: var(--design-muted);
+}
+
+.design-v3 .check-status-badge-checkin,
+.design-v3 .status-ready {
+  background: var(--design-success-soft);
+  color: var(--design-success);
+}
+
+.design-v3 .check-status-badge-checkout,
+.design-v3 .status-locked {
+  background: var(--design-danger-soft);
+  color: var(--design-danger);
+}
+
+.design-v3 .status-pending {
+  background: var(--design-warning-soft);
+  color: var(--design-warning);
+}
+
+.design-v3 .check-button {
+  border-color: transparent;
+  box-shadow: var(--design-shadow-action);
+  text-shadow: 0 1px 1px rgba(23, 32, 68, 0.16);
+}
+
+.design-v3 .check-button-checkin {
+  background: linear-gradient(145deg, #4d70c7 0%, #30438f 100%);
+}
+
+.design-v3 .check-button-tbm {
+  background: linear-gradient(145deg, #607fd0 0%, #3a4f9d 100%);
+}
+
+.design-v3 .check-button-lunch {
+  background: linear-gradient(145deg, #c8923c 0%, #98611b 100%);
+}
+
+.design-v3 .check-button-checkout {
+  background: linear-gradient(145deg, #405991 0%, #273768 100%);
+}
+
+.design-v3 .check-button-disabled {
+  background: linear-gradient(145deg, #aab5d3 0%, #8997bc 100%);
+  color: rgba(255, 255, 255, 0.94);
+  filter: none;
+}
+
+.design-v3 .check-message {
+  background: var(--design-success-soft);
+  border-color: rgba(36, 121, 101, 0.24);
+  color: var(--design-success);
+}
+
+.design-v3 .user-location-map-wrap,
+.design-v3 .map-panel {
+  border-color: var(--design-line);
+}
+
+.design-v3 .user-location-map-canvas,
+.design-v3 .map-canvas {
+  background: linear-gradient(180deg, #edf4ff 0%, #d9e6fa 100%);
+  border-color: var(--design-line);
+}
+
+/* Admin console */
+.design-v3 .admin-console {
+  color: var(--design-text);
+}
+
+.design-v3 .admin-hero-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(239, 244, 255, 0.7));
+}
+
+.design-v3 .admin-hero-stat strong,
+.design-v3 .admin-period-stat-number,
+.design-v3 .metric-value,
+.design-v3 .mgmt-section-label,
+.design-v3 .mgmt-user-name {
+  color: var(--design-brand-strong);
+}
+
+.design-v3 .admin-special-case-badge {
+  background: var(--design-warning-soft);
+  color: var(--design-warning);
+}
+
+.design-v3 .admin-section-link {
+  box-shadow: 0 8px 18px rgba(71, 91, 148, 0.07);
+}
+
+.design-v3 .admin-focus-panel,
+.design-v3 .admin-summary-panel,
+.design-v3 .admin-watch-panel,
+.design-v3 .admin-period-table-panel,
+.design-v3 .admin-overview-action-panel {
+  border-color: rgba(255, 255, 255, 0.74);
+}
+
+.design-v3 .admin-period-legend-dot-done {
+  background: var(--design-success-soft);
+  border-color: var(--design-success);
+}
+
+.design-v3 .admin-period-legend-dot-pending {
+  background: var(--design-warning-soft);
+  border-color: var(--design-warning);
+}
+
+.design-v3 .all-periods-table-head,
+.design-v3 .all-periods-table-row:nth-child(odd),
+.design-v3 .mgmt-user-options,
+.design-v3 .invite-link-row-options {
+  background: rgba(234, 241, 255, 0.64);
+}
+
+.design-v3 .all-periods-trigger-active,
+.design-v3 .name-chip-button-selected,
+.design-v3 .mgmt-option-btn-active,
+.design-v3 .mgmt-option-btn:hover {
+  background: var(--design-brand-soft);
+  border-color: rgba(61, 94, 183, 0.34);
+  color: var(--design-brand-strong);
+}
+
+.design-v3 .account-department-filter-button {
+  border-color: rgba(86, 105, 170, 0.22);
+}
+
+.design-v3 .mgmt-user-row-open,
+.design-v3 .zone-editor-card-selected,
+.design-v3 .user-card-selected {
+  border-color: rgba(61, 94, 183, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(61, 94, 183, 0.12);
+}
+
+.design-v3 .mgmt-option-btn {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: var(--design-line);
+  color: var(--design-text);
+}
+
+.design-v3 .wheel-item {
+  color: rgba(23, 32, 68, 0.32);
+}
+
+.design-v3 .wheel-item--on,
+.design-v3 .wheel-colon {
+  color: var(--design-brand-strong);
+}
+
+.design-v3 .wheel-hl {
+  background: var(--design-brand-soft);
+}
+
+.design-v3 .wheel-fade-t {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%);
+}
+
+.design-v3 .wheel-fade-b {
+  background: linear-gradient(0deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%);
+}
+
+/* Keyboard and reduced-motion behavior */
+.design-v3 a:focus-visible,
+.design-v3 button:focus-visible,
+.design-v3 input:focus-visible,
+.design-v3 select:focus-visible,
+.design-v3 textarea:focus-visible,
+.design-v3 summary:focus-visible {
+  outline: 3px solid rgba(61, 94, 183, 0.42);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .design-v3 *,
+  .design-v3 *::before,
+  .design-v3 *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .design-v3 .card,
+  .design-v3 .glass-panel,
+  .design-v3 .metric-card,
+  .design-v3 .table-panel,
+  .design-v3 .check-card,
+  .design-v3 .view-toggle,
+  .design-v3 .nav-link,
+  .design-v3 .button-ghost,
+  .design-v3 .button-subtle {
+    background: rgba(255, 255, 255, 0.94);
+  }
+}

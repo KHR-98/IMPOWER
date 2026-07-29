@@ -1,0 +1,1357 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#eaf1ff" />
+    <meta name="color-scheme" content="light" />
+    <title>IM-ON 모바일 출석체크 · Radix UI 목업</title>
+    <link rel="icon" href="assets/juyon-snc-logo.png" type="image/png" />
+
+    <style>
+      :root {
+        --app-bg: #eaf1ff;
+        --surface: rgba(255, 255, 255, 0.68);
+        --surface-strong: rgba(255, 255, 255, 0.86);
+        --text: #172044;
+        --muted: #66739b;
+        --line: rgba(86, 105, 170, 0.16);
+        --brand: #3d5eb7;
+        --brand-strong: #293986;
+        --brand-soft: rgba(92, 119, 206, 0.11);
+        --on-brand: #ffffff;
+        --success: #247965;
+        --success-soft: rgba(72, 174, 145, 0.13);
+        --warning: #9e671d;
+        --shadow-shell: 0 28px 76px rgba(47, 66, 125, 0.22);
+        --shadow-card: 0 10px 26px rgba(71, 91, 148, 0.08);
+        --shadow-action: 0 18px 38px rgba(46, 70, 145, 0.2);
+        --radius-card: 21px;
+        --radius-action: 24px;
+        font-family:
+          Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        min-height: 100%;
+        background: #dce7fb;
+      }
+
+      body {
+        min-width: 320px;
+        min-height: 100svh;
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--text);
+        background: #dce7fb;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      button,
+      [role="button"] {
+        touch-action: manipulation;
+      }
+
+      button:focus-visible,
+      [role="button"]:focus-visible {
+        outline: 3px solid rgba(61, 94, 183, 0.34);
+        outline-offset: 3px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .stage {
+        min-height: 100svh;
+        display: flex;
+        justify-content: center;
+      }
+
+      .app-shell {
+        position: relative;
+        isolation: isolate;
+        width: 100%;
+        max-width: 430px;
+        min-height: 100svh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 12% 4%, rgba(255, 255, 255, 0.94), transparent 27%),
+          radial-gradient(circle at 92% 34%, rgba(122, 154, 235, 0.24), transparent 29%),
+          linear-gradient(160deg, #eef5ff 0%, #e7efff 48%, #dfe9ff 100%);
+        box-shadow: var(--shadow-shell);
+      }
+
+      .brand-header {
+        position: relative;
+        z-index: 5;
+        min-height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid var(--line);
+        padding: max(11px, env(safe-area-inset-top)) 18px 11px;
+        background: rgba(244, 248, 255, 0.76);
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+      }
+
+      .brand-logo {
+        width: 108px;
+        height: auto;
+        display: block;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      .profile-copy {
+        min-width: 0;
+        text-align: right;
+      }
+
+      .profile-copy strong,
+      .profile-copy span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .profile-copy strong {
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .profile-copy span {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .content {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 20px 18px 18px;
+      }
+
+      .day-heading {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+
+      .day-heading > div {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .day-heading p {
+        margin: 0 0 5px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .day-heading h2 {
+        max-width: 275px;
+        margin: 0;
+        color: var(--text);
+        font-size: 20px;
+        font-weight: 850;
+        line-height: 1.3;
+        letter-spacing: -0.055em;
+        word-break: keep-all;
+      }
+
+      .state-pill {
+        min-height: 29px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: var(--brand);
+        background: var(--brand-soft);
+        font-size: 10px;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .state-pill.is-success {
+        color: var(--success);
+        background: var(--success-soft);
+      }
+
+      .action-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 172px;
+        border: 1px solid rgba(255, 255, 255, 0.52);
+        border-radius: var(--radius-action);
+        padding: 21px;
+        color: var(--on-brand);
+        background: linear-gradient(145deg, rgba(39, 55, 134, 0.94), rgba(72, 103, 181, 0.88));
+        box-shadow: var(--shadow-action);
+      }
+
+      .action-card-head {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 19px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .stage-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        padding: 5px 8px;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .action-card-body {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: end;
+        gap: 16px;
+      }
+
+      .action-card h3 {
+        margin: 0 0 7px;
+        font-size: 27px;
+        font-weight: 900;
+        line-height: 1.18;
+        letter-spacing: -0.055em;
+        word-break: keep-all;
+      }
+
+      .action-card p {
+        max-width: 270px;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 12px;
+        line-height: 1.6;
+        word-break: keep-all;
+      }
+
+      .action-icon {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 15px;
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .glass-card {
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        border-radius: var(--radius-card);
+        background: var(--surface);
+        box-shadow: var(--shadow-card);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+      }
+
+      .card-trigger {
+        width: 100%;
+        min-height: 62px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border: 0;
+        padding: 0 16px;
+        color: var(--text);
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .trigger-main {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+
+      .soft-icon {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border-radius: 11px;
+        color: var(--brand);
+        background: var(--brand-soft);
+      }
+
+      .soft-icon.is-success {
+        color: var(--success);
+        background: var(--success-soft);
+      }
+
+      .trigger-copy {
+        min-width: 0;
+      }
+
+      .trigger-copy strong,
+      .trigger-copy span {
+        display: block;
+      }
+
+      .trigger-copy strong {
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .trigger-copy span {
+        margin-top: 2px;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 650;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .chevron {
+        flex: 0 0 auto;
+        color: var(--brand);
+        transition: transform 180ms ease;
+      }
+
+      .card-trigger[data-state="open"] .chevron,
+      .record-toggle[data-state="open"] .chevron {
+        transform: rotate(180deg);
+      }
+
+      .collapsible-content {
+        overflow: hidden;
+      }
+
+      .collapsible-content[data-state="open"] {
+        animation: reveal 180ms ease-out;
+      }
+
+      .location-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        padding: 12px;
+      }
+
+      .detail-block {
+        min-width: 0;
+        border-radius: 12px;
+        padding: 11px;
+        background: var(--brand-soft);
+      }
+
+      .detail-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 4px;
+        color: var(--text);
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .detail-block span:last-child {
+        display: block;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 650;
+      }
+
+      .icon-button {
+        width: 26px;
+        height: 26px;
+        display: inline-grid;
+        place-items: center;
+        border: 0;
+        border-radius: 9px;
+        padding: 0;
+        color: var(--brand);
+        background: rgba(255, 255, 255, 0.64);
+        cursor: pointer;
+      }
+
+      .record-card {
+        padding-bottom: 12px;
+      }
+
+      .record-head {
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 16px;
+      }
+
+      .record-title small,
+      .record-title strong {
+        display: block;
+      }
+
+      .record-title small {
+        margin-bottom: 2px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .record-title strong {
+        font-size: 15px;
+        font-weight: 900;
+      }
+
+      .text-button {
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 0;
+        border-radius: 11px;
+        padding: 0 9px;
+        color: var(--brand);
+        background: var(--brand-soft);
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .progress-track {
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        margin: 0 16px 8px;
+        background: var(--brand-soft);
+      }
+
+      .progress-bar {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--brand-strong), var(--brand));
+        transition: width 360ms ease;
+      }
+
+      .record-toggle {
+        width: calc(100% - 24px);
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 0;
+        border-radius: 11px;
+        margin: 0 12px;
+        padding: 0 6px 0 8px;
+        color: var(--muted);
+        background: transparent;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .latest-record {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid var(--line);
+        margin-top: 4px;
+        padding: 11px 16px 2px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .latest-record strong {
+        color: var(--success);
+        font-size: 11px;
+      }
+
+      .empty-record {
+        color: var(--muted);
+      }
+
+      .bottom-action {
+        position: sticky;
+        z-index: 10;
+        bottom: 0;
+        border-top: 1px solid var(--line);
+        margin-top: auto;
+        padding: 10px 18px max(12px, env(safe-area-inset-bottom));
+        background: rgba(244, 248, 255, 0.8);
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+      }
+
+      .action-message {
+        min-height: 16px;
+        margin: 0 0 7px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 650;
+        text-align: center;
+      }
+
+      .action-message.is-success {
+        color: var(--success);
+        font-weight: 800;
+      }
+
+      .primary-button {
+        width: 100%;
+        min-height: 62px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border: 1px solid var(--brand);
+        border-radius: 17px;
+        padding: 0 20px;
+        color: var(--on-brand);
+        background: var(--brand);
+        box-shadow: 0 12px 24px rgba(41, 48, 134, 0.2);
+        cursor: pointer;
+        transition:
+          color 160ms ease,
+          background 160ms ease,
+          border-color 160ms ease,
+          transform 160ms ease;
+      }
+
+      .primary-button:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+
+      .primary-button:disabled {
+        cursor: default;
+      }
+
+      .primary-button.is-checking {
+        border-color: rgba(61, 94, 183, 0.16);
+        color: var(--brand);
+        background: var(--brand-soft);
+        box-shadow: none;
+      }
+
+      .primary-button.is-success {
+        border-color: var(--success);
+        color: #ffffff;
+        background: var(--success);
+        box-shadow: none;
+      }
+
+      .button-label,
+      .button-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .button-label {
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+
+      .button-note {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 10px;
+        font-weight: 750;
+      }
+
+      .primary-button.is-checking .button-note {
+        color: var(--muted);
+      }
+
+      .spinner {
+        animation: spin 820ms linear infinite;
+      }
+
+      .tooltip-content {
+        z-index: 60;
+        max-width: 220px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 10px;
+        padding: 8px 10px;
+        color: #ffffff;
+        background: rgba(23, 32, 68, 0.94);
+        box-shadow: 0 10px 28px rgba(20, 29, 71, 0.2);
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .tooltip-arrow {
+        fill: rgba(23, 32, 68, 0.94);
+      }
+
+      .dialog-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        background: rgba(18, 27, 62, 0.42);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        animation: fade-in 160ms ease-out;
+      }
+
+      .dialog-content {
+        position: fixed;
+        z-index: 71;
+        left: 50%;
+        bottom: 0;
+        width: min(430px, 100%);
+        max-height: min(78svh, 690px);
+        overflow: auto;
+        border: 1px solid rgba(255, 255, 255, 0.76);
+        border-radius: 26px 26px 0 0;
+        padding: 22px 18px max(24px, env(safe-area-inset-bottom));
+        color: var(--text);
+        background: rgba(247, 250, 255, 0.96);
+        box-shadow: 0 -20px 56px rgba(28, 43, 94, 0.2);
+        transform: translateX(-50%);
+        animation: sheet-in 220ms ease-out;
+      }
+
+      .dialog-handle {
+        width: 36px;
+        height: 4px;
+        border-radius: 999px;
+        margin: -10px auto 18px;
+        background: rgba(102, 115, 155, 0.28);
+      }
+
+      .dialog-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .dialog-title {
+        margin: 0 0 4px;
+        font-size: 21px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+      }
+
+      .dialog-description {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .dialog-close {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 12px;
+        padding: 0;
+        color: var(--brand);
+        background: var(--brand-soft);
+        cursor: pointer;
+      }
+
+      .step-list {
+        display: grid;
+        gap: 5px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .step-item {
+        min-height: 51px;
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid transparent;
+        border-radius: 14px;
+        padding: 6px 10px;
+        color: var(--muted);
+      }
+
+      .step-item.is-current {
+        border-color: rgba(61, 94, 183, 0.12);
+        color: var(--brand);
+        background: var(--brand-soft);
+      }
+
+      .step-item.is-complete {
+        color: var(--success);
+        background: var(--success-soft);
+      }
+
+      .step-number {
+        width: 31px;
+        height: 31px;
+        display: grid;
+        place-items: center;
+        border-radius: 11px;
+        color: inherit;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 10px;
+        font-weight: 900;
+      }
+
+      .step-copy strong,
+      .step-copy span {
+        display: block;
+      }
+
+      .step-copy strong {
+        color: inherit;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .step-copy span,
+      .step-time {
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 650;
+      }
+
+      .boot {
+        min-height: 100svh;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes reveal {
+        from {
+          opacity: 0;
+          transform: translateY(-5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+        }
+      }
+
+      @keyframes sheet-in {
+        from {
+          opacity: 0;
+          transform: translate(-50%, 24px);
+        }
+      }
+
+      @media (min-width: 600px) {
+        .dialog-content {
+          top: 50%;
+          bottom: auto;
+          width: min(390px, calc(100% - 32px));
+          border-radius: 26px;
+          transform: translate(-50%, -50%);
+          animation: dialog-in 200ms ease-out;
+        }
+
+        @keyframes dialog-in {
+          from {
+            opacity: 0;
+            transform: translate(-50%, calc(-50% + 18px));
+          }
+        }
+      }
+
+      @media (max-width: 430px) {
+        .app-shell {
+          box-shadow: none;
+        }
+      }
+
+      @media (max-width: 359px) {
+        .content {
+          padding-right: 15px;
+          padding-left: 15px;
+        }
+
+        .day-heading h2 {
+          font-size: 19px;
+        }
+
+        .action-card {
+          min-height: 164px;
+          padding: 18px;
+        }
+
+        .action-card h3 {
+          font-size: 24px;
+        }
+
+        .location-details {
+          grid-template-columns: 1fr;
+        }
+
+        .bottom-action {
+          padding-right: 15px;
+          padding-left: 15px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.2.4",
+          "react/jsx-runtime": "https://esm.sh/react@19.2.4/jsx-runtime",
+          "react-dom": "https://esm.sh/react-dom@19.2.4",
+          "react-dom/client": "https://esm.sh/react-dom@19.2.4/client"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="root"><div class="boot">모바일 출석 화면을 불러오는 중입니다.</div></div>
+    <noscript>이 목업의 Radix UI 상호작용을 확인하려면 JavaScript를 활성화해 주세요.</noscript>
+
+    <script type="module">
+      import React, { useEffect, useState } from "react";
+      import { createRoot } from "react-dom/client";
+      import { Collapsible, Dialog, Tooltip } from "https://esm.sh/radix-ui@1.6.7?bundle&external=react,react-dom&target=es2022";
+      import {
+        Check,
+        CheckCircle2,
+        ChevronDown,
+        CircleHelp,
+        Clock3,
+        Footprints,
+        ListChecks,
+        LoaderCircle,
+        LocateFixed,
+        LogIn,
+        LogOut,
+        MapPin,
+        MoonStar,
+        Navigation,
+        ShieldCheck,
+        SunMedium,
+        Utensils,
+        X
+      } from "https://esm.sh/lucide-react@1.27.0?bundle&external=react&target=es2022";
+
+      const h = React.createElement;
+
+      const STEPS = [
+        { label: "출근", time: "06:00–08:30", note: "정문 출입구", icon: LogIn },
+        { label: "오전 TBM", time: "06:00–08:30", note: "안전교육 확인", icon: SunMedium },
+        { label: "점심 등록", time: "11:40–13:30", note: "중식 이용 등록", icon: Utensils },
+        { label: "점심 출문", time: "점심 시간", note: "출문 위치 확인", icon: LogOut },
+        { label: "점심 입문", time: "점심 시간", note: "입문 위치 확인", icon: LogIn },
+        { label: "오후 TBM", time: "13:35–13:45", note: "오후 안전 확인", icon: ShieldCheck },
+        { label: "퇴근 TBM", time: "16:30–16:45", note: "마감 안전 확인", icon: MoonStar },
+        { label: "퇴근", time: "16:30–18:00", note: "퇴근 위치 확인", icon: Footprints }
+      ];
+
+      function BrandHeader() {
+        return h(
+          "header",
+          { className: "brand-header" },
+          h("img", {
+            className: "brand-logo",
+            src: "assets/juyon-snc-logo.png",
+            alt: "주연SNC"
+          }),
+          h(
+            "div",
+            { className: "profile-copy" },
+            h("strong", null, "김민수 대원"),
+            h("span", null, "메모리 PCS · 주간조")
+          )
+        );
+      }
+
+      function DayHeading({ phase }) {
+        const completed = phase === "success";
+
+        return h(
+          "div",
+          { className: "day-heading" },
+          h(
+            "div",
+            null,
+            h("p", null, "2026년 7월 27일 월요일"),
+            h("h2", null, completed ? "출근 기록을 확인했어요" : "좋은 아침이에요, 김민수 대원")
+          ),
+          h(
+            "span",
+            { className: `state-pill${completed ? " is-success" : ""}` },
+            completed
+              ? h(Check, { size: 13, strokeWidth: 2.4, "aria-hidden": true })
+              : h(Clock3, { size: 13, strokeWidth: 2.2, "aria-hidden": true }),
+            completed ? "출근 완료" : "출근 전"
+          )
+        );
+      }
+
+      function ActionCard({ phase }) {
+        const checking = phase === "checking";
+        const completed = phase === "success";
+        const title = completed
+          ? "출근이 기록됐어요"
+          : checking
+            ? "현재 위치를 확인하고 있어요"
+            : "출근할 시간이에요";
+        const description = completed
+          ? "07:42에 정문 출입구에서 저장했습니다. 다음 기록은 오전 TBM입니다."
+          : checking
+            ? "GPS 정확도와 허용 구역을 확인한 뒤 안전하게 기록합니다."
+            : "현장 출입구 안에서 위치를 확인한 뒤 기록됩니다.";
+        const ActionIcon = completed ? CheckCircle2 : checking ? LocateFixed : Navigation;
+
+        return h(
+          "section",
+          { className: "action-card", "aria-labelledby": "next-action-title" },
+          h(
+            "div",
+            { className: "action-card-head" },
+            h("span", null, completed ? "다음 단계 · 오전 TBM 06:00–08:30" : "현재 가능 · 출근 06:00–08:30"),
+            h(
+              "span",
+              { className: "stage-label" },
+              completed ? h(Check, { size: 12, "aria-hidden": true }) : null,
+              completed ? "1단계 완료" : "1단계"
+            )
+          ),
+          h(
+            "div",
+            { className: "action-card-body" },
+            h(
+              "div",
+              null,
+              h("h3", { id: "next-action-title" }, title),
+              h("p", null, description)
+            ),
+            h(
+              "span",
+              { className: "action-icon", "aria-hidden": true },
+              h(ActionIcon, {
+                className: checking ? "spinner" : undefined,
+                size: 24,
+                strokeWidth: 1.9
+              })
+            )
+          )
+        );
+      }
+
+      function AccuracyTooltip() {
+        return h(
+          Tooltip.Root,
+          null,
+          h(
+            Tooltip.Trigger,
+            { asChild: true },
+            h(
+              "button",
+              { type: "button", className: "icon-button", "aria-label": "GPS 정확도 기준 안내" },
+              h(CircleHelp, { size: 14, strokeWidth: 2.1, "aria-hidden": true })
+            )
+          ),
+          h(
+            Tooltip.Portal,
+            null,
+            h(
+              Tooltip.Content,
+              { className: "tooltip-content", sideOffset: 8 },
+              "GPS 오차가 운영 기준 이내이고 허용 구역 안에 있을 때만 기록할 수 있습니다.",
+              h(Tooltip.Arrow, { className: "tooltip-arrow" })
+            )
+          )
+        );
+      }
+
+      function LocationCard({ phase }) {
+        const completed = phase === "success";
+
+        return h(
+          Collapsible.Root,
+          { className: "glass-card" },
+          h(
+            Collapsible.Trigger,
+            { asChild: true },
+            h(
+              "button",
+              { type: "button", className: "card-trigger" },
+              h(
+                "span",
+                { className: "trigger-main" },
+                h(
+                  "span",
+                  { className: `soft-icon${completed ? " is-success" : ""}`, "aria-hidden": true },
+                  completed
+                    ? h(CheckCircle2, { size: 18, strokeWidth: 2.1 })
+                    : h(MapPin, { size: 18, strokeWidth: 2.1 })
+                ),
+                h(
+                  "span",
+                  { className: "trigger-copy" },
+                  h("strong", null, completed ? "위치 확인 완료" : "위치 확인 준비됨"),
+                  h("span", null, completed ? "정문 출입구 · GPS ±12m" : "상세 위치와 GPS 정확도 보기")
+                )
+              ),
+              h(ChevronDown, { className: "chevron", size: 17, strokeWidth: 2.1, "aria-hidden": true })
+            )
+          ),
+          h(
+            Collapsible.Content,
+            { className: "collapsible-content" },
+            h(
+              "div",
+              { className: "location-details" },
+              h(
+                "div",
+                { className: "detail-block" },
+                h(
+                  "span",
+                  { className: "detail-label" },
+                  h(MapPin, { size: 13, "aria-hidden": true }),
+                  "정문 출입구"
+                ),
+                h("span", null, "현재 위치에서 18m")
+              ),
+              h(
+                "div",
+                { className: "detail-block" },
+                h(
+                  "span",
+                  { className: "detail-label" },
+                  h(LocateFixed, { size: 13, "aria-hidden": true }),
+                  "GPS 정확도",
+                  h(AccuracyTooltip)
+                ),
+                h("span", null, "±12m · 운영 기준 충족")
+              )
+            )
+          )
+        );
+      }
+
+      function SequenceDialog({ phase }) {
+        const completed = phase === "success";
+
+        return h(
+          Dialog.Portal,
+          null,
+          h(Dialog.Overlay, { className: "dialog-overlay" }),
+          h(
+            Dialog.Content,
+            { className: "dialog-content" },
+            h("div", { className: "dialog-handle", "aria-hidden": true }),
+            h(
+              "div",
+              { className: "dialog-header" },
+              h(
+                "div",
+                null,
+                h(Dialog.Title, { className: "dialog-title" }, "오늘 출결 순서"),
+                h(
+                  Dialog.Description,
+                  { className: "dialog-description" },
+                  "메모리 PCS 주간조 기준 8단계입니다. 가능한 시간은 운영 설정을 따릅니다."
+                )
+              ),
+              h(
+                Dialog.Close,
+                { asChild: true },
+                h(
+                  "button",
+                  { type: "button", className: "dialog-close", "aria-label": "전체 순서 닫기" },
+                  h(X, { size: 19, strokeWidth: 2.2, "aria-hidden": true })
+                )
+              )
+            ),
+            h(
+              "ol",
+              { className: "step-list" },
+              ...STEPS.map((step, index) => {
+                const isComplete = completed && index === 0;
+                const isCurrent = completed ? index === 1 : index === 0;
+                const StepIcon = step.icon;
+
+                return h(
+                  "li",
+                  {
+                    key: step.label,
+                    className: `step-item${isComplete ? " is-complete" : isCurrent ? " is-current" : ""}`
+                  },
+                  h(
+                    "span",
+                    { className: "step-number", "aria-hidden": true },
+                    isComplete ? h(Check, { size: 14, strokeWidth: 2.4 }) : index + 1
+                  ),
+                  h(
+                    "span",
+                    { className: "step-copy" },
+                    h("strong", null, step.label),
+                    h("span", null, step.note)
+                  ),
+                  h(
+                    "span",
+                    { className: "step-time" },
+                    h(StepIcon, {
+                      size: 12,
+                      strokeWidth: 1.9,
+                      style: { marginRight: "4px", verticalAlign: "-2px" },
+                      "aria-hidden": true
+                    }),
+                    step.time
+                  )
+                );
+              })
+            )
+          )
+        );
+      }
+
+      function RecordCard({ phase }) {
+        const completed = phase === "success";
+        const progress = completed ? 12.5 : 0;
+
+        return h(
+          Dialog.Root,
+          null,
+          h(
+            "section",
+            { className: "glass-card record-card", "aria-labelledby": "record-title" },
+            h(
+              "div",
+              { className: "record-head" },
+              h(
+                "div",
+                { className: "record-title" },
+                h("small", null, "오늘 기록"),
+                h("strong", { id: "record-title" }, completed ? "1/8 완료" : "0/8 완료")
+              ),
+              h(
+                Dialog.Trigger,
+                { asChild: true },
+                h(
+                  "button",
+                  { type: "button", className: "text-button" },
+                  h(ListChecks, { size: 15, strokeWidth: 2.1, "aria-hidden": true }),
+                  "전체 순서"
+                )
+              )
+            ),
+            h(
+              "div",
+              {
+                className: "progress-track",
+                role: "progressbar",
+                "aria-label": "오늘 출결 진행률",
+                "aria-valuemin": 0,
+                "aria-valuemax": 8,
+                "aria-valuenow": completed ? 1 : 0
+              },
+              h("span", { className: "progress-bar", style: { width: `${progress}%` } })
+            ),
+            h(
+              Collapsible.Root,
+              null,
+              h(
+                Collapsible.Trigger,
+                { asChild: true },
+                h(
+                  "button",
+                  { type: "button", className: "record-toggle" },
+                  h("span", null, completed ? "최근 기록 확인" : "기록 전 안내 확인"),
+                  h(ChevronDown, { className: "chevron", size: 15, "aria-hidden": true })
+                )
+              ),
+              h(
+                Collapsible.Content,
+                { className: "collapsible-content" },
+                h(
+                  "div",
+                  { className: "latest-record" },
+                  completed
+                    ? h(React.Fragment, null, h("span", null, "출근 · 정문 출입구"), h("strong", null, "07:42 저장"))
+                    : h(
+                        React.Fragment,
+                        null,
+                        h("span", { className: "empty-record" }, "출근 버튼을 누르면 첫 기록이 여기에 표시됩니다."),
+                        h(Clock3, { size: 14, "aria-hidden": true })
+                      )
+                )
+              )
+            )
+          ),
+          h(SequenceDialog, { phase })
+        );
+      }
+
+      function BottomAction({ phase, onStart }) {
+        const checking = phase === "checking";
+        const completed = phase === "success";
+        const ButtonIcon = completed ? CheckCircle2 : checking ? LoaderCircle : Navigation;
+        const label = completed ? "출근 완료" : checking ? "확인 중..." : "출근하기";
+        const note = completed ? "07:42 기록" : checking ? "보안·위치 확인" : "위치 확인 후 기록";
+        const message = completed
+          ? "출근 기록이 저장됐습니다. 다음 단계는 오전 TBM입니다."
+          : checking
+            ? "GPS 정확도와 출입 허용 구역을 확인하고 있습니다."
+            : "GPS를 켜고 버튼을 눌러 주세요";
+
+        return h(
+          "footer",
+          { className: "bottom-action" },
+          h(
+            "p",
+            {
+              className: `action-message${completed ? " is-success" : ""}`,
+              role: "status",
+              "aria-live": "polite"
+            },
+            message
+          ),
+          h(
+            "button",
+            {
+              type: "button",
+              className: `primary-button${checking ? " is-checking" : completed ? " is-success" : ""}`,
+              disabled: checking || completed,
+              "aria-busy": checking,
+              onClick: onStart
+            },
+            h(
+              "span",
+              { className: "button-label" },
+              h(ButtonIcon, {
+                className: checking ? "spinner" : undefined,
+                size: 20,
+                strokeWidth: 2.2,
+                "aria-hidden": true
+              }),
+              label
+            ),
+            h("span", { className: "button-note" }, note)
+          )
+        );
+      }
+
+      function App() {
+        const [phase, setPhase] = useState("ready");
+
+        useEffect(() => {
+          if (phase !== "checking") {
+            return undefined;
+          }
+
+          const timer = window.setTimeout(() => setPhase("success"), 1100);
+          return () => window.clearTimeout(timer);
+        }, [phase]);
+
+        return h(
+          Tooltip.Provider,
+          { delayDuration: 180 },
+          h(
+            "main",
+            { className: "stage" },
+            h(
+              "article",
+              { className: "app-shell", "aria-labelledby": "screen-title" },
+              h("h1", { id: "screen-title", className: "sr-only" }, "출석체크"),
+              h(BrandHeader),
+              h(
+                "div",
+                { className: "content" },
+                h(DayHeading, { phase }),
+                h(ActionCard, { phase }),
+                h(LocationCard, { phase }),
+                h(RecordCard, { phase })
+              ),
+              h(BottomAction, { phase, onStart: () => setPhase("checking") })
+            )
+          )
+        );
+      }
+
+      createRoot(document.getElementById("root")).render(h(App));
+    </script>
+  </body>
+</html>
