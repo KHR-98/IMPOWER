@@ -2901,11 +2901,13 @@ html.kakao-auth-leaving .login-shell {
   gap: 8px;
 }
 
-/* 이름 명단복사 버튼을 엑셀 버튼 왼쪽에 나란히 둔다. */
-.topbar-master-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* 이름 명단복사 버튼은 사용자/관리자·로그아웃 행과 분리된 독립 고정 위치에 둔다.
+   (같은 가로 행에 두면 버튼 폭만큼 사용자/관리자 토글이 왼쪽으로 밀림) */
+.topbar-copy-fixed {
+  position: fixed;
+  top: 84px;
+  right: 16px;
+  z-index: 100;
 }
 
 .topbar-roster-copy-btn {

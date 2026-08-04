@@ -71,16 +71,16 @@ export default async function ProtectedLayout({
                 <LogoutIcon />
               </button>
             </form>
-            {session.role === "master" ? (
-              <div className="topbar-master-actions">
-                <Suspense>
-                  <AttendanceRosterCopyButton />
-                </Suspense>
-                <AdminExportPanel />
-              </div>
-            ) : null}
+            {session.role === "master" ? <AdminExportPanel /> : null}
           </div>
         </div>
+        {session.role === "master" ? (
+          <div className="topbar-copy-fixed">
+            <Suspense>
+              <AttendanceRosterCopyButton />
+            </Suspense>
+          </div>
+        ) : null}
         <span className="watermark-text">© 2026 권순범 · 김형래. All rights reserved.</span>
 
         {children}
