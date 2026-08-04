@@ -108,6 +108,8 @@ export interface RosterEntry {
   allowLunchOut: boolean;
   scheduleReasonCode?: RosterReasonCode | null;
   scheduleReason?: string | null;
+  /** 부서 내 경력순위(1=최고참). 없는 사람은 null. 상주인원 명단 복사에서만 정렬에 사용. */
+  careerRank?: number | null;
 }
 
 export interface TimeWindow {

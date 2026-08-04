@@ -7,6 +7,7 @@ import { AdminRefreshButton } from "@/components/admin-refresh-button";
 import { AllPeriodsExpanded, AllPeriodsTrigger } from "@/components/all-periods-drawer";
 import type { AllPeriodsRow } from "@/components/all-periods-drawer";
 import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
+import { AttendanceRosterCopyButton } from "@/components/attendance-roster-copy-button";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
@@ -334,7 +335,14 @@ export default async function AdminPage({
                   </span>
                 </div>
               </div>
-              <AdminRefreshButton />
+              <div className="inline-row">
+                <AttendanceRosterCopyButton
+                  entries={dashboard.scheduledUsers}
+                  departmentName={selectedDashboardDepartment?.name ?? ""}
+                  dateKey={dashboard.dateKey}
+                />
+                <AdminRefreshButton />
+              </div>
             </div>
 
             {!showAllPeriods && specialCaseGroups.length > 0 ? (

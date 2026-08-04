@@ -2007,7 +2007,7 @@ async function getSupabaseActiveUsers(departmentId?: string | null) {
   const client = getSupabaseAdminClient();
   let query = client
     .from(TABLES.users)
-    .select("username, display_name, role, is_active, department_id")
+    .select("username, display_name, role, is_active, department_id, career_rank")
     .eq("is_active", true);
 
   if (departmentId !== undefined) {
@@ -2128,6 +2128,7 @@ export async function getSupabaseDashboardView(departmentId?: string | null): Pr
       allowLunchOut: Boolean(rosterRow?.allow_lunch_out),
       scheduleReasonCode,
       scheduleReason: scheduleReasonCode ? getRosterReasonMessage(scheduleReasonCode) : null,
+      careerRank: typeof user.career_rank === "number" ? user.career_rank : null,
     } satisfies RosterEntry;
   });
 
