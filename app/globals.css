@@ -1382,6 +1382,14 @@ html.kakao-auth-leaving .login-shell {
   flex-wrap: nowrap;
   overflow-x: auto;
   padding-bottom: 2px;
+  scrollbar-width: none;              /* Firefox */
+  -ms-overflow-style: none;           /* 구형 Edge/IE */
+  -webkit-overflow-scrolling: touch;  /* iOS 관성 스크롤 유지 */
+}
+
+/* 스크롤바만 숨기고 좌우 스크롤은 유지 */
+.account-department-filter-list::-webkit-scrollbar {
+  display: none;                      /* Chrome/Safari/Edge */
 }
 
 .account-department-filter-button {
@@ -2906,7 +2914,7 @@ html.kakao-auth-leaving .login-shell {
 .topbar-copy-fixed {
   position: fixed;
   top: 84px;
-  right: 16px;
+  right: 66px; /* 40px 엑셀 아이콘(right:16~56px) 왼쪽에 8px 간격을 두고 배치 */
   z-index: 100;
 }
 
