@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Image from "next/image";
 
 import { AdminExportPanel } from "@/components/admin-export-panel";
+import { AttendanceRosterCopyButton } from "@/components/attendance-roster-copy-button";
 import { ViewToggle } from "@/components/view-toggle";
 import { getDepartments, getSessionUserByUsername } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
@@ -71,7 +72,12 @@ export default async function ProtectedLayout({
               </button>
             </form>
             {session.role === "master" ? (
-              <AdminExportPanel />
+              <div className="topbar-master-actions">
+                <Suspense>
+                  <AttendanceRosterCopyButton />
+                </Suspense>
+                <AdminExportPanel />
+              </div>
             ) : null}
           </div>
         </div>
