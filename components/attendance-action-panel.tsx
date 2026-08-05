@@ -248,11 +248,11 @@ function getButtonLabel(state: AttendanceEventState): string {
   }
 
   if (state.action === "check-in") {
-    return "출근";
+    return "보안 확인 후 입문합니다";
   }
 
   if (state.action === "check-out") {
-    return "퇴근";
+    return "보안 확인 후 출문합니다";
   }
 
   return state.label;
