@@ -3,7 +3,8 @@ values
   ('master', '마스터', '전체 부서와 전체 계정을 관리합니다.', 10, true),
   ('admin', '팀장', '소속 부서의 사용자와 설정을 관리합니다.', 20, true),
   ('sub_admin', '조장', '소속 부서 데이터를 조회합니다.', 30, true),
-  ('user', '대원', '출퇴근을 기록하는 일반 사용자입니다.', 40, true)
+  ('user', '대원', '출퇴근을 기록하는 일반 사용자입니다.', 40, true),
+  ('viewer', '뷰어', '전체 부서 현황을 조회만 하는 열람 전용 계정입니다.', 50, true)
 on conflict (code) do update set
   label_ko = excluded.label_ko,
   description_ko = excluded.description_ko,

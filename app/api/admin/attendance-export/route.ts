@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { getMonthlyAttendanceExportData } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { canSelectAnyDepartment } from "@/lib/permissions";
 import { loadHolidayMap } from "@/lib/korean-holidays";
 import { parseRosterReasonCodeFromSourceKey } from "@/lib/roster-reasons";
 import { getSupabaseAdminClient } from "@/lib/supabase";
@@ -280,8 +281,8 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
 
 export async function GET(request: Request) {
   const session = await getSession();
-  if (!session || session.role !== "master") {
-    return NextResponse.json({ error: "마스터 계정만 출결 엑셀을 다운로드할 수 있습니다." }, { status: 403 });
+  if (!session || !canSelectAnyDepartment(session.role)) {
+    return NextResponse.json({ error: "출결 엑셀 다운로드 권한이 없습니다." }, { status: 403 });
   }
 
   const url = new URL(request.url);

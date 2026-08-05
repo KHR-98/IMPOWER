@@ -10,7 +10,7 @@ const adminUserSchema = z
     mode: z.enum(["create", "update"]),
     username: z.string().trim().min(1, "로그인 ID를 입력하세요.").max(40, "로그인 ID가 너무 깁니다.").regex(/^\S+$/, "로그인 ID에는 공백을 넣을 수 없습니다."),
     displayName: z.string().trim().min(1, "표시 이름을 입력하세요.").max(40, "표시 이름이 너무 깁니다."),
-    role: z.enum(["user", "admin", "sub_admin", "master"]),
+    role: z.enum(["user", "viewer", "admin", "sub_admin", "master"]),
     departmentId: z.string().uuid("부서를 선택하세요.").nullable(),
     isActive: z.boolean(),
     password: z.string().trim().nullable(),
@@ -70,6 +70,11 @@ export async function PUT(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "입력값을 확인하세요." }, { status: 400 });
+  }
+
+  // 뷰어(열람 전용) 권한 부여는 마스터만 가능하다.
+  if (parsed.data.role === "viewer" && auth.session.role !== "master") {
+    return NextResponse.json({ error: "뷰어 권한은 마스터만 지정할 수 있습니다." }, { status: 403 });
   }
 
   const result = await saveAdminUser({

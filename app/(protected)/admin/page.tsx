@@ -11,7 +11,8 @@ import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
 import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminView } from "@/lib/auth";
+import { canSelectAnyDepartment } from "@/lib/permissions";
 import { hasCurrentConsent } from "@/lib/consent-store";
 import { buildCurrentPeriodOperatorRows } from "@/lib/current-period";
 import {
@@ -34,6 +35,11 @@ const ADMIN_SECTION_OPTIONS: Array<{ key: AdminSectionKey; label: string }> = [
 function getAdminSectionOptions(role: UserRole): Array<{ key: AdminSectionKey; label: string }> {
   if (role === "sub_admin") {
     return ADMIN_SECTION_OPTIONS.filter((option) => option.key === "overview");
+  }
+
+  // 열람 전용(viewer): 오늘현황 + 시스템설정(읽기전용)만. 근태관리·계정관리 탭은 제외.
+  if (role === "viewer") {
+    return ADMIN_SECTION_OPTIONS.filter((option) => option.key === "overview" || option.key === "system");
   }
 
   return ADMIN_SECTION_OPTIONS;
@@ -95,7 +101,7 @@ export default async function AdminPage({
 }: {
   searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string; departmentId?: string }>;
 }) {
-  const session = await requireAdmin();
+  const session = await requireAdminView();
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   if (!(await hasCurrentConsent(session.username))) {
@@ -109,20 +115,22 @@ export default async function AdminPage({
   const activeDepartments = departments.filter((department) => department.isActive);
   const sessionDepartment =
     session.departmentId ? departments.find((department) => department.id === session.departmentId) ?? null : null;
-  const dashboardDepartmentOptions = session.role === "master"
+  // master·viewer는 전체 부서를 조회/선택할 수 있다(viewer는 열람만).
+  const canSelectAllDepartments = canSelectAnyDepartment(session.role);
+  const dashboardDepartmentOptions = canSelectAllDepartments
     ? activeDepartments
     : sessionDepartment
       ? [sessionDepartment]
       : [];
-  const selectedDashboardDepartment = session.role === "master"
+  const selectedDashboardDepartment = canSelectAllDepartments
     ? dashboardDepartmentOptions.find((department) => department.id === resolvedSearchParams?.departmentId) ??
       dashboardDepartmentOptions[0] ??
       null
     : sessionDepartment;
-  const dashboardDepartmentId = session.role === "master"
+  const dashboardDepartmentId = canSelectAllDepartments
     ? selectedDashboardDepartment?.id ?? null
     : session.departmentId ?? null;
-  const accountScopeDepartmentId = session.role === "master" ? undefined : session.departmentId ?? null;
+  const accountScopeDepartmentId = canSelectAllDepartments ? undefined : session.departmentId ?? null;
   const dashboardQueryDepartmentId = selectedSection === "overview" ? dashboardDepartmentId : accountScopeDepartmentId;
   const dashboardDepartmentCode =
     selectedSection === "overview" ? selectedDashboardDepartment?.code ?? session.departmentCode : session.departmentCode;
@@ -234,7 +242,7 @@ export default async function AdminPage({
     isActive: department.isActive,
   }));
   const scopedSettings =
-    session.role === "master"
+    canSelectAllDepartments
       ? dashboard.settings
       : {
           ...dashboard.settings,
@@ -270,7 +278,7 @@ export default async function AdminPage({
 
       {selectedSection === "overview" ? (
         <>
-        {session.role === "master" && dashboardDepartmentOptions.length > 0 ? (
+        {canSelectAllDepartments && dashboardDepartmentOptions.length > 0 ? (
           <nav className="inline-row account-department-filter-list" aria-label="오늘현황 부서 선택">
             {dashboardDepartmentOptions.map((department) => {
               const selected = department.id === dashboardDepartmentId;
@@ -286,7 +294,7 @@ export default async function AdminPage({
               );
             })}
           </nav>
-        ) : session.role === "master" ? (
+        ) : canSelectAllDepartments ? (
           <div className="notice small">오늘현황을 조회할 부서가 없습니다.</div>
         ) : null}
 
@@ -334,7 +342,7 @@ export default async function AdminPage({
                   </span>
                 </div>
               </div>
-              <AdminRefreshButton />
+              {session.role !== "viewer" ? <AdminRefreshButton /> : null}
             </div>
 
             {!showAllPeriods && specialCaseGroups.length > 0 ? (
@@ -449,7 +457,7 @@ export default async function AdminPage({
             </div>
             <AdminSettingsPanel
               enabled={adminDataMutationEnabled}
-              canEdit={session.role !== "sub_admin" && (session.role === "master" || Boolean(session.departmentId))}
+              canEdit={session.role !== "sub_admin" && session.role !== "viewer" && (session.role === "master" || Boolean(session.departmentId))}
               initialSettings={scopedSettings}
               initialZones={dashboard.zones}
               actorDepartmentId={accountScopeDepartmentId}

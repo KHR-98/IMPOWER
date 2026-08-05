@@ -218,7 +218,7 @@ function nullableString(value: unknown): string | null {
 }
 
 function normalizeUserRole(value: unknown): UserRole {
-  return value === "master" || value === "admin" || value === "sub_admin" ? value : "user";
+  return value === "master" || value === "admin" || value === "sub_admin" || value === "viewer" ? value : "user";
 }
 
 function mapDepartment(row: Record<string, unknown>): Department {
@@ -1518,7 +1518,7 @@ export async function saveSupabaseAdminUser(
 
   const updatePayload: {
     display_name: string;
-    role: "user" | "admin" | "sub_admin" | "master";
+    role: UserRole;
     is_active: boolean;
     department_id: string | null;
     password_hash?: string;
@@ -2744,7 +2744,7 @@ async function upsertSupabaseAttendanceWindows(
 
 export async function saveSupabaseAdminConfiguration(
   input: { settings: AppSettings; zones: Zone[] },
-  actorRole: "master" | "admin" | "sub_admin" | "user",
+  actorRole: UserRole,
   actorDepartmentId: string | null,
 ): Promise<{ ok: boolean; message: string }> {
   const client = getSupabaseAdminClient();

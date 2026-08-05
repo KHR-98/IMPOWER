@@ -6,7 +6,7 @@ import { AttendanceRosterCopyButton } from "@/components/attendance-roster-copy-
 import { ViewToggle } from "@/components/view-toggle";
 import { getDepartments, getSessionUserByUsername } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { canSelectAnyDepartment, isAdminRole } from "@/lib/permissions";
 
 import { logoutAction } from "./actions";
 
@@ -25,7 +25,10 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }>) {
   const session = await requireSession();
+  // ViewToggle(관리↔사용자 전환)은 실제 관리자 3종만. viewer는 사용자 화면이 없으므로 제외.
   const isAdmin = isAdminRole(session.role);
+  // 명단복사·엑셀(출력인원 열람)은 전체 부서 조회 역할(master·viewer)에게 노출.
+  const canViewOutput = canSelectAnyDepartment(session.role);
   const [dbUser, departments] = await Promise.all([
     getSessionUserByUsername(session.username),
     getDepartments(),
@@ -71,10 +74,10 @@ export default async function ProtectedLayout({
                 <LogoutIcon />
               </button>
             </form>
-            {session.role === "master" ? <AdminExportPanel /> : null}
+            {canViewOutput ? <AdminExportPanel /> : null}
           </div>
         </div>
-        {session.role === "master" ? (
+        {canViewOutput ? (
           <div className="topbar-copy-fixed">
             <Suspense>
               <AttendanceRosterCopyButton />

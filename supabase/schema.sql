@@ -9,7 +9,7 @@ create table if not exists org_departments (
 );
 
 create table if not exists account_roles (
-  code text primary key check (code in ('user', 'sub_admin', 'admin', 'master')),
+  code text primary key check (code in ('user', 'viewer', 'sub_admin', 'admin', 'master')),
   label_ko text not null,
   description_ko text,
   sort_order integer not null default 0,

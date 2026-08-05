@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getSession } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { canViewAdmin } from "@/lib/permissions";
 
 export default async function IndexPage() {
   const session = await getSession();
@@ -10,5 +10,5 @@ export default async function IndexPage() {
     redirect("/login");
   }
 
-  redirect(isAdminRole(session.role) ? "/admin" : "/dashboard");
+  redirect(canViewAdmin(session.role) ? "/admin" : "/dashboard");
 }

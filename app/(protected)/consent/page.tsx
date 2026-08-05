@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 
 import { ConsentForm } from "@/components/consent-form";
 import { requireSession } from "@/lib/auth";
+import { canViewAdmin } from "@/lib/permissions";
 import { hasCurrentConsent } from "@/lib/consent-store";
+import type { UserRole } from "@/lib/types";
 
-function getDefaultNextPath(role: string): string {
-  return role === "master" || role === "admin" || role === "sub_admin" ? "/admin" : "/dashboard";
+function getDefaultNextPath(role: UserRole): string {
+  return canViewAdmin(role) ? "/admin" : "/dashboard";
 }
 
 function sanitizeNextPath(rawNext: string | undefined, defaultPath: string): string {

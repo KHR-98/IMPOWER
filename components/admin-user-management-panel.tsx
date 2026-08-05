@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { getRoleLabel } from "@/lib/permissions";
 import type { AdminUserListItem, Department, UserRole } from "@/lib/types";
 
-const ROLE_ORDER: Record<string, number> = { master: 0, admin: 1, sub_admin: 2, user: 3 };
+const ROLE_ORDER: Record<string, number> = { master: 0, admin: 1, sub_admin: 2, user: 3, viewer: 4 };
 
 function sortUsers(users: AdminUserListItem[]): AdminUserListItem[] {
   return [...users].sort((a, b) => {
@@ -53,6 +53,7 @@ export function AdminUserManagementPanel({
     isMaster || (user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"));
   const allRoleOptions: Array<{ value: UserRole; label: string }> = [
     { value: "user", label: "대원" },
+    { value: "viewer", label: "뷰어" },
     { value: "sub_admin", label: "조장" },
     { value: "admin", label: "팀장" },
     { value: "master", label: "마스터" },

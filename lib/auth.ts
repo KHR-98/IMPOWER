@@ -7,6 +7,7 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth-config"
 import { getSessionUserByUsername, getUserDepartmentCode } from "@/lib/app-data";
 import { isDepartmentLocked } from "@/lib/department-lock";
 import { encodeSessionToken, verifySessionToken } from "@/lib/session-token";
+import { canViewAdmin } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/types";
 
 export async function createSession(user: SessionUser) {
@@ -88,6 +89,18 @@ export async function requireAdminOrSubAdmin(): Promise<SessionUser> {
   const session = await requireSession();
 
   if (session.role !== "master" && session.role !== "admin" && session.role !== "sub_admin") {
+    redirect("/");
+  }
+
+  return session;
+}
+
+// 관리자 화면 열람 게이트. viewer(열람 전용) 포함. 쓰기 API는 이 게이트를 쓰지 않고
+// isAdminRole/isSystemAdminRole/master 게이트로 계속 막으므로 viewer는 열람만 가능하다.
+export async function requireAdminView(): Promise<SessionUser> {
+  const session = await requireSession();
+
+  if (!canViewAdmin(session.role)) {
     redirect("/");
   }
 

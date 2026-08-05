@@ -170,6 +170,9 @@ const users: UserAccount[] = [
   buildUser("user-lee", "lee", "이서준", "user", "dept-foundry-pcs"),
   buildUser("user-han", "han", "한지아", "sub_admin", "dept-foundry-pcs"),
   buildUser("user-yoon", "yoon", "윤도현", "user", "dept-memory", false),
+  // 열람 전용(viewer): 특정 부서에 속하지 않고 전체 부서를 조회만 한다. 부서 무소속("")이라
+  // getDepartment가 못 찾아 departmentCode/Name이 null이 되고, 부서 잠금에도 걸리지 않는다.
+  buildUser("user-viewer", "viewer", "개발자 뷰어", "viewer", ""),
 ];
 
 interface DemoInviteLink {

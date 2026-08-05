@@ -30,6 +30,11 @@ export async function POST(
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
+  // 열람 전용(viewer) 계정은 입·출문 등 출결 기록을 수행할 수 없다.
+  if (session.role === "viewer") {
+    return NextResponse.json({ error: "열람 전용 계정은 입·출문을 사용할 수 없습니다." }, { status: 403 });
+  }
+
   const { action } = await context.params;
 
   if (!isAttendanceAction(action)) {

@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 
 import { getDashboardView, getDepartments } from "@/lib/app-data";
 import { getSession } from "@/lib/auth";
+import { canSelectAnyDepartment } from "@/lib/permissions";
 import { buildRosterText } from "@/lib/roster-copy-text";
 
 export async function GET(request: Request) {
   const session = await getSession();
-  if (!session || session.role !== "master") {
-    return NextResponse.json({ error: "마스터 계정만 명단을 복사할 수 있습니다." }, { status: 403 });
+  if (!session || !canSelectAnyDepartment(session.role)) {
+    return NextResponse.json({ error: "명단 복사 권한이 없습니다." }, { status: 403 });
   }
 
   const requestedDepartmentId = new URL(request.url).searchParams.get("departmentId");

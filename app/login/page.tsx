@@ -3,7 +3,7 @@ import { Space_Grotesk } from "next/font/google";
 
 import { LoginForm } from "@/components/login-form";
 import { getSession } from "@/lib/auth";
-import { isAdminRole } from "@/lib/permissions";
+import { canViewAdmin } from "@/lib/permissions";
 
 const loginTitleFont = Space_Grotesk({
   subsets: ["latin"],
@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const session = await getSession();
 
   if (session) {
-    redirect(isAdminRole(session.role) ? "/admin" : "/dashboard");
+    redirect(canViewAdmin(session.role) ? "/admin" : "/dashboard");
   }
 
   const { error: errorCode } = await searchParams;

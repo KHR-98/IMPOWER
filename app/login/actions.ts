@@ -7,7 +7,7 @@ import { authenticateUser, changePassword, getDepartments, getUserDepartmentCode
 import { createSession } from "@/lib/auth";
 import { hasCurrentConsent } from "@/lib/consent-store";
 import { DEPARTMENT_LOCKED_MESSAGE, isDepartmentLocked } from "@/lib/department-lock";
-import { isAdminRole } from "@/lib/permissions";
+import { canViewAdmin } from "@/lib/permissions";
 import type { SessionUser, UserRole } from "@/lib/types";
 
 export interface LoginState {
@@ -25,7 +25,7 @@ const loginSchema = z.object({
 });
 
 const devLoginSchema = z.object({
-  role: z.enum(["master", "admin", "sub_admin", "user"]),
+  role: z.enum(["master", "admin", "sub_admin", "user", "viewer"]),
 });
 
 const DEV_LOGIN_ACCOUNTS: Record<
@@ -60,6 +60,13 @@ const DEV_LOGIN_ACCOUNTS: Record<
     departmentCode: "memory_pcs",
     departmentName: "메모리PCS",
   },
+  viewer: {
+    username: "viewer",
+    displayName: "개발자 뷰어",
+    role: "viewer",
+    departmentCode: null,
+    departmentName: null,
+  },
 };
 
 const changePasswordSchema = z
@@ -88,7 +95,7 @@ const changePasswordSchema = z
   });
 
 async function getPostLoginPath(user: SessionUser): Promise<string> {
-  const defaultPath = isAdminRole(user.role) ? "/admin" : "/dashboard";
+  const defaultPath = canViewAdmin(user.role) ? "/admin" : "/dashboard";
   return (await hasCurrentConsent(user.username)) ? defaultPath : `/consent?next=${encodeURIComponent(defaultPath)}`;
 }
 

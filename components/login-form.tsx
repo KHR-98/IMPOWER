@@ -12,6 +12,7 @@ const DEV_LOGIN_OPTIONS = [
   { role: "admin", label: "팀장" },
   { role: "sub_admin", label: "조장" },
   { role: "user", label: "대원" },
+  { role: "viewer", label: "뷰어" },
 ] as const;
 
 export function LoginForm({ devMode = false }: LoginFormProps) {

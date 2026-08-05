@@ -8,7 +8,7 @@ import { hasCurrentConsent } from "@/lib/consent-store";
 import { getKakaoRedirectUri, getKakaoRestApiKey } from "@/lib/kakao-oauth";
 import { encodeKakaoPendingToken } from "@/lib/kakao-token";
 import { INVITE_LINK_COOKIE } from "@/lib/invite-link-cookie";
-import { isAdminRole } from "@/lib/permissions";
+import { canViewAdmin } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/types";
 
 const KAKAO_PENDING_COOKIE = "kakao_pending";
@@ -20,7 +20,7 @@ type KakaoTokenError = {
 };
 
 async function getPostLoginPath(user: Pick<SessionUser, "username" | "role">): Promise<string> {
-  const defaultPath = isAdminRole(user.role) ? "/admin" : "/dashboard";
+  const defaultPath = canViewAdmin(user.role) ? "/admin" : "/dashboard";
   return (await hasCurrentConsent(user.username)) ? defaultPath : `/consent?next=${encodeURIComponent(defaultPath)}`;
 }
 
