@@ -2,8 +2,6 @@ import type { RosterEntry, RosterReasonCode } from "@/lib/types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
-// 상주인원 총원 — 운영 요청에 따라 고정값. 바꾸려면 이 상수만 수정한다.
-const TOTAL_HEADCOUNT = 43;
 // 사업장 접두 문구. "{SITE_PREFIX} {부서명}" 형태로 헤더에 쓰인다.
 const SITE_PREFIX = "평택";
 const NAMES_PER_ROW = 4;
@@ -113,7 +111,7 @@ export function buildRosterText(rawEntries: RosterEntry[], departmentName: strin
 
   return [
     formatDateLine(dateKey),
-    `${SITE_PREFIX} ${departmentName} 상주인원  총원(${TOTAL_HEADCOUNT}명)`,
+    `${SITE_PREFIX} ${departmentName} 상주인원  총원(${presentUsernames.size}명)`,
     "",
     ...gridLines,
     "",

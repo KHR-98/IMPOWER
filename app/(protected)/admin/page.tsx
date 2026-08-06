@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -10,6 +11,7 @@ import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
+import { AttendanceRosterCopyButton } from "@/components/attendance-roster-copy-button";
 import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdminView } from "@/lib/auth";
 import { canSelectAnyDepartment } from "@/lib/permissions";
@@ -273,6 +275,11 @@ export default async function AdminPage({
                 {option.label}
               </Link>
             ))}
+            {canSelectAllDepartments ? (
+              <Suspense>
+                <AttendanceRosterCopyButton />
+              </Suspense>
+            ) : null}
           </nav>
         ) : null}
       </section>

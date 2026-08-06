@@ -32,7 +32,7 @@ export function AttendanceRosterCopyButton() {
 
   return (
     <button type="button" className="button topbar-roster-copy-btn" onClick={handleCopy}>
-      {status === "copied" ? "복사됨" : status === "error" ? "복사 실패" : "이름 명단복사"}
+      {status === "copied" ? "복사됨" : status === "error" ? "복사 실패" : "출결 명단복사"}
     </button>
   );
 }
