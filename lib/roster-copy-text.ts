@@ -6,6 +6,12 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const SITE_PREFIX = "평택";
 const NAMES_PER_ROW = 4;
 
+// 부서별 상주인원 총원(고정값). 여기 지정된 부서는 이 값을 헤더 "총원(N명)"에 쓰고,
+// 지정되지 않은 부서는 오늘 출근완료 인원 수를 그대로 쓴다. 값을 바꾸려면 이 표만 수정한다.
+const DEPARTMENT_TOTAL_HEADCOUNT: Record<string, number> = {
+  파운드리PCS: 11,
+};
+
 // 하단 특이사항 표기 순서와 라벨(운영 지정: 연차→예비군→교육→경조사→휴가→오전 반차→오후 반차).
 const NOTE_ORDER: ReadonlyArray<{ code: RosterReasonCode; label: string }> = [
   { code: "leave", label: "연차" },
@@ -111,7 +117,7 @@ export function buildRosterText(rawEntries: RosterEntry[], departmentName: strin
 
   return [
     formatDateLine(dateKey),
-    `${SITE_PREFIX} ${departmentName} 상주인원  총원(${presentUsernames.size}명)`,
+    `${SITE_PREFIX} ${departmentName} 상주인원  총원(${DEPARTMENT_TOTAL_HEADCOUNT[departmentName] ?? presentUsernames.size}명)`,
     "",
     ...gridLines,
     "",
