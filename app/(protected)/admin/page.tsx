@@ -20,6 +20,7 @@ import {
   filterLunchTbmLabels,
   getDepartmentCurrentPeriodLabel,
 } from "@/lib/department-feature-policy";
+import { isFrontendOnlyDepartmentId } from "@/lib/frontend-department-overrides";
 import { formatKoreaDateTime, getKoreaDateSlashLabel } from "@/lib/time";
 import type { RosterReasonCode, ShiftType, UserRole } from "@/lib/types";
 
@@ -282,6 +283,21 @@ export default async function AdminPage({
           <nav className="inline-row account-department-filter-list" aria-label="오늘현황 부서 선택">
             {dashboardDepartmentOptions.map((department) => {
               const selected = department.id === dashboardDepartmentId;
+              // ITC·인프라 등 프론트 전용 placeholder는 조회할 실제 부서가 없어
+              // 클릭 시 서버 예외가 발생하므로 비활성(클릭 불가)으로 표시한다.
+              if (isFrontendOnlyDepartmentId(department.id)) {
+                return (
+                  <span
+                    key={department.id}
+                    className="button-subtle account-department-filter-button"
+                    aria-disabled="true"
+                    title="준비 중인 부서입니다."
+                    style={{ opacity: 0.5, cursor: "not-allowed", pointerEvents: "none" }}
+                  >
+                    {department.name}
+                  </span>
+                );
+              }
               return (
                 <Link
                   key={department.id}

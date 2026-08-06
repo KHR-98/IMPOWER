@@ -26,6 +26,19 @@ function isHidden(code: string): boolean {
   return HIDDEN_DEPARTMENT_CODES.has(code);
 }
 
+const FRONTEND_ONLY_DEPARTMENT_IDS = new Set<string>(
+  FRONTEND_ONLY_DEPARTMENTS.map((department) => department.id),
+);
+
+/**
+ * True for the frontend-only placeholder departments (ITC, 인프라). They have no
+ * backing department row, so navigating/querying by their id server-side throws.
+ * Callers use this to render them as non-interactive.
+ */
+export function isFrontendOnlyDepartmentId(id: string): boolean {
+  return FRONTEND_ONLY_DEPARTMENT_IDS.has(id);
+}
+
 /** Remove hidden departments, then append the frontend-only placeholders. */
 export function applyDepartmentOverrides(departments: Department[]): Department[] {
   const visible = departments.filter((department) => !isHidden(department.code));
