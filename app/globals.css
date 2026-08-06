@@ -2911,8 +2911,15 @@ html.kakao-auth-leaving .login-shell {
 
 /* 이름 명단복사 버튼은 사용자/관리자·로그아웃 행과 분리된 독립 고정 위치에 둔다.
    (같은 가로 행에 두면 버튼 폭만큼 사용자/관리자 토글이 왼쪽으로 밀림) */
+.topbar-copy-fixed {
+  position: fixed;
+  top: 84px;
+  right: 66px; /* 40px 엑셀 아이콘(right:16~56px) 왼쪽에 8px 간격을 두고 배치 */
+  z-index: 100;
+}
+
 .topbar-roster-copy-btn {
-  margin-left: auto; /* 섹션 탭 줄 오른쪽 끝으로 밀어 시스템 설정과 떨어뜨린다 */
+  margin-left: auto; /* (admin nav 배치 시) 섹션 탭 줄 오른쪽 끝으로 밀어 시스템 설정과 떨어뜨린다 */
   align-self: center; /* 옆 탭 높이에 늘어나지 않고 자체 크기 유지 */
   padding: 8px 12px;
   font-size: 12px;

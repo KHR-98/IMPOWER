@@ -275,7 +275,8 @@ export default async function AdminPage({
                 {option.label}
               </Link>
             ))}
-            {canSelectAllDepartments ? (
+            {/* 뷰어는 상단에 엑셀 버튼이 없어 여기(섹션 탭 오른쪽 끝)에 표시. 마스터는 상단 layout에 표시. */}
+            {session.role === "viewer" ? (
               <Suspense>
                 <AttendanceRosterCopyButton />
               </Suspense>

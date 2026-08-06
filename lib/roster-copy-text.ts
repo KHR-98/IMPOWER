@@ -10,6 +10,7 @@ const NAMES_PER_ROW = 4;
 // 지정되지 않은 부서는 오늘 출근완료 인원 수를 그대로 쓴다. 값을 바꾸려면 이 표만 수정한다.
 const DEPARTMENT_TOTAL_HEADCOUNT: Record<string, number> = {
   파운드리PCS: 11,
+  메모리PCS: 43,
 };
 
 // 하단 특이사항 표기 순서와 라벨(운영 지정: 연차→예비군→교육→경조사→휴가→오전 반차→오후 반차).

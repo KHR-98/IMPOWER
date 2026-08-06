@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Image from "next/image";
 
 import { AdminExportPanel } from "@/components/admin-export-panel";
+import { AttendanceRosterCopyButton } from "@/components/attendance-roster-copy-button";
 import { ViewToggle } from "@/components/view-toggle";
 import { getDepartments, getSessionUserByUsername } from "@/lib/app-data";
 import { requireSession } from "@/lib/auth";
@@ -78,6 +79,14 @@ export default async function ProtectedLayout({
             {canExport ? <AdminExportPanel /> : null}
           </div>
         </div>
+        {/* 마스터: 출결 명단복사를 상단 엑셀 버튼 왼쪽(기존 위치)에 둔다. 뷰어는 엑셀이 없어 admin nav에 표시. */}
+        {canExport ? (
+          <div className="topbar-copy-fixed">
+            <Suspense>
+              <AttendanceRosterCopyButton />
+            </Suspense>
+          </div>
+        ) : null}
         <span className="watermark-text">© 2026 권순범 · 김형래. All rights reserved.</span>
 
         {children}
