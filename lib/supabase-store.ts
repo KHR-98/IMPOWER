@@ -983,13 +983,14 @@ export async function getSupabaseAdminUsers(departmentId?: string | null): Promi
   return (data ?? []).map((row) => mapAdminUserListItem(row));
 }
 
-async function hasActiveDepartment(departmentId: string): Promise<boolean> {
+// 계정 배정용 부서 존재 확인. 비활성 부서(예: 운영 계정 전용 "운영" 부서)에도 배정할 수 있어야
+// 하므로 is_active 는 조건에 넣지 않는다. 부서 행이 존재하기만 하면 통과.
+async function departmentExists(departmentId: string): Promise<boolean> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client
     .from(TABLES.departments)
     .select("id")
     .eq("id", departmentId)
-    .eq("is_active", true)
     .maybeSingle();
 
   if (error) {
@@ -1391,7 +1392,7 @@ export async function saveSupabaseAdminUser(
     };
   }
 
-  if (!(await hasActiveDepartment(input.departmentId))) {
+  if (!(await departmentExists(input.departmentId))) {
     return {
       ok: false,
       message: "선택한 부서를 찾을 수 없습니다.",
