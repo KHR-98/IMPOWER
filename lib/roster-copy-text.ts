@@ -37,7 +37,21 @@ function isHalfDay(entry: RosterEntry): boolean {
   return entry.scheduleReasonCode != null && HALF_DAY_CODES.has(entry.scheduleReasonCode);
 }
 
-function buildPhantomEntries(entries: RosterEntry[], departmentName: string): RosterEntry[] {
+// dateKey(YYYY-MM-DD)가 토·일인지 판단. 요일은 formatDateLine과 같이 UTC 자정 기준으로 구해
+// 실행 환경 시간대의 영향을 받지 않게 한다. 파싱 실패 시 평일로 간주(예외 인원을 계속 노출).
+function isWeekendDateKey(dateKey: string): boolean {
+  const [y, m, d] = dateKey.split("-").map((part) => Number(part));
+  if (!y || !m || !d) return false;
+  const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return weekday === 0 || weekday === 6; // 일(0), 토(6)
+}
+
+function buildPhantomEntries(entries: RosterEntry[], departmentName: string, dateKey: string): RosterEntry[] {
+  // 주말(토·일)에는 예외 인원을 강제로 넣지 않는다. 실제 근무 로스터에 잡혀 있을 때만 표시된다.
+  // 평일(월~금)은 계정이 없어도 무조건 상주인원에 포함한다.
+  if (isWeekendDateKey(dateKey)) {
+    return [];
+  }
   const existingNames = new Set(entries.map((entry) => entry.displayName.trim()));
   return PHANTOM_MEMBERS.filter(
     (member) => member.departmentName === departmentName && !existingNames.has(member.displayName),
@@ -80,7 +94,7 @@ function byCareer(a: RosterEntry, b: RosterEntry): number {
 
 export function buildRosterText(rawEntries: RosterEntry[], departmentName: string, dateKey: string): string {
   // 계정 없는 예외 인원(예: 박명호)을 합쳐 항상 명단/카운트에 포함시킨다.
-  const entries = [...rawEntries, ...buildPhantomEntries(rawEntries, departmentName)];
+  const entries = [...rawEntries, ...buildPhantomEntries(rawEntries, departmentName, dateKey)];
 
   // 오늘 상주(출근완료) 대상: 근무예정자 + 반차자. 연차/예비군/교육/경조사/휴가는 제외.
   const presentUsernames = new Set<string>();
