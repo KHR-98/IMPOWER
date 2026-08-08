@@ -47,6 +47,7 @@ import {
   getSupabaseAdminUsers,
   getSupabaseDashboardView,
   getSupabaseDepartments,
+  getSupabaseAllDepartments,
   getSupabaseSettings,
   getSupabaseSessionUser,
   getSupabaseSheetUserImportPreview,
@@ -185,6 +186,15 @@ export async function getDashboardView(departmentId?: string | null): Promise<Da
 export async function getDepartments(): Promise<Department[]> {
   const departments = resolveDataSource().dataSource === "supabase"
     ? await getSupabaseDepartments()
+    : await getDemoDepartments();
+  return applyDepartmentOverrides(departments);
+}
+
+// 비활성 부서까지 포함한 전체 부서(계정관리 부서 배정 전용). 출력 화면은 getDepartments(활성만)를 쓴다.
+// applyDepartmentOverrides 는 그대로 적용해 숨김 부서(메모리)/placeholder(ITC·인프라) 규칙을 유지한다.
+export async function getAllDepartments(): Promise<Department[]> {
+  const departments = resolveDataSource().dataSource === "supabase"
+    ? await getSupabaseAllDepartments()
     : await getDemoDepartments();
   return applyDepartmentOverrides(departments);
 }

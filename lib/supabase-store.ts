@@ -1782,6 +1782,22 @@ export async function getSupabaseDepartments(): Promise<Department[]> {
   return (data ?? []).map(mapDepartment);
 }
 
+// 비활성 부서까지 포함한 전체 부서. 계정관리 부서 배정 드롭다운 전용이다.
+// (출력 화면은 getSupabaseDepartments 의 활성 부서만 쓰므로, 비활성 "운영" 부서는 계정관리에서만 노출된다.)
+export async function getSupabaseAllDepartments(): Promise<Department[]> {
+  const client = getSupabaseAdminClient();
+  const { data, error } = await client
+    .from(TABLES.departments)
+    .select("id, code, name, is_active")
+    .order("name");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapDepartment);
+}
+
 export async function getSupabaseZones(): Promise<Zone[]> {
   const client = getSupabaseAdminClient();
   const { data, error } = await client.from(TABLES.zones).select("*").order("name");

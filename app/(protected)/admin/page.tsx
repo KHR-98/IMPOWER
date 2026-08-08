@@ -10,7 +10,7 @@ import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
-import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
+import { getAdminUserList, getAllDepartments, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdminView } from "@/lib/auth";
 import { canSelectAnyDepartment } from "@/lib/permissions";
 import { hasCurrentConsent } from "@/lib/consent-store";
@@ -142,13 +142,15 @@ export default async function AdminPage({
   const dashboardDepartmentCode =
     selectedSection === "overview" ? selectedDashboardDepartment?.code ?? session.departmentCode : session.departmentCode;
   const canUseAccountManagement = session.role === "master" || session.role === "admin";
-  const [dashboard, runtime, adminUsers, inviteLinks, adminTodayView, devCoordinates] = await Promise.all([
+  const [dashboard, runtime, adminUsers, inviteLinks, adminTodayView, devCoordinates, accountDepartmentSource] = await Promise.all([
     getDashboardView(dashboardQueryDepartmentId),
     getRuntimeInfo(),
     canUseAccountManagement ? getAdminUserList(accountScopeDepartmentId) : Promise.resolve([]),
     canUseAccountManagement ? getInviteLinkList(session) : Promise.resolve([]),
     selectedSection === "overview" ? getUserTodayView(session.username, session) : Promise.resolve(null),
     selectedSection === "overview" ? getDevCoordinatesForTesting() : Promise.resolve(null),
+    // 계정관리 부서 배정 드롭다운은 비활성 "운영" 부서까지 필요하므로 전체 부서를 따로 조회한다.
+    canUseAccountManagement ? getAllDepartments() : Promise.resolve(departments),
   ]);
   const buildOverviewHref = (departmentId: string, keepAllPeriods = showAllPeriods) => {
     const params = new URLSearchParams();
@@ -242,7 +244,7 @@ export default async function AdminPage({
       : periodLabel.includes("주간조")
       ? "주간조 출결표"
       : `${periodLabel} 출결표`;
-  const accountDepartments = departments.map((department) => ({
+  const accountDepartments = accountDepartmentSource.map((department) => ({
     id: department.id,
     code: department.code,
     name: department.name,
