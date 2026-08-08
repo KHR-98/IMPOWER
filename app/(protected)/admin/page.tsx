@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -11,7 +10,6 @@ import { AdminRosterSyncPanel } from "@/components/admin-roster-sync-panel";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminUserManagementPanel } from "@/components/admin-user-management-panel";
 import { AttendanceManagementPanel } from "@/components/attendance-management-panel";
-import { AttendanceRosterCopyButton } from "@/components/attendance-roster-copy-button";
 import { getAdminUserList, getDashboardView, getDepartments, getDevCoordinatesForTesting, getInviteLinkList, getRuntimeInfo, getUserTodayView } from "@/lib/app-data";
 import { requireAdminView } from "@/lib/auth";
 import { canSelectAnyDepartment } from "@/lib/permissions";
@@ -105,6 +103,12 @@ export default async function AdminPage({
   searchParams?: Promise<{ section?: string; focus?: string; allPeriods?: string; departmentId?: string }>;
 }) {
   const session = await requireAdminView();
+
+  // 운영(viewer, 열람 전용)은 전용 출력 화면으로 보낸다. 관리자 콘솔은 실제 관리자·마스터용.
+  if (session.role === "viewer") {
+    redirect("/admin/output");
+  }
+
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
 
   if (!(await hasCurrentConsent(session.username))) {
@@ -275,12 +279,6 @@ export default async function AdminPage({
                 {option.label}
               </Link>
             ))}
-            {/* 뷰어는 상단에 엑셀 버튼이 없어 여기(섹션 탭 오른쪽 끝)에 표시. 마스터는 상단 layout에 표시. */}
-            {session.role === "viewer" ? (
-              <Suspense>
-                <AttendanceRosterCopyButton />
-              </Suspense>
-            ) : null}
           </nav>
         ) : null}
       </section>
@@ -366,7 +364,7 @@ export default async function AdminPage({
                   </span>
                 </div>
               </div>
-              {session.role !== "viewer" ? <AdminRefreshButton /> : null}
+              <AdminRefreshButton />
             </div>
 
             {!showAllPeriods && specialCaseGroups.length > 0 ? (
@@ -481,7 +479,7 @@ export default async function AdminPage({
             </div>
             <AdminSettingsPanel
               enabled={adminDataMutationEnabled}
-              canEdit={session.role !== "sub_admin" && session.role !== "viewer" && (session.role === "master" || Boolean(session.departmentId))}
+              canEdit={session.role !== "sub_admin" && (session.role === "master" || Boolean(session.departmentId))}
               initialSettings={scopedSettings}
               initialZones={dashboard.zones}
               actorDepartmentId={accountScopeDepartmentId}

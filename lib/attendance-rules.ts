@@ -20,8 +20,8 @@ export const ACTION_LABELS: Record<AttendanceAction, string> = {
   "check-in": "출근",
   tbm: "TBM",
   "lunch-register": "점심 등록",
-  "lunch-out": "점심 출문",
-  "lunch-in": "점심 입문",
+  "lunch-out": "보안 확인 후 출문합니다",
+  "lunch-in": "보안 확인 후 입문합니다",
   "check-out": "퇴근",
 };
 
@@ -29,8 +29,8 @@ const EVENT_LABELS: Record<AttendanceEventCode, string> = {
   check_in: "출근",
   tbm_morning: "TBM",
   lunch_register: "점심 등록",
-  lunch_out: "점심 출문",
-  lunch_in: "점심 입문",
+  lunch_out: "보안 확인 후 출문합니다",
+  lunch_in: "보안 확인 후 입문합니다",
   tbm_afternoon: "TBM",
   tbm_checkout: "TBM",
   check_out: "퇴근",

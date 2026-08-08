@@ -18,9 +18,9 @@ export default async function DashboardPage({
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const isAdminUserPreview = resolvedSearchParams?.view === "user";
 
-  // viewer(열람 전용)는 사용자(워커) 화면이 없다 — 항상 관리자 열람 화면으로 보낸다.
+  // viewer(운영, 열람 전용)는 사용자(워커) 화면이 없다 — 항상 운영 전용 출력 화면으로 보낸다.
   if (session.role === "viewer") {
-    redirect("/admin");
+    redirect("/admin/output");
   }
 
   if ((session.role === "admin" || session.role === "sub_admin") && !isAdminUserPreview) {

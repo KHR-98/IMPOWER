@@ -62,7 +62,7 @@ const DEV_LOGIN_ACCOUNTS: Record<
   },
   viewer: {
     username: "viewer",
-    displayName: "개발자 뷰어",
+    displayName: "개발자 운영",
     role: "viewer",
     departmentCode: null,
     departmentName: null,
@@ -95,7 +95,8 @@ const changePasswordSchema = z
   });
 
 async function getPostLoginPath(user: SessionUser): Promise<string> {
-  const defaultPath = canViewAdmin(user.role) ? "/admin" : "/dashboard";
+  const defaultPath =
+    user.role === "viewer" ? "/admin/output" : canViewAdmin(user.role) ? "/admin" : "/dashboard";
   return (await hasCurrentConsent(user.username)) ? defaultPath : `/consent?next=${encodeURIComponent(defaultPath)}`;
 }
 

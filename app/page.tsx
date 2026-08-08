@@ -10,5 +10,7 @@ export default async function IndexPage() {
     redirect("/login");
   }
 
-  redirect(canViewAdmin(session.role) ? "/admin" : "/dashboard");
+  redirect(
+    session.role === "viewer" ? "/admin/output" : canViewAdmin(session.role) ? "/admin" : "/dashboard",
+  );
 }

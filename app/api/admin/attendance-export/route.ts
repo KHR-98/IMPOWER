@@ -281,7 +281,9 @@ function addSheet(wb: ExcelJS.Workbook, sheetName: string, rows: ExportRow[], ho
 
 export async function GET(request: Request) {
   const session = await getSession();
-  if (!session || !canSelectAnyDepartment(session.role)) {
+  // 엑셀 다운로드는 열람 전용(viewer=운영)을 제외한 전체부서 조회 역할, 즉 사실상 master만.
+  // UI 버튼도 layout.tsx에서 viewer를 숨기므로 서버 게이트도 동일하게 viewer를 막는다.
+  if (!session || !canSelectAnyDepartment(session.role) || session.role === "viewer") {
     return NextResponse.json({ error: "출결 엑셀 다운로드 권한이 없습니다." }, { status: 403 });
   }
 

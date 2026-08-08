@@ -62,6 +62,14 @@ const departments: Department[] = [
     name: "메모리PCS",
     isActive: true,
   },
+  // 운영(viewer) 계정 전용 부서. isActive=false라 오늘현황·output·명단복사 등 출결 출력 화면에는
+  // 안 뜨고(그 화면들은 isActive만 조회), 계정관리 부서 드롭다운에는 노출돼 배정할 수 있다.
+  {
+    id: "dept-ops",
+    code: "ops",
+    name: "운영",
+    isActive: false,
+  },
   {
     id: "dept-foundry-pcs",
     code: "foundry_pcs",
@@ -170,9 +178,9 @@ const users: UserAccount[] = [
   buildUser("user-lee", "lee", "이서준", "user", "dept-foundry-pcs"),
   buildUser("user-han", "han", "한지아", "sub_admin", "dept-foundry-pcs"),
   buildUser("user-yoon", "yoon", "윤도현", "user", "dept-memory", false),
-  // 열람 전용(viewer): 특정 부서에 속하지 않고 전체 부서를 조회만 한다. 부서 무소속("")이라
-  // getDepartment가 못 찾아 departmentCode/Name이 null이 되고, 부서 잠금에도 걸리지 않는다.
-  buildUser("user-viewer", "viewer", "개발자 뷰어", "viewer", ""),
+  // 운영(viewer, 열람 전용): 실제 근무 부서가 아닌 비활성 "운영" 부서(dept-ops)에 소속시킨다.
+  // 전체 부서를 조회만 하고, 소속 부서가 출력 화면에 안 떠 다른 부서 명단을 오염시키지 않는다.
+  buildUser("user-viewer", "viewer", "개발자 운영", "viewer", "dept-ops"),
 ];
 
 interface DemoInviteLink {

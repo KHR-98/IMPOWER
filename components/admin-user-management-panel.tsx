@@ -53,7 +53,7 @@ export function AdminUserManagementPanel({
     isMaster || (user.departmentId === actorDepartmentId && (user.role === "user" || user.role === "sub_admin"));
   const allRoleOptions: Array<{ value: UserRole; label: string }> = [
     { value: "user", label: "대원" },
-    { value: "viewer", label: "뷰어" },
+    { value: "viewer", label: "운영" },
     { value: "sub_admin", label: "조장" },
     { value: "admin", label: "팀장" },
     { value: "master", label: "마스터" },

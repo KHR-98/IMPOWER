@@ -132,7 +132,8 @@ export async function buildAttendanceStatusAlertReport(
   kind: AttendanceAlertKind,
   now: Date = new Date(),
 ): Promise<AttendanceStatusAlertReport> {
-  const departments = await getDepartments();
+  // 비활성 부서(예: 운영 계정 전용 "운영" 부서)는 실제 출결 대상이 아니므로 알림 집계에서 제외한다.
+  const departments = (await getDepartments()).filter((department) => department.isActive);
   const summaries = await Promise.all(
     departments.map(async (department) => {
       const view = await getDashboardView(department.id);

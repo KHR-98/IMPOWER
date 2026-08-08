@@ -28,7 +28,7 @@ export function getRoleLabel(role: UserRole): string {
     case "sub_admin":
       return "조장";
     case "viewer":
-      return "뷰어";
+      return "운영";
     default:
       return "대원";
   }

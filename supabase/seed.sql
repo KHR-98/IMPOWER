@@ -32,7 +32,9 @@ insert into org_departments (code, name, is_active)
 values
   ('memory_pcs', '메모리PCS', true),
   ('foundry_pcs', '파운드리PCS', true),
-  ('memory', '메모리', true)
+  ('memory', '메모리', true),
+  -- 운영(viewer) 계정 전용 부서. is_active=false라 출결 출력 화면에는 안 뜨고, 계정관리에서만 배정한다.
+  ('ops', '운영', false)
 on conflict (code) do update set
   name = excluded.name,
   is_active = excluded.is_active;
