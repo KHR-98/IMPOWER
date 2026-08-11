@@ -115,7 +115,7 @@ const INITIAL_INVITE_LINK_LIMITS: Record<string, number> = {
 };
 const INITIAL_INVITE_LINK_DURATION_HOURS = 72;
 const STANDARD_INVITE_LINK_DURATION_HOURS = 24;
-const STANDARD_INVITE_LINK_MAX_USES = 5;
+const STANDARD_INVITE_LINK_MAX_USES = 10;
 
 const zoneIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

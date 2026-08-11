@@ -47,7 +47,7 @@ const INITIAL_INVITE_LINK_LIMITS: Record<string, number> = {
 };
 const INITIAL_INVITE_LINK_DURATION_HOURS = 72;
 const STANDARD_INVITE_LINK_DURATION_HOURS = 24;
-const STANDARD_INVITE_LINK_MAX_USES = 5;
+const STANDARD_INVITE_LINK_MAX_USES = 10;
 
 const departments: Department[] = [
   {
