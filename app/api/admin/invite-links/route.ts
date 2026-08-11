@@ -12,7 +12,7 @@ const createInviteLinkSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("standard"),
     departmentId: z.string().trim().min(1, "부서를 선택하세요.").nullable(),
-    maxUses: z.number().int().min(1, "가입 가능 인원은 1명 이상이어야 합니다.").max(10, "신규 링크는 최대 10명까지 사용할 수 있습니다."),
+    maxUses: z.number().int().min(1, "가입 가능 인원은 1명 이상이어야 합니다.").max(15, "신규 링크는 최대 15명까지 사용할 수 있습니다."),
   }),
 ]);
 

@@ -209,10 +209,10 @@ export function AdminInviteLinkPanel({
           <input
             type="number"
             min={1}
-            max={10}
+            max={15}
             value={maxUses}
             disabled={!enabled || pending}
-            onChange={(event) => setMaxUses(Math.min(10, Math.max(1, Number(event.target.value) || 1)))}
+            onChange={(event) => setMaxUses(Math.min(15, Math.max(1, Number(event.target.value) || 1)))}
           />
         </label>
         <button type="button" className="button" disabled={!enabled || pending || manageableDepartments.length === 0} onClick={createStandardLink}>
