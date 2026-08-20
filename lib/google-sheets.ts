@@ -519,6 +519,7 @@ function isWeekendDate(dateKey: string): boolean {
 function mergeRosterSnapshots(
   baseSnapshot: SheetRosterSnapshot,
   supplementalSnapshots: SheetRosterSnapshot[],
+  failedDepartments: string[] = [],
 ): SheetRosterSnapshot {
   return {
     mode: baseSnapshot.mode,
@@ -531,6 +532,7 @@ function mergeRosterSnapshots(
       ...baseSnapshot.unmatchedNames,
       ...supplementalSnapshots.flatMap((snapshot) => snapshot.unmatchedNames),
     ],
+    failedDepartments,
   };
 }
 
@@ -1164,26 +1166,46 @@ export async function fetchSheetRosterSnapshot(
         assignments: [],
         unmatchedNames: [],
       } satisfies SheetRosterSnapshot);
-  const supplementalSnapshots = await Promise.all(
-    departmentConfigs.map((config) => {
-      const departmentUsers = knownUsers.filter((user) => user.departmentCode === config.departmentCode);
-      if (departmentUsers.length === 0) {
-        return null;
-      }
+  const supplementalTargets = departmentConfigs
+    .map((config) => ({
+      config,
+      departmentUsers: knownUsers.filter((user) => user.departmentCode === config.departmentCode),
+    }))
+    .filter((target) => target.departmentUsers.length > 0);
 
-      return fetchDepartmentSheetRosterSnapshot({
+  const settled = await Promise.allSettled(
+    supplementalTargets.map((target) =>
+      fetchDepartmentSheetRosterSnapshot({
         sheets,
         targetDate,
-        knownUsers: departmentUsers,
-        config,
-      });
-    }),
+        knownUsers: target.departmentUsers,
+        config: target.config,
+      }),
+    ),
   );
 
-  return mergeRosterSnapshots(
-    baseSnapshot,
-    supplementalSnapshots.filter((snapshot): snapshot is SheetRosterSnapshot => Boolean(snapshot)),
-  );
+  // 부서 시트 하나가 삭제되거나 권한이 끊겨도 그 부서만 근무표 없음으로 처리하고
+  // 나머지 부서(메모리PCS 등)는 정상 동기화한다.
+  const failedDepartments: string[] = [];
+  const supplementalSnapshots = settled.map((result, index) => {
+    if (result.status === "fulfilled") {
+      return result.value;
+    }
+
+    const { config, departmentUsers } = supplementalTargets[index];
+    const label = getSheetDepartmentLabel(config.departmentCode);
+    failedDepartments.push(label);
+    console.error(`[roster-sync] ${label} 근무표 시트를 읽지 못했습니다.`, result.reason);
+
+    return {
+      mode: "monthly_matrix",
+      workDate: targetDate,
+      assignments: buildSimpleDefaultAssignments(targetDate, departmentUsers, "sheet_missing"),
+      unmatchedNames: [],
+    } satisfies SheetRosterSnapshot;
+  });
+
+  return mergeRosterSnapshots(baseSnapshot, supplementalSnapshots, failedDepartments);
 }
 
 export async function fetchSheetUserCandidates(): Promise<SheetUserCandidateSnapshot> {
@@ -1220,7 +1242,7 @@ interface SheetWriteRowContext {
   rangeStartColumn: number;
 }
 
-function getSheetWriteDepartmentLabel(departmentCode: SheetDepartmentCode): string {
+function getSheetDepartmentLabel(departmentCode: SheetDepartmentCode): string {
   if (departmentCode === "memory") return "메모리";
   if (departmentCode === "foundry_pcs") return "파운드리PCS";
   return "메모리PCS";
@@ -1231,7 +1253,7 @@ function getWriteSpreadsheetId(config: DepartmentSheetWriteConfig): string {
     return config.spreadsheetId;
   }
 
-  throw new Error(`${getSheetWriteDepartmentLabel(config.departmentCode)} Google Sheet ID 환경 변수가 설정되지 않았습니다.`);
+  throw new Error(`${getSheetDepartmentLabel(config.departmentCode)} Google Sheet ID 환경 변수가 설정되지 않았습니다.`);
 }
 
 function shouldWriteActiveName(config: DepartmentSheetWriteConfig, input: { isScheduled: boolean; shiftType: ShiftType }): boolean {
@@ -1257,7 +1279,7 @@ async function getSheetWriteRowContext(input: {
 
   if (!tabName) {
     throw new Error(
-      `${getSheetWriteDepartmentLabel(input.config.departmentCode)} Google Sheet 탭을 찾을 수 없습니다: ${input.config.tabNameCandidates.join(", ")}`,
+      `${getSheetDepartmentLabel(input.config.departmentCode)} Google Sheet 탭을 찾을 수 없습니다: ${input.config.tabNameCandidates.join(", ")}`,
     );
   }
 
@@ -1278,7 +1300,7 @@ async function getSheetWriteRowContext(input: {
   const targetRowIndex = dataRows.findIndex((row) => normalizeDateValue(String(row[dateIndex] ?? ""), targetYear) === input.workDate);
 
   if (targetRowIndex < 0) {
-    throw new Error(`${getSheetWriteDepartmentLabel(input.config.departmentCode)} Google Sheet에서 ${input.workDate} 날짜 행을 찾을 수 없습니다.`);
+    throw new Error(`${getSheetDepartmentLabel(input.config.departmentCode)} Google Sheet에서 ${input.workDate} 날짜 행을 찾을 수 없습니다.`);
   }
 
   return {
@@ -1317,7 +1339,7 @@ async function updateActiveNameSlots(input: {
 
     const emptySlotPosition = activeSlotIndexes.findIndex((slotIndex) => String(input.context.row[slotIndex] ?? "").trim() === "");
     if (emptySlotPosition < 0) {
-      throw new Error(`${getSheetWriteDepartmentLabel(input.config.departmentCode)} Google Sheet에 빈 근무자 칸이 없습니다.`);
+      throw new Error(`${getSheetDepartmentLabel(input.config.departmentCode)} Google Sheet에 빈 근무자 칸이 없습니다.`);
     }
 
     await input.sheets.spreadsheets.values.update({

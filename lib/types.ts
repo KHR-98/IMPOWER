@@ -302,6 +302,8 @@ export interface SheetRosterSnapshot {
   workDate: string;
   assignments: SheetRosterAssignment[];
   unmatchedNames: string[];
+  /** 시트를 읽지 못해 근무표 없음으로 처리한 부서 라벨. 나머지 부서는 정상 동기화된다. */
+  failedDepartments?: string[];
 }
 
 export interface SheetUserCandidateSnapshot {

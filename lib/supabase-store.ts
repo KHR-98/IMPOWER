@@ -50,6 +50,7 @@ import type {
   SessionUser,
   ShiftAttendanceSettings,
   ShiftType,
+  SheetRosterSnapshot,
   SheetUserImportPreview,
   TimeWindow,
   UserTodayView,
@@ -703,17 +704,30 @@ async function buildRosterSyncUsers(
   });
 }
 
-async function buildSupabaseRosterSyncPreview(workDate: string): Promise<RosterSyncPreview> {
+interface RosterSyncContext {
+  users: Awaited<ReturnType<typeof getSupabaseActiveUsers>>;
+  existingMap: Map<string, Awaited<ReturnType<typeof getSupabaseRosterEntries>>[number]>;
+  snapshot: SheetRosterSnapshot;
+}
+
+/**
+ * 근무표 시트와 Supabase 현재 상태를 한 번만 읽는다. 미리보기와 실제 동기화가
+ * 이 컨텍스트를 공유하므로 시트 API 호출이 요청당 1회로 유지된다.
+ */
+async function loadRosterSyncContext(workDate: string): Promise<RosterSyncContext> {
   const [users, existingRows] = await Promise.all([
     getSupabaseActiveUsers(),
     getSupabaseRosterEntries(workDate),
   ]);
   const existingMap = new Map(existingRows.map((row) => [String(row.username), row]));
   const rosterSyncUsers = await buildRosterSyncUsers(users);
-  const snapshot = await fetchSheetRosterSnapshot(
-    workDate,
-    rosterSyncUsers,
-  );
+  const snapshot = await fetchSheetRosterSnapshot(workDate, rosterSyncUsers);
+
+  return { users, existingMap, snapshot };
+}
+
+function buildRosterSyncPreviewFromContext(workDate: string, context: RosterSyncContext): RosterSyncPreview {
+  const { users, existingMap, snapshot } = context;
 
   const rows = snapshot.assignments
     .map((assignment) => {
@@ -750,6 +764,11 @@ async function buildSupabaseRosterSyncPreview(workDate: string): Promise<RosterS
     unmatchedNames: snapshot.unmatchedNames,
   };
 }
+
+async function buildSupabaseRosterSyncPreview(workDate: string): Promise<RosterSyncPreview> {
+  return buildRosterSyncPreviewFromContext(workDate, await loadRosterSyncContext(workDate));
+}
+
 function isSupabaseSchemaMissingError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
@@ -2970,17 +2989,10 @@ export async function getSupabaseRosterSyncPreview(): Promise<RosterSyncPreview>
 export async function syncSupabaseRoster(): Promise<RosterSyncResult> {
   const workDate = getKoreaDateKey();
   const client = getSupabaseAdminClient();
-  const [users, existingRows, preview] = await Promise.all([
-    getSupabaseActiveUsers(),
-    getSupabaseRosterEntries(workDate),
-    buildSupabaseRosterSyncPreview(workDate),
-  ]);
-  const existingMap = new Map(existingRows.map((row) => [String(row.username), row]));
-  const rosterSyncUsers = await buildRosterSyncUsers(users);
-  const snapshot = await fetchSheetRosterSnapshot(
-    workDate,
-    rosterSyncUsers,
-  );
+  // 시트/Supabase 조회는 여기서 1회만. preview 는 같은 컨텍스트에서 파생한다.
+  const context = await loadRosterSyncContext(workDate);
+  const { existingMap, snapshot } = context;
+  const preview = buildRosterSyncPreviewFromContext(workDate, context);
 
   const payload = snapshot.assignments.map((assignment) => {
     const existing = existingMap.get(assignment.username);
@@ -3005,6 +3017,16 @@ export async function syncSupabaseRoster(): Promise<RosterSyncResult> {
 
   const syncedCount = preview.summary.scheduledCount;
   const skippedCount = preview.unmatchedNames.length;
+  const failedDepartments = snapshot.failedDepartments ?? [];
+  const messageParts = [`${preview.sourceLabel} 근무표를 동기화했습니다. ${syncedCount}명 반영되었습니다.`];
+
+  if (skippedCount > 0) {
+    messageParts.push(`${skippedCount}명은 앱 사용자와 매칭되지 않았습니다.`);
+  }
+
+  if (failedDepartments.length > 0) {
+    messageParts.push(`${failedDepartments.join(", ")} 시트를 읽지 못해 해당 부서는 근무표 없음으로 처리했습니다.`);
+  }
 
   return {
     ok: true,
@@ -3012,10 +3034,7 @@ export async function syncSupabaseRoster(): Promise<RosterSyncResult> {
     workDate,
     syncedCount,
     skippedCount,
-    message:
-      skippedCount > 0
-        ? `${preview.sourceLabel} 근무표를 동기화했습니다. ${syncedCount}명 반영, ${skippedCount}명은 앱 사용자와 매칭되지 않았습니다.`
-        : `${preview.sourceLabel} 근무표를 동기화했습니다. ${syncedCount}명 반영되었습니다.`,
+    message: messageParts.join(" "),
   };
 }
 
